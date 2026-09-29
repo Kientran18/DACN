@@ -1,10 +1,6 @@
 # Preliminary Security Architecture
 
-> Nguồn: `WEEK_1_CYBER.docx` — Preliminary Windows Endpoint Threat Model và Preliminary Security Architecture.
-
 ## 1. Sơ đồ kiến trúc gốc
-
-![Preliminary Security Architecture](assets/preliminary-security-architecture.png)
 
 Luồng trong sơ đồ:
 
@@ -87,9 +83,3 @@ flowchart TD
 │   └── Response                                   │
 └──────────────────────────────────────────────────┘
 ```
-
-## 6. Ghi chú về hai sơ đồ trong tài liệu gốc
-
-- Threat Model liệt kê cả **Network Events** trong System Boundary.
-- Sơ đồ Preliminary Security Architecture ở trang cuối chỉ thể hiện ba nhánh thu thập: **Process Events, File Events, Registry Events**.
-- Vì tài liệu gốc chưa giải thích sự khác nhau này, file này giữ nguyên cả hai cách biểu diễn thay vì tự quyết định loại nào là thiết kế cuối cùng.
