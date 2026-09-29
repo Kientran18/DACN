@@ -2,8 +2,6 @@
 
 > Nguồn: `WEEK_1_CYBER.docx` — các mục EPP, EDR, Detection, Investigation, Response và Threat Hunting.
 
-![Mối quan hệ giữa EPP, EDR, Detection, Investigation, Response và Threat Hunting](../architecture/assets/endpoint-security-overview.png)
-
 ## 1. EPP — Endpoint Protection Platform
 
 EPP (Endpoint Protection Platform) là lớp bảo vệ được triển khai trực tiếp trên endpoint như máy tính Windows, laptop hoặc workstation nhằm ngăn chặn các mối đe dọa trước hoặc trong thời điểm chúng thực thi.
