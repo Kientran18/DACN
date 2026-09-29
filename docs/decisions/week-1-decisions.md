@@ -1,7 +1,5 @@
 # Week 1 — Recorded Technical Decisions
 
-> File này gom lại các lựa chọn đã được ghi rõ cho Giai đoạn 1 trong `WEEK_1_CYBER.docx`. Không bổ sung quyết định mới ngoài tài liệu gốc.
-
 | Khu vực | Quyết định / lựa chọn cho Giai đoạn 1 |
 |---|---|
 | Nền tảng | Windows 10/11 |
