@@ -1,7 +1,5 @@
 # Phase 1 Scope — Windows Endpoint Security Prototype
 
-> Nguồn: `WEEK_1_CYBER.docx` — các phần định hướng Giai đoạn 1 và Preliminary Windows Endpoint Threat Model.
-
 ## 1. System Scope
 
 Threat model ban đầu giới hạn trong:
@@ -116,5 +114,3 @@ Giả định các nguồn threat:
 - Prototype chạy trên một endpoint
 - Không có central server trong Phase 1
 - Không yêu cầu enterprise-scale detection
-
-> Lưu ý: tài liệu gốc còn một câu bắt đầu bằng “Internet có thể được sử dụng nhưng detection chính...” nhưng câu này bị dừng giữa chừng, nên không tự bổ sung phần còn thiếu.
