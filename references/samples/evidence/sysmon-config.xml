@@ -1,0 +1,78 @@
+<!--
+  Sysmon Configuration v1.0 (Issue #16, PoC)
+  Target: Sysmon 15.x on Windows 10/11 lab VM, schemaversion 4.90.
+  Purpose: collect process, file, registry, network and DNS samples for the 13 selected
+  MITRE techniques (DET-001 to DET-010). NOT tuned for production volume.
+
+  Notes
+  - NOT yet validated on a real machine. Validate before install:  Sysmon64.exe -s  (prints schema)
+    then apply:  Sysmon64.exe -accepteula -i sysmon-config.xml  (or -c to update).
+  - Events 4 (service state) and 16 (config change) are always logged by Sysmon.
+  - onmatch="exclude" with no rules = log everything for that event (used where volume is acceptable in a lab).
+  - onmatch="include" = log only matches. Several conditions on the same field are OR-ed.
+  - Open decisions: Event 23 vs 26 (Q-C2) and registry key list (Q-C3). See docs/02-sysmon-configuration-v1.md.
+-->
+<Sysmon schemaversion="4.90">
+  <HashAlgorithms>SHA256,IMPHASH</HashAlgorithms>
+  <DnsLookup>False</DnsLookup>
+
+  <EventFiltering>
+
+    <!-- Event 1 ProcessCreate, Event 5 ProcessTerminate: log all in the PoC, tune after measuring volume -->
+    <RuleGroup name="process" groupRelation="or">
+      <ProcessCreate onmatch="exclude"/>
+      <ProcessTerminate onmatch="exclude"/>
+    </RuleGroup>
+
+    <!-- Event 3 NetworkConnect: everything except loopback. Event 22 DnsQuery: everything -->
+    <RuleGroup name="network" groupRelation="or">
+      <NetworkConnect onmatch="exclude">
+        <DestinationIp condition="is">127.0.0.1</DestinationIp>
+        <DestinationIp condition="is">0:0:0:0:0:0:0:1</DestinationIp>
+      </NetworkConnect>
+      <DnsQuery onmatch="exclude"/>
+    </RuleGroup>
+
+    <!-- Event 11 FileCreate (create or overwrite), 15 FileCreateStreamHash, 26 FileDeleteDetected, 29 FileExecutableDetected -->
+    <RuleGroup name="file" groupRelation="or">
+      <FileCreate onmatch="include">
+        <TargetFilename condition="contains">\Temp\</TargetFilename>
+        <TargetFilename condition="contains">\Downloads\</TargetFilename>
+        <TargetFilename condition="contains">\Desktop\</TargetFilename>
+        <TargetFilename condition="contains">\AppData\Roaming\</TargetFilename>
+        <TargetFilename condition="contains">\ProgramData\</TargetFilename>
+        <TargetFilename condition="contains">\Users\Public\</TargetFilename>
+        <TargetFilename condition="contains">\Start Menu\Programs\Startup\</TargetFilename>
+      </FileCreate>
+      <FileCreateStreamHash onmatch="include">
+        <TargetFilename condition="contains">\Downloads\</TargetFilename>
+        <Contents condition="contains">ZoneId=</Contents>
+      </FileCreateStreamHash>
+      <FileDeleteDetected onmatch="include">
+        <TargetFilename condition="contains">\Temp\</TargetFilename>
+        <TargetFilename condition="contains">\Downloads\</TargetFilename>
+        <TargetFilename condition="contains">\Desktop\</TargetFilename>
+      </FileDeleteDetected>
+      <FileExecutableDetected onmatch="include">
+        <TargetFilename condition="contains">\Temp\</TargetFilename>
+        <TargetFilename condition="contains">\Downloads\</TargetFilename>
+        <TargetFilename condition="contains">\AppData\</TargetFilename>
+        <TargetFilename condition="contains">\ProgramData\</TargetFilename>
+        <TargetFilename condition="contains">\Users\Public\</TargetFilename>
+      </FileExecutableDetected>
+    </RuleGroup>
+
+    <!-- Events 12, 13, 14 RegistryEvent: persistence-related keys only, plus the PoC test key -->
+    <RuleGroup name="registry" groupRelation="or">
+      <RegistryEvent onmatch="include">
+        <TargetObject condition="contains">\CurrentVersion\Run</TargetObject>
+        <TargetObject condition="contains">\CurrentVersion\Winlogon\</TargetObject>
+        <TargetObject condition="contains">\Image File Execution Options\</TargetObject>
+        <TargetObject condition="contains">\Schedule\TaskCache\</TargetObject>
+        <TargetObject condition="end with">\ImagePath</TargetObject>
+        <TargetObject condition="contains">\Software\EDR_PoC</TargetObject>
+      </RegistryEvent>
+    </RuleGroup>
+
+  </EventFiltering>
+</Sysmon>

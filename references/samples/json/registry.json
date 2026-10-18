@@ -1,0 +1,68 @@
+[
+  {
+    "event_id": "a95f919d-adca-5eb1-9560-f0f2b393c097",
+    "timestamp": "2026-10-18T09:11:57.7192438Z",
+    "source": "SYSMON",
+    "event_type": "REGISTRY_SET_VALUE",
+    "sysmon_event_id": 13,
+    "channel": "Microsoft-Windows-Sysmon/Operational",
+    "record_id": 191,
+    "hostname": "DESKTOP-IDEMGQU",
+    "process_guid": "43f71ec6-8d48-6ad4-1c01-000000000400",
+    "data": {
+      "operation": "SetValue",
+      "target_object": "HKU\\S-1-5-21-237846928-68144873-1231419655-1001\\SOFTWARE\\EDR_PoC\\TestDword",
+      "details": "DWORD (0x00000001)",
+      "image_path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "hive": "HKU",
+      "key_path": "S-1-5-21-237846928-68144873-1231419655-1001\\SOFTWARE\\EDR_PoC",
+      "value_name": "TestDword",
+      "value_type_inferred": "REG_DWORD",
+      "new_data_str": "DWORD (0x00000001)"
+    },
+    "raw_data": {
+      "RuleName": "registry",
+      "EventType": "SetValue",
+      "UtcTime": "2026-10-18 09:11:57.708",
+      "ProcessGuid": "{43f71ec6-8d48-6ad4-1c01-000000000400}",
+      "ProcessId": "1616",
+      "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "TargetObject": "HKU\\S-1-5-21-237846928-68144873-1231419655-1001\\SOFTWARE\\EDR_PoC\\TestDword",
+      "Details": "DWORD (0x00000001)",
+      "User": "DESKTOP-IDEMGQU\\Trankien"
+    }
+  },
+  {
+    "event_id": "36216620-092e-52be-afcd-69ac05b4ef61",
+    "timestamp": "2026-10-18T09:11:57.7191760Z",
+    "source": "SYSMON",
+    "event_type": "REGISTRY_SET_VALUE",
+    "sysmon_event_id": 13,
+    "channel": "Microsoft-Windows-Sysmon/Operational",
+    "record_id": 190,
+    "hostname": "DESKTOP-IDEMGQU",
+    "process_guid": "43f71ec6-8d48-6ad4-1c01-000000000400",
+    "data": {
+      "operation": "SetValue",
+      "target_object": "HKU\\S-1-5-21-237846928-68144873-1231419655-1001\\SOFTWARE\\EDR_PoC\\TestString",
+      "details": "EDR_POC_20261018_021142",
+      "image_path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "hive": "HKU",
+      "key_path": "S-1-5-21-237846928-68144873-1231419655-1001\\SOFTWARE\\EDR_PoC",
+      "value_name": "TestString",
+      "value_type_inferred": "STRING_UNSPECIFIED",
+      "new_data_str": "EDR_POC_20261018_021142"
+    },
+    "raw_data": {
+      "RuleName": "registry",
+      "EventType": "SetValue",
+      "UtcTime": "2026-10-18 09:11:57.708",
+      "ProcessGuid": "{43f71ec6-8d48-6ad4-1c01-000000000400}",
+      "ProcessId": "1616",
+      "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "TargetObject": "HKU\\S-1-5-21-237846928-68144873-1231419655-1001\\SOFTWARE\\EDR_PoC\\TestString",
+      "Details": "EDR_POC_20261018_021142",
+      "User": "DESKTOP-IDEMGQU\\Trankien"
+    }
+  }
+]
