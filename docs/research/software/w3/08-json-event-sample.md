@@ -1,6 +1,6 @@
 # JSON Event Sample
 
-**Trạng thái: CHƯA CÓ MẪU THẬT.** Sau khi có dữ liệu thật, chạy collector ở file mode và lưu kết quả vào `samples/json/process_event.json` (và các loại khác).
+**Trạng thái: ĐÃ CÓ MẪU THẬT** tại [references/samples/json](../../../../references/samples/json). Ví dụ bên dưới là minh họa lịch sử; JSON thật và schema hiệu chỉnh là nguồn đối chiếu. Sau khi có dữ liệu thật, chạy collector ở file mode và lưu kết quả vào `samples/json/process_event.json` (và các loại khác).
 
 ## 1. Cấu trúc đầu ra (mỗi sự kiện)
 

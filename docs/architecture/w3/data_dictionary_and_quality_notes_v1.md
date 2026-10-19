@@ -1,4 +1,7 @@
-# Từ Điển Dữ Liệu & Kiểm Soát Rủi Ro Chất Lượng Dữ Liệu v1
+# Từ điển dữ liệu và ghi chú chất lượng v1
+
+> Cập nhật 2026-10-19: [schema](endpoint_event_schema_v1.md) và [mapping](sysmon_raw_to_silver_mapping_v1.md) hiệu chỉnh là contract hiện hành chờ review. Mô tả Pydantic/DuckDB/dead-letter bên dưới là thiết kế dự kiến; chưa có mã pipeline tương ứng trong main để xác minh đã triển khai.
+
 
 ---
 
@@ -45,12 +48,12 @@
 
 ### 2.2 Rủi Ro Lệch Múi Giờ & Time Drift
 * **Bản chất rủi ro:** Giờ hệ thống máy trạm có thể bị sai lệch hoặc định dạng theo múi giờ địa phương, gây sai sót thứ tự trước/sau khi thực hiện Sliding Window đếm tần suất thao tác file (DET-008).
-* **Biện pháp xử lý:** Chuẩn hóa toàn bộ timestamp về ISO 8601 UTC có hậu tố `Z` ngay tại tầng Ingestion.
+* **Biện pháp xử lý:** Chuẩn hóa múi giờ về UTC xử lý khác biệt timezone, không sửa sai đồng hồ nguồn. Cần lưu thời gian ingestion và thiết kế theo dõi clock drift riêng; collector hiện giữ chuỗi SystemTime UTC của nguồn.
 
 ### 2.3 Rủi Ro Khuyết Thiếu Trường Dữ Liệu Cố Hữu Của Sysmon (Data Gaps)
 * **Bản chất rủi ro:** Sysmon Event ID 11 không trả về dung lượng file (`file_size_bytes`); Sysmon Event ID 13 trả về chuỗi text thay vì native registry type (`REG_SZ`, `REG_DWORD`).
 * **Biện pháp xử lý:** 
-  * Trường `file_size_bytes` được cấu hình là Optional trong schema với giá trị mặc định là `0`.
+  * Trường file_size_bytes nếu được bổ sung phải là Optional/null khi nguồn không có. Không gán 0 để tránh nhầm với file rỗng. Collector hiện không xuất trường này.
   * Trường Registry sử dụng hàm phân tích heuristic `value_type_inferred` để bóc tách kiểu giá trị an toàn.
 
 ### 2.4 Cơ Chế Phân Lập Bản Ghi Lỗi (Dead Letter Isolation)

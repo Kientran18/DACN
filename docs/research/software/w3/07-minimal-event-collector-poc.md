@@ -1,5 +1,8 @@
 # Minimal Event Collector PoC
 
+> **Cập nhật 2026-10-19:** Đã có mẫu thật và kết quả file mode; thông tin chưa chạy/chưa cài bên dưới là ghi chú lịch sử trước lần lab. Trạng thái hiện hành và đường dẫn tái lập ở [index](00-index-and-dod.md). Python live mode vẫn chưa có bằng chứng. Không diễn giải mọi lệnh hướng dẫn là đã thử thành công.
+
+
 **Code:** `poc/sysmon_collector_poc.py` · **Test:** `poc/test_sysmon_collector_poc.py` · **Dữ liệu test:** `poc/fixtures/synthetic_events.xml` (giả lập, không phải mẫu thật)
 
 ## 1. Chức năng

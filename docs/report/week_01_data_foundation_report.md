@@ -1,5 +1,8 @@
 # Báo Cáo Tiến Độ Tuần 1: Nền Tảng Dữ Liệu EDR Cục Bộ (Local EDR Data Foundation)
 
+> **Cập nhật 2026-10-19:** Báo cáo lịch sử. Các kết quả code pipeline/DuckDB, số đo và số test bên dưới chưa có đủ mã nguồn/log tương ứng trong main để tái lập; không coi là bằng chứng nghiệm thu. Kế hoạch tiếp theo được thay bằng [backlog 12 tuần](../project/research-backlog-12-weeks.md); tuần 3 tập trung schema/mẫu/collector, tuần 4 đánh giá công cụ. Trạng thái đồng thuận theo [review chung](../project/week-01-03-review-and-ownership.md).
+
+
 **Dự án:** Hệ thống Giám sát & Phát hiện Xâm nhập Điểm cuối Cục bộ (Local EDR)  
 **Vai trò phụ trách:** Data Engineer / Pipeline & Storage  
 **Thời gian hoàn thành:** Tuần 1 (Kế hoạch 12 tuần ĐACN)  

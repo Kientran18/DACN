@@ -1,5 +1,8 @@
 # Sysmon Configuration v1
 
+> **Cập nhật 2026-10-19:** Đã có mẫu thật và kết quả file mode; thông tin chưa chạy/chưa cài bên dưới là ghi chú lịch sử trước lần lab. Trạng thái hiện hành và đường dẫn tái lập ở [index](00-index-and-dod.md). Python live mode vẫn chưa có bằng chứng. Không diễn giải mọi lệnh hướng dẫn là đã thử thành công.
+
+
 **File cấu hình:** `configs/sysmon/sysmon-config.xml` · **Schema:** 4.90 (Sysmon 15.x) · **Trạng thái:** viết xong, **chưa cài thử trên máy thật**.
 
 ## 1. Thiết kế

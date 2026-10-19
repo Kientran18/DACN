@@ -1,44 +1,22 @@
-# Chia sẻ mẫu với Cyber và Data
+# Bàn giao mẫu và review Cyber Data
 
-**Điều kiện trước khi gửi:** đã có mẫu thật (file 03 đến 06 và `samples/json/`), đã che SID/tên máy/tên người dùng (`-Sanitize`), và không chứa thông tin cá nhân.
+## Gói đã có trên repository
 
-## 1. Thông báo mẫu
+- [Raw XML và manifest](../../../../references/samples/raw).
+- [Bốn JSON thật](../../../../references/samples/json): Process 3, File 2, Registry 2, Network 1.
+- [Báo cáo activities và config](../../../../references/samples/evidence).
+- Windows 10.0.19045, Sysmon 15.22; marker EDR_POC_20261018_021142.
+- sanitized=false; đây là dữ liệu lab có tên máy/tài khoản/đường dẫn. Chưa có bản sanitize được nghiệm thu.
 
-> **[W03][Software] Mẫu sự kiện Sysmon thật từ VM lab (Issue #16)**
-> Đã có mẫu thô (XML) và JSON cho process (Event 1, 5), file (11, 26, 29), registry (12, 13), network (3, 22) tại `samples/raw/` và `samples/json/`. Cấu hình: `configs/sysmon/sysmon-config.xml` v1.0, Sysmon <phiên bản>, Windows <build>.
-> Nhờ **Data** kiểm tra mẫu với Pydantic Silver schema; nhờ **Cyber** kiểm tra mẫu có đủ để viết DET-001, 002, 003, 005, 010. Câu hỏi cụ thể ở bên dưới. Mong phản hồi trước <ngày>.
+## Review cần thực hiện
 
-## 2. Checklist cho Data
+Data đối chiếu schema theo Event ID và các tên hostname/src_ip/src_port; kiểm tra missing/null, UUIDv5, timestamp, process_guid và bảo toàn raw_data. Cyber đối chiếu mẫu với [MITRE Matrix v2](../../cyber/mitre-detection-matrix-v2.md), đặc biệt DET-007/008 và mức độ bằng chứng của từng hành vi. Software xác nhận config thực dùng, đường dẫn tái lập và các giới hạn còn chưa thử.
 
-- [ ] `ProcessEvent` validate được mẫu Event 1 thật? Trường nào bị từ chối?
-- [ ] Silver cần thêm cột nào: `parent_image`, `parent_command_line`, `integrity_level`, `session_id`, `end_time`, `operation`, `dns_query_name` (Q-D6)?
-- [ ] `process_guid` của Sysmon qua được validation UUID (Q-D1)?
-- [ ] Chấp nhận `event_id` UUIDv5, `source = SYSMON`, `event_type` theo bảng quy đổi (Q-X3)?
-- [ ] Tên channel trong `collector.py` là `Microsoft-Windows-Sysmon/Operational` (Q-D7)?
-- [ ] Số liệu volume (E9) có phù hợp với ngân sách RAM/CPU (Q-D5)?
+Không tự ghi PASS hoặc thay người review. [Biểu mẫu review chung](../../../project/week-01-03-review-and-ownership.md) ghi người, ngày, link và yêu cầu thay đổi. Báo cáo Data cũ tuyên bố đồng thuận chưa đủ để chứng minh mọi người đã kiểm tra chi tiết.
 
-## 3. Checklist cho Cyber
+## Mục còn mở
 
-- [ ] Mẫu Event 1 (`ParentImage`, `CommandLine`) đủ để viết DET-001/002?
-- [ ] Mẫu registry (Event 13) đủ cho DET-003? Danh sách key cần theo dõi (Q-C3).
-- [ ] Mẫu Event 3 + 22 đủ cho DET-005/006? Kết quả E7 về correlate DNS.
-- [ ] Kết quả E1 đến E3 (ghi đè, nối thêm, đổi tên) thay đổi định nghĩa DET-008 thế nào (Q-C1)?
-- [ ] Event 23 hay 26 (Q-C2); Network có nằm trong sơ đồ kiến trúc (Q-C6)?
-
-## 4. Biên bản review (điền sau khi họp)
-
-| Bên | Ngày | Người tham gia | Kết quả / yêu cầu thay đổi | Link |
-|---|---|---|---|---|
-| Data | | | | |
-| Cyber | | | | |
-
-## 5. Commit mẫu vào repo
-
-Theo convention của team (nhánh `feature/16-sysmon-collector-poc`):
-
-```text
-config(sysmon-config): add Sysmon config v1.0 for PoC
-feat(collector): add minimal Sysmon collector PoC with file and live modes
-docs(samples): add raw Sysmon event samples from lab VM (Refs #16)
-```
-Vị trí: `configs/sysmon/`, `scripts/poc/`, `poc/` (hoặc `src/collector/` khi thống nhất với Data), `samples/raw/`, `samples/json/`, `docs/`.
+- Python live mode trên Windows.
+- Kết quả E1–E10: hiện mới có một số bằng chứng sự kiện, chưa hoàn thành thí nghiệm kiểm soát.
+- Xác nhận tên trường, event_type và nullability theo schema hiệu chỉnh.
+- Xác nhận ma trận v2 và quyết định giới hạn detection.

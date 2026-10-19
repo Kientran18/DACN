@@ -1,5 +1,8 @@
 # Initial Detection Notes
 
+> **Cập nhật 2026-10-19:** Danh sách yêu cầu/ý tưởng tuần 2, không phải tất cả đều thu được qua Sysmon hiện tại. Độ phủ có bằng chứng và giới hạn xem [MITRE Matrix v2](mitre-detection-matrix-v2.md); không coi file write/rename hoặc service/heartbeat đã được kiểm chứng.
+
+
 ## Objective
 
 Define initial detection ideas for the selected Windows endpoint threat behaviors.

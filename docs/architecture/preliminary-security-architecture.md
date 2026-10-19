@@ -9,7 +9,7 @@ Windows Endpoint
       ↓
 Event Collection Layer
       ↓
-Process Events / File Events / Registry Events
+Process Events / File Events / Registry Events / Network and DNS Events
       ↓
 Event Normalization
       ↓
@@ -30,6 +30,8 @@ flowchart TD
     B --> C1[Process Events]
     B --> C2[File Events]
     B --> C3[Registry Events]
+    B --> C4[Network and DNS Events]
+    C4 --> D
     C1 --> D[Event Normalization]
     C2 --> D
     C3 --> D

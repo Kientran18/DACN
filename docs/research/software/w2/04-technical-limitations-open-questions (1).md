@@ -1,5 +1,8 @@
 # Technical Limitations and Open Questions
 
+> **Cập nhật 2026-10-19:** Đây là mapping/đề xuất tuần 2. Ma trận bằng chứng hiện hành: [v2](../../cyber/mitre-detection-matrix-v2.md). Event 11/23/26 không chứng minh đầy đủ write-in-place/rename; lab chọn Event 26. Các mục Full là khả năng nguồn theo khảo sát, không phải xác nhận detection đã chạy. Tên JSON và required theo Event ID được chốt trong schema tuần 3 hiệu chỉnh; quyết định cuối cùng vẫn chờ review.
+
+
 **Bối cảnh:** Phase 1 – Local EDR trên 1 Windows endpoint (Software role)
 **Trạng thái tài liệu:** **DRAFT – chờ review với Data và Cyber** (chưa có xác nhận chính thức nào được ghi nhận)
 **Căn cứ:** `01-windows-telemetry-sources-v1.md`, `02-telemetry-source-mapping-table.md`, `03-collection-feasibility-notes.md`, `edr_data_requirements_architecture.md`, `sysmon_to_silver_schema_mapping.md`, `week_01_data_foundation_report.md`, `data_pipeline_phase_1_scope.md`, `security_telemetry_v1.md`, `initial_detection_notes.md`, `threat_model_v1.md`, `selected_mitre_techniques_v1.md`, `security_behavior_list.md`, `week-1-decisions.md`, `phase-1-scope.md`, `endpoint-security-concepts.md`, `duckdb_process_tree_recursive_cte.md`, `duckdb_sliding_window_aggregations.md`, `shannon_entropy_feature_extraction.md`, `requirements.txt`
