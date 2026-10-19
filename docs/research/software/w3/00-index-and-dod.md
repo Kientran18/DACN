@@ -1,55 +1,51 @@
-# Week 3 – Issue #16: Windows Telemetry Collection PoC – Index và trạng thái DoD
+# Tuần 3 Windows Telemetry PoC và trạng thái nghiệm thu
 
-**Trạng thái tổng thể:** Đã viết xong cấu hình, script, mã PoC và tài liệu. **Chưa có dữ liệu thật**: các mẫu sự kiện, kết quả cài đặt Sysmon và buổi review phải thực hiện trên VM lab.
+Cập nhật 2026-10-19. Đã có mẫu thật trong repository. File mode của collector đã tái tạo đúng bốn JSON; chưa có bằng chứng Python live mode hoặc full pipeline/DuckDB.
 
-## Những gì đã và chưa được kiểm tra
+## Môi trường và mẫu
 
-| Thành phần | Đã kiểm tra | Chưa kiểm tra |
-|---|---|---|
-| `sysmon_collector_poc.py` (parse, normalize, CLI) | 13 unit test đạt (pytest), chạy trên **sự kiện giả lập** viết tay | Chạy live với `pywin32` trên Windows |
-| `sysmon-config.xml` | XML hợp lệ về cú pháp | Chưa cài trên Sysmon thật; chưa kiểm tra `Sysmon64.exe -s` và tên phần tử (`DnsLookup`, `FileExecutableDetected`...) |
-| `run-poc-activities.ps1`, `export-samples.ps1` | Đọc lại cú pháp bằng mắt | **Chưa chạy lần nào** (container không có PowerShell/Windows) |
-| Các giả định về hành vi Sysmon (ghi đè, rename, registry...) | — | Cần thí nghiệm E1 đến E10 trong file 09 |
+- Windows: 10.0.19045; Sysmon: 15.22.
+- Marker: EDR_POC_20261018_021142.
+- Thời gian lần thử UTC: 2026-10-18T09:11:42.5934411Z đến 09:12:02.0878180Z.
+- Báo cáo: [poc_run](../../../../references/samples/evidence/poc_run_20261018_021142.json).
+- [Manifest](../../../../references/samples/raw/export_manifest.json): exported_utc 2026-10-18T09:14:37.0816904Z, sanitized=false.
+- Config thu mẫu lưu tại [evidence](../../../../references/samples/evidence/sysmon-config.xml).
+- Bộ raw: [references/samples/raw](../../../../references/samples/raw); JSON: [references/samples/json](../../../../references/samples/json).
 
-## Deliverables
+## Kết quả
 
-| Deliverable | File | Trạng thái |
-|---|---|---|
-| Windows Telemetry Lab Setup Notes | `docs/01-windows-telemetry-lab-setup-notes.md` | Viết xong, chưa thực hành |
-| Sysmon Configuration v1 | `configs/sysmon/sysmon-config.xml` + `docs/02-sysmon-configuration-v1.md` | Viết xong, chưa cài thử |
-| Raw Process Event Sample | `docs/03-raw-process-event-sample.md` → `samples/raw/` | **Chờ thu thập** |
-| Raw File Event Sample | `docs/04-raw-file-event-sample.md` → `samples/raw/` | **Chờ thu thập** |
-| Raw Registry Event Sample | `docs/05-raw-registry-event-sample.md` → `samples/raw/` | **Chờ thu thập** |
-| Raw Network Event Sample | `docs/06-raw-network-event-sample.md` → `samples/raw/` | **Chờ thu thập** |
-| Minimal Event Collector PoC | `poc/sysmon_collector_poc.py` + `docs/07-minimal-event-collector-poc.md` | Code xong, test giả lập đạt |
-| JSON Event Sample | `docs/08-json-event-sample.md` → `samples/json/` | Chỉ có mẫu giả lập; **chờ mẫu thật** |
-| Collection Limitations v1 | `docs/09-collection-limitations-v1.md` | Viết xong dưới dạng giả thuyết, chờ xác minh |
-| (Task) Share samples with Cyber and Data | `docs/10-share-samples-with-cyber-and-data.md` | Có mẫu thông báo và checklist |
+| Nhóm | Raw ID | JSON chính | Số mẫu JSON |
+|---|---|---|---|
+| Process | 1,5 | process.json (ID 1) | 3 |
+| File | 11,26,29 | file.json (ID 11) | 2 |
+| Registry | 12,13 | registry.json (ID 13) | 2 |
+| Network/DNS | 3,22 | network.json (ID 3) | 1 |
+| Quản trị Sysmon | 4,16 | Chưa xuất JSON riêng | Không áp dụng |
 
-## Definition of Done
+Báo cáo activities ghi đủ 5 bước ok. PowerShell export đã đọc Event Log; điều này không chứng minh collector Python live mode đã chạy. Raw/JSON vẫn chứa thông tin môi trường máy ảo; chưa thực hiện sanitize.
 
-- [ ] Sysmon is installed and operational
-- [ ] Sysmon events are visible in Windows Event Log
-- [ ] Real process event has been collected
-- [ ] Real file event has been inspected or collected
-- [ ] Real registry event has been inspected or collected
-- [ ] Real network event has been inspected or collected
-- [ ] At least one event type can be read programmatically *(code sẵn sàng, mới test giả lập)*
-- [ ] At least one raw event can be exported to JSON *(như trên)*
-- [ ] Sample events are committed to the repository
-- [ ] Required permissions and limitations are documented *(đã viết, chưa xác minh)*
-- [ ] Cyber and Data have reviewed the collected samples
+## Tiêu chí có bằng chứng
 
-Chỉ tick khi đã làm thật trên VM. Issue #16 ở trạng thái Open cho đến khi hoàn tất.
+- [x] Có log Sysmon thực tế và thông tin phiên bản.
+- [x] Có raw XML Process/File/Registry/Network.
+- [x] Đọc Event Log qua PowerShell và xuất XML.
+- [x] Collector Python file mode xuất JSON thật của bốn nhóm.
+- [x] Mẫu đã commit vào repository.
+- [ ] Có kết quả thử Python live mode trên Windows.
+- [ ] Hoàn tất review Cyber/Data/Software có người, ngày, link.
+- [ ] Ghi kết quả thí nghiệm giới hạn E1–E10 đầy đủ.
 
-## Thứ tự thực hiện trên VM lab
+Hai mục live mode/E1–E10 là trạng thái kiểm chứng cần công khai, không tự mở rộng yêu cầu triển khai production. Chưa tuyên bố nghiệm thu 100% issue #16 hoặc #13 khi review còn thiếu.
 
-1. Chụp snapshot sạch, cài Sysmon với config v1 (file 01, mục 3 đến 5).
-2. Chạy `run-poc-activities.ps1` (không cần Admin) và ghi lại marker `EDR_POC_<timestamp>`.
-3. Chạy `export-samples.ps1 -Sanitize` bằng Admin để xuất XML thô vào `samples/raw/`.
-4. Dán sự kiện thật vào các file 03 đến 06, đánh dấu bảng kiểm tra trường.
-5. Chạy collector: `python poc/sysmon_collector_poc.py --mode file --input samples/raw/recent_events_all.xml ...`, rồi thử `--mode live` bằng Admin.
-6. Làm các thí nghiệm E1 đến E10 (file 09), cập nhật file 02 và 09 theo kết quả.
-7. Commit mẫu, gửi cho Cyber và Data (file 10).
+## Tái lập
 
-*Ghi chú:* issue #16 có một dòng task trống ở cuối danh sách, nên xóa đi.
+Từ thư mục gốc repo:
+
+```powershell
+python .\poc\sysmon-collector\sysmon_collector_poc.py --mode file --input .\references\samples\raw\raw_process_create_event1.xml --output .\tmp\process.json
+python -m pytest -q .\poc\sysmon-collector\test_sysmon_collector_poc.py
+```
+
+File mode chỉ cần Python standard library. pytest chỉ cần trên máy phát triển khi chạy test. Live mode mới cần pywin32 và quyền đọc channel. Xem [schema](../../../architecture/w3/endpoint_event_schema_v1.md), [ma trận v2](../../cyber/mitre-detection-matrix-v2.md), [review](../../../project/week-01-03-review-and-ownership.md).
+
+Các trang hướng dẫn cũ được giữ để tham khảo thao tác; phần trạng thái lịch sử không thay thế bằng chứng hiện tại ở trang này.

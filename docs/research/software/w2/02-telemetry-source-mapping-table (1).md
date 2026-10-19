@@ -1,5 +1,8 @@
 # Telemetry Source Mapping Table
 
+> **Cập nhật 2026-10-19:** Đây là mapping/đề xuất tuần 2. Ma trận bằng chứng hiện hành: [v2](../../cyber/mitre-detection-matrix-v2.md). Event 11/23/26 không chứng minh đầy đủ write-in-place/rename; lab chọn Event 26. Các mục Full là khả năng nguồn theo khảo sát, không phải xác nhận detection đã chạy. Tên JSON và required theo Event ID được chốt trong schema tuần 3 hiệu chỉnh; quyết định cuối cùng vẫn chờ review.
+
+
 Ký hiệu độ phủ: **Full** = lấy trực tiếp · **Partial** = suy ra/làm giàu được nhưng có điều kiện · **Gap** = nguồn Phase 1 không cung cấp.
 Mỗi bảng đối chiếu từng field **Required** trong `edr_data_requirements_architecture.md` (mục 2.1–2.4) với nguồn thực tế.
 

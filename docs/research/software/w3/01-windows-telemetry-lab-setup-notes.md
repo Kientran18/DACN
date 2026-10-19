@@ -1,5 +1,8 @@
 # Windows Telemetry Lab Setup Notes
 
+> **Cập nhật 2026-10-19:** Đã có mẫu thật và kết quả file mode; thông tin chưa chạy/chưa cài bên dưới là ghi chú lịch sử trước lần lab. Trạng thái hiện hành và đường dẫn tái lập ở [index](00-index-and-dod.md). Python live mode vẫn chưa có bằng chứng. Không diễn giải mọi lệnh hướng dẫn là đã thử thành công.
+
+
 **Phạm vi:** VM Windows 10/11 dùng chung của team (xem `docs/05-windows-lab-environment.md` của Week 1). Mọi lệnh dưới đây **chưa được chạy thử**; ghi kết quả thật vào mục 9.
 
 ## 1. Chuẩn bị
@@ -83,13 +86,13 @@ Nếu một loại không xuất hiện, ghi lại trong file 09 (đây cũng l�
 
 | Mục | Giá trị |
 |---|---|
-| Ngày thực hiện / người thực hiện | |
-| Windows build | |
-| Sysmon version | |
+| Ngày thực hiện / người thực hiện | 2026-10-18; người thực hiện cần nhóm xác nhận trong review |
+| Windows build | 10.0.19045 (manifest) |
+| Sysmon version | 15.22 (manifest) |
 | Hash SHA256 của `sysmon-config.xml` | |
 | Kích thước channel Sysmon | |
 | Snapshot đã chụp | |
-| Python / pywin32 version | |
+| Python / pywin32 version | Chưa có version trong evidence; không suy đoán từ lệnh hướng dẫn |
 
 ## 10. Xử lý sự cố
 

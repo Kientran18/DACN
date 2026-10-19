@@ -1,14 +1,14 @@
 # Raw Registry Event Sample (Sysmon Event 12, 13, 14)
 
-**Trạng thái: CHƯA THU THẬP.** Dùng bước 4 của `run-poc-activities.ps1` (khóa an toàn `HKCU\Software\EDR_PoC`). File nguồn: `samples/raw/raw_registry_key_event12.xml`, `raw_registry_setvalue_event13.xml`.
+**Trạng thái: ĐÃ CÓ MẪU THẬT.** Xem [XML đã commit](../../../../references/samples/raw/raw_registry_setvalue_event13.xml) và [index](00-index-and-dod.md). Các bảng kiểm tra cần reviewer xác nhận; không coi placeholder bên dưới là dữ liệu. Dùng bước 4 của `run-poc-activities.ps1` (khóa an toàn `HKCU\Software\EDR_PoC`). File nguồn: `samples/raw/raw_registry_key_event12.xml`, `raw_registry_setvalue_event13.xml`.
 
 ## Mẫu thật – Event 12 (CreateKey / DeleteKey)
 ```xml
-<!-- PASTE REAL SYSMON EVENT 12 HERE -->
+<!-- Xem file XML đã liên kết ở đầu trang; không sao chép mẫu giả vào đây.
 ```
 ## Mẫu thật – Event 13 (SetValue, chuỗi và DWORD)
 ```xml
-<!-- PASTE REAL SYSMON EVENT 13 HERE -->
+<!-- Xem file XML đã liên kết ở đầu trang; không sao chép mẫu giả vào đây.
 ```
 
 ## Kiểm tra từng trường

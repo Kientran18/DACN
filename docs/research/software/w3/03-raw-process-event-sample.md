@@ -1,6 +1,6 @@
 # Raw Process Event Sample (Sysmon Event 1, 5)
 
-**Trạng thái: CHƯA THU THẬP.** Chạy bước 1 và 2 của `run-poc-activities.ps1`, rồi `export-samples.ps1`. File nguồn: `samples/raw/raw_process_create_event1.xml`, `raw_process_terminate_event5.xml`.
+**Trạng thái: ĐÃ CÓ MẪU THẬT.** Xem [XML đã commit](../../../../references/samples/raw/raw_process_create_event1.xml) và [index](00-index-and-dod.md). Các bảng kiểm tra cần reviewer xác nhận; không coi placeholder bên dưới là dữ liệu. Chạy bước 1 và 2 của `run-poc-activities.ps1`, rồi `export-samples.ps1`. File nguồn: `samples/raw/raw_process_create_event1.xml`, `raw_process_terminate_event5.xml`.
 
 ## Lệnh thu thập nhanh (Admin)
 ```powershell
@@ -9,12 +9,12 @@ wevtutil qe Microsoft-Windows-Sysmon/Operational /q:"*[System[(EventID=1)]]" /c:
 
 ## Mẫu thật – Event 1 (dán vào đây)
 ```xml
-<!-- PASTE REAL SYSMON EVENT 1 HERE (command line contains EDR_POC_...) -->
+<!-- Xem file XML đã liên kết ở đầu trang; không sao chép mẫu giả vào đây.
 ```
 
 ## Mẫu thật – Event 5
 ```xml
-<!-- PASTE REAL SYSMON EVENT 5 HERE -->
+<!-- Xem file XML đã liên kết ở đầu trang; không sao chép mẫu giả vào đây.
 ```
 
 ## Kiểm tra từng trường (đánh dấu sau khi xem mẫu thật)

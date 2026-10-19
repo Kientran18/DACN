@@ -1,5 +1,8 @@
 # Week 2: Behavior-to-Telemetry Mapping & Data Requirements v1
 
+> **Cập nhật 2026-10-19:** Đây là mapping/đề xuất tuần 2. Ma trận bằng chứng hiện hành: [v2](../research/cyber/mitre-detection-matrix-v2.md). Event 11/23/26 không chứng minh đầy đủ write-in-place/rename; lab chọn Event 26. Các mục Full là khả năng nguồn theo khảo sát, không phải xác nhận detection đã chạy. Tên JSON và required theo Event ID được chốt trong schema tuần 3 hiệu chỉnh; quyết định cuối cùng vẫn chờ review.
+
+
 ## Deliverable 1: Behavior-to-Telemetry Mapping v1
 Ma trận ánh xạ từ 13 kỹ thuật MITRE ATT&CK của Cyber sang Telemetry Type, Sysmon Event ID của Software, và bảng dữ liệu Silver Layer của Data.
 

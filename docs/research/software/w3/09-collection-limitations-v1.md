@@ -1,5 +1,8 @@
 # Collection Limitations v1
 
+> **Cập nhật 2026-10-19:** Đã có lần thu mẫu thật. Bằng chứng: Event 26, 29, Registry 12/13, Network 3 và DNS 22 đã xuất; chưa đủ để kết luận các giả thuyết write/append/rename, volume hoặc quyền đọc của tài khoản thường. Bảng kết quả E1–E10 chưa được nghiệm thu; xem [index](00-index-and-dod.md).
+
+
 Kế thừa từ `04-technical-limitations-open-questions.md` (Week 2). Các mục dưới là **giả thuyết cần xác minh bằng thí nghiệm** trên VM; sau khi có kết quả, cập nhật cột "Kết quả" và sửa file Week 2 nếu giả thuyết sai.
 
 ## 1. Quyền cần thiết (Required Permissions)
