@@ -1,0 +1,43 @@
+[
+  {
+    "event_id": "7536126d-407c-500d-a9b1-c9d7cec9f7df",
+    "timestamp": "2026-10-18T09:11:59.4649146Z",
+    "source": "SYSMON",
+    "event_type": "NETWORK_CONNECT",
+    "sysmon_event_id": 3,
+    "channel": "Microsoft-Windows-Sysmon/Operational",
+    "record_id": 194,
+    "hostname": "DESKTOP-IDEMGQU",
+    "process_guid": "43f71ec6-8d48-6ad4-1c01-000000000400",
+    "data": {
+      "protocol": "TCP",
+      "direction": "OUTBOUND",
+      "src_ip": "10.0.2.15",
+      "src_port": 49904,
+      "dest_ip": "172.66.147.243",
+      "dest_port": 443,
+      "ip_version": "IPv4",
+      "image_path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+    },
+    "raw_data": {
+      "RuleName": "-",
+      "UtcTime": "2026-10-18 09:12:11.850",
+      "ProcessGuid": "{43f71ec6-8d48-6ad4-1c01-000000000400}",
+      "ProcessId": "1616",
+      "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "User": "DESKTOP-IDEMGQU\\Trankien",
+      "Protocol": "tcp",
+      "Initiated": "true",
+      "SourceIsIpv6": "false",
+      "SourceIp": "10.0.2.15",
+      "SourceHostname": "-",
+      "SourcePort": "49904",
+      "SourcePortName": "-",
+      "DestinationIsIpv6": "false",
+      "DestinationIp": "172.66.147.243",
+      "DestinationHostname": "-",
+      "DestinationPort": "443",
+      "DestinationPortName": "-"
+    }
+  }
+]

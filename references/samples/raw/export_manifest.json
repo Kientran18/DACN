@@ -1,0 +1,63 @@
+﻿{
+    "exported_utc":  "2026-10-18T09:14:37.0816904Z",
+    "sanitized":  false,
+    "files":  [
+                  {
+                      "name":  "raw_process_create_event1",
+                      "event_id":  1,
+                      "count":  3
+                  },
+                  {
+                      "name":  "raw_process_terminate_event5",
+                      "event_id":  5,
+                      "count":  1
+                  },
+                  {
+                      "name":  "raw_file_create_event11",
+                      "event_id":  11,
+                      "count":  2
+                  },
+                  {
+                      "name":  "raw_file_delete_event26",
+                      "event_id":  26,
+                      "count":  2
+                  },
+                  {
+                      "name":  "raw_file_executable_event29",
+                      "event_id":  29,
+                      "count":  1
+                  },
+                  {
+                      "name":  "raw_registry_key_event12",
+                      "event_id":  12,
+                      "count":  2
+                  },
+                  {
+                      "name":  "raw_registry_setvalue_event13",
+                      "event_id":  13,
+                      "count":  2
+                  },
+                  {
+                      "name":  "raw_network_connect_event3",
+                      "event_id":  3,
+                      "count":  1
+                  },
+                  {
+                      "name":  "raw_dns_query_event22",
+                      "event_id":  22,
+                      "count":  1
+                  },
+                  {
+                      "name":  "raw_sysmon_state_event4",
+                      "event_id":  4,
+                      "count":  1
+                  },
+                  {
+                      "name":  "raw_sysmon_config_event16",
+                      "event_id":  16,
+                      "count":  1
+                  }
+              ],
+    "sysmon_version":  "15.22",
+    "windows_version":  "10.0.19045"
+}

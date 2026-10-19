@@ -1,0 +1,58 @@
+[
+  {
+    "event_id": "cab6af4d-a862-5e4c-bfb5-42b5b46081cd",
+    "timestamp": "2026-10-18T09:11:53.2778558Z",
+    "source": "SYSMON",
+    "event_type": "FILE_CREATE",
+    "sysmon_event_id": 11,
+    "channel": "Microsoft-Windows-Sysmon/Operational",
+    "record_id": 182,
+    "hostname": "DESKTOP-IDEMGQU",
+    "process_guid": "43f71ec6-8d48-6ad4-1c01-000000000400",
+    "data": {
+      "file_path": "C:\\Users\\Trankien\\AppData\\Local\\Temp\\edr_poc\\EDR_POC_20261018_021142_drop.exe",
+      "file_extension": "exe",
+      "image_path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "hashes": {},
+      "file_sha256": null
+    },
+    "raw_data": {
+      "RuleName": "file",
+      "UtcTime": "2026-10-18 09:11:53.265",
+      "ProcessGuid": "{43f71ec6-8d48-6ad4-1c01-000000000400}",
+      "ProcessId": "1616",
+      "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "TargetFilename": "C:\\Users\\Trankien\\AppData\\Local\\Temp\\edr_poc\\EDR_POC_20261018_021142_drop.exe",
+      "CreationUtcTime": "2026-10-18 09:11:53.265",
+      "User": "DESKTOP-IDEMGQU\\Trankien"
+    }
+  },
+  {
+    "event_id": "ab310dc5-7581-50ec-8b83-8dccc56d3f13",
+    "timestamp": "2026-10-18T09:11:51.9483988Z",
+    "source": "SYSMON",
+    "event_type": "FILE_CREATE",
+    "sysmon_event_id": 11,
+    "channel": "Microsoft-Windows-Sysmon/Operational",
+    "record_id": 180,
+    "hostname": "DESKTOP-IDEMGQU",
+    "process_guid": "43f71ec6-8d48-6ad4-1c01-000000000400",
+    "data": {
+      "file_path": "C:\\Users\\Trankien\\AppData\\Local\\Temp\\edr_poc\\EDR_POC_20261018_021142.txt",
+      "file_extension": "txt",
+      "image_path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "hashes": {},
+      "file_sha256": null
+    },
+    "raw_data": {
+      "RuleName": "file",
+      "UtcTime": "2026-10-18 09:11:51.907",
+      "ProcessGuid": "{43f71ec6-8d48-6ad4-1c01-000000000400}",
+      "ProcessId": "1616",
+      "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "TargetFilename": "C:\\Users\\Trankien\\AppData\\Local\\Temp\\edr_poc\\EDR_POC_20261018_021142.txt",
+      "CreationUtcTime": "2026-10-18 09:11:51.907",
+      "User": "DESKTOP-IDEMGQU\\Trankien"
+    }
+  }
+]

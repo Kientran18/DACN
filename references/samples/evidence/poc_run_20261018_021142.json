@@ -1,0 +1,39 @@
+﻿{
+    "marker":  "EDR_POC_20261018_021142",
+    "start_utc":  "2026-10-18T09:11:42.5934411Z",
+    "end_utc":  "2026-10-18T09:12:02.0878180Z",
+    "host":  "DESKTOP-IDEMGQU",
+    "work_dir":  "C:\\Users\\Trankien\\AppData\\Local\\Temp\\edr_poc",
+    "steps":  [
+                  {
+                      "step":  "1_normal_process",
+                      "start_utc":  "2026-10-18T09:11:43.0551568Z",
+                      "status":  "ok",
+                      "detail":  ""
+                  },
+                  {
+                      "step":  "2_parent_child",
+                      "start_utc":  "2026-10-18T09:11:44.1962037Z",
+                      "status":  "ok",
+                      "detail":  ""
+                  },
+                  {
+                      "step":  "3_file_activity",
+                      "start_utc":  "2026-10-18T09:11:51.8461271Z",
+                      "status":  "ok",
+                      "detail":  ""
+                  },
+                  {
+                      "step":  "4_registry_activity",
+                      "start_utc":  "2026-10-18T09:11:57.5935212Z",
+                      "status":  "ok",
+                      "detail":  ""
+                  },
+                  {
+                      "step":  "5_network_activity",
+                      "start_utc":  "2026-10-18T09:11:57.8358559Z",
+                      "status":  "ok",
+                      "detail":  ""
+                  }
+              ]
+}
