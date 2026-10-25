@@ -1,5 +1,8 @@
 # Đặc Tả Kiến Trúc Data Pipeline & Hợp Đồng Dữ Liệu Đa Tầng (Bronze / Silver / Gold) v1.0
 
+> **Đối chiếu W05 (#26/#27/#29):** Phần Bronze v1.1 trong tài liệu này là **đặc tả đề xuất ban đầu của Data**, không phải format collector phải xuất song song. Hợp đồng Bronze dùng chung được đề xuất tại [Canonical Collector → Bronze → Silver Contract](contracts/README.md), lấy `bronze-event/1.0` làm envelope gốc và chuyển sang Silver qua adapter có kiểm thử. Việc phê duyệt của Data/Software vẫn **đang chờ xác nhận**. Không sửa nhầm schema Silver v1.1 thành version Bronze.
+
+
 **Dự án:** Hệ thống Giám sát & Phát hiện Xâm nhập Điểm cuối Cục bộ (Local EDR)  
 **Issue tham chiếu:** `[W05][Data] Thiết kế Bronze/Silver/Gold, schema, chất lượng và lineage dữ liệu #27`  
 **Tài liệu tổng hợp đích:** `[W05][Team] Thống nhất thiết kế Data Pipeline và nghiệm thu các hợp đồng dữ liệu #26`  
