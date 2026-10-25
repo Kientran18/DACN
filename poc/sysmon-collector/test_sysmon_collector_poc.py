@@ -11,7 +11,7 @@ import pytest
 
 import sysmon_collector_poc as c
 
-FIXTURE = Path(__file__).parent / "fixtures" / "synthetic_events.xml"
+FIXTURE = Path(__file__).parent / "configs" / "synthetic_events.xml"
 
 
 @pytest.fixture(scope="module")
