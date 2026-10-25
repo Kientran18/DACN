@@ -30,11 +30,11 @@ Tài liệu đặc tả chi tiết logic chuyển đổi (ETL/ELT) từ các tr�
 | **Tất cả bảng** | `timestamp` | `System.TimeCreated.SystemTime` | Parse ISO 8601 UTC string -> Native Timestamp |
 | **Tất cả bảng** | `source` | *Hằng số* | Gán giá trị cứng: `'SYSMON'` |
 | **Tất cả bảng** | `sysmon_event_id` | `System.EventID` | Ép kiểu `int(EventID)` |
-| **Tất cả bảng** | `host_id` | `System.Computer` | Lấy nguyên bản chuỗi máy trạm |
-| **Tất cả bảng** | `process_guid` | `EventData.ProcessGuid` | `strip_guid(ProcessGuid)` |
+| **Tất cả bảng** | `hostname` | `System.Computer` | Lấy hostname nguồn; dùng đồng nhất với collector JSON |
+| **Tất cả bảng** | `process_guid` | `EventData.ProcessGuid` | `strip_guid` nếu nguồn có; cho phép NULL với Event 4/16 |
 | **Tất cả bảng** | `raw_data` | `EventData` | Serialize toàn bộ dictionary sang chuỗi JSON |
 | **silver_process_events** | `event_type` | `System.EventID` | `1` -> `'PROCESS_START'`, `5` -> `'PROCESS_TERMINATE'` |
-| **silver_process_events** | `pid`, `ppid` | `ProcessId`, `ParentProcessId` | Ép kiểu `int` |
+| **silver_process_events** | `pid`, `ppid` | `ProcessId`, `ParentProcessId` | PID khi có; PPID/ParentProcessId **chỉ bắt buộc Event 1**, NULL Event 5 |
 | **silver_process_events** | `parent_guid` | `EventData.ParentProcessGuid` | `strip_guid(ParentProcessGuid)` |
 | **silver_process_events** | `image_path` | `EventData.Image` | Giữ nguyên đường dẫn tệp nhị phân |
 | **silver_process_events** | `command_line` | `EventData.CommandLine` | Giữ nguyên format đối số (UTF-8 an toàn) |
@@ -52,5 +52,14 @@ Tài liệu đặc tả chi tiết logic chuyển đổi (ETL/ELT) từ các tr�
 | **silver_registry_events** | `details` | `EventData.Details` | Giữ nguyên chuỗi thiết lập cấu hình |
 | **silver_network_events** | `protocol` | `EventData.Protocol` | In hoa chuỗi giao thức: `.upper()` |
 | **silver_network_events** | `direction` | `EventData.Initiated` | `'OUTBOUND'` nếu `Initiated.lower() == 'true'`, ngược lại `'INBOUND'` |
-| **silver_network_events** | `source_ip`, `dest_ip` | `SourceIp`, `DestinationIp` | Giữ nguyên chuỗi địa chỉ IP |
-| **silver_network_events** | `source_port`, `dest_port` | `SourcePort`, `DestinationPort` | Ép kiểu `int` |
+| **silver_network_events** | `src_ip`, `dest_ip` | `SourceIp`, `DestinationIp` | Chỉ Event 3; Event 22 không có socket IP |
+| **silver_network_events** | `src_port`, `dest_port` | `SourcePort`, `DestinationPort` | Chỉ Event 3; Event 22 không có socket port |
+
+## 3. Hiệu chỉnh đối chiếu XML thật (25/10/2026)
+
+- **Event 5:** không có `ParentProcessGuid`, `ParentProcessId`, `CommandLine`, nên `parent_guid`, `ppid` và `command_line` phải nullable.
+- **Event 22 DNS:** không có `Protocol`, `SourceIp`, `SourcePort`, `DestinationIp`, `DestinationPort` hay `Initiated`; dùng `QueryName`, `QueryStatus`, `QueryResults` và event type `DNS_QUERY`.
+- **Event 29:** có payload FileExecutableDetected riêng, không coi là FileCreate Event 11.
+- Trục thời gian chính: `System.TimeCreated.SystemTime`; giữ `EventData.UtcTime` riêng để phân tích sai lệch.
+- `file.operation` trong Silver là **trường được suy ra từ Event ID**, không được giả định xuất hiện sẵn trong JSON collector.
+- Các diễn giải chi tiết và migration nằm tại [W5 schema v1.1](../w5/schema_reconciliation_and_dictionary_v1_1.md).

@@ -33,7 +33,7 @@ Thống nhất áp dụng **Phương án C (Deterministic UUIDv5)** cho toàn b�
 
 ## 4. Hệ Quả & Đánh Giá Tác Động (Consequences)
 * **Tích cực:** 
-  * Đảm bảo tính duy nhất tuyệt đối trên toàn bộ điểm cuối và các kênh log.
-  * Pipeline đạt chuẩn **Idempotent**: Dù nạp lại file Bronze bao nhiêu lần thì bản ghi tạo ra trong DuckDB vẫn giữ nguyên `event_id`, cho phép cơ chế `INSERT OR IGNORE` hoạt động hoàn hảo.
+  * Định danh lặp lại được với `(Computer, Channel, EventRecordID)` nhưng không đảm bảo tuyệt đối nếu log reset/RecordID reuse hoặc tên host thay đổi.
+  * UUIDv5 ổn định khi đầu vào không đổi; ingestion idempotent còn cần unique constraint/upsert và quy tắc xử lý log reset.
 * **Tiêu cực/Ràng buộc:** 
-  * Cần đảm bảo collector luôn đọc được trường `EventRecordID` từ Windows System Header (đã được kiểm chứng sẵn có 100% trong Sysmon EventLog).
+  * Cần đảm bảo collector luôn đọc được trường `EventRecordID` từ Windows System Header (đã thấy trong mẫu W3, vẫn cần kiểm tra dữ liệu thiếu/hỏng).

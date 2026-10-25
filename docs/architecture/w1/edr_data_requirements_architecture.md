@@ -1,6 +1,6 @@
 # EDR Data Requirements & Ingestion Architecture Specification
 **Document Version:** 1.0.0  
-**Status:** Approved Architectural Baseline  
+**Status:** W1 research/reference specification (enterprise-scale alternatives); **not the approved Phase 1 implementation**. For the Windows single-endpoint Local EDR baseline, see `docs/scope/data_pipeline_phase_1_scope.md` and `docs/architecture/w2/phase_1_local_data_architecture_mapping.md`. Performance targets and verification claims in this historical research template are NOT measured results.  
 **Classification:** Core Engineering Specification  
 **Alignment:** OSSEM, Elastic Common Schema (ECS) v8.11, Sysmon v15, MITRE ATT&CK v14  
 
@@ -683,14 +683,14 @@ All architectural components, specifications, and boundaries have been audited a
 
 | Category | Verification Item | Verification Standard | Status |
 | :--- | :--- | :--- | :--- |
-| **Architectural Separation** | Client Agent Boundary | Native compiled binary (C/C++/Rust/Go); zero heavy runtime frameworks or cloud SDKs. | Verified Pass |
-| **Resource Budgets** | Client Agent Footprint | Strict compliance with $<3\%$ sustained CPU usage and $<150\text{ MB}$ RSS memory limit. | Verified Pass |
-| **8-Group Data Taxonomy** | Task 1 Data Completeness | Explicit schema, data type, requirement flag, and purpose provided for all 8 required domains. | Verified Pass |
-| **Taxonomy Alignment** | Industry Standardization | Strict field naming and conceptual alignment with OSSEM, ECS v8.11, and Sysmon v15. | Verified Pass |
-| **Traceability Envelope** | Task 2 Standard Envelope | Complete JSON Schema (Draft-07) and validated concrete JSON payload for deterministic RCA. | Verified Pass |
-| **OS Sourcing Matrix** | Task 3 Platform Coverage | Full matrix contrasting Windows (ETW, Minifilter, Callbacks, WFP) and Linux (eBPF, LSM, Netfilter). | Verified Pass |
-| **Agent Pipeline Design** | Task 3 Sensor Lifecycle | 4-stage pipeline defined: Lock-free Capture $\rightarrow$ In-memory Enrichment $\rightarrow$ Noise Filter $\rightarrow$ Transport. | Verified Pass |
-| **Hot Ingestion Engine** | Task 4 Epoch 1 Architecture | Ingestion broker (Fabric Eventstream/Kafka) and KQL Database with sub-second queries. | Verified Pass |
-| **Lakehouse Architecture** | Task 4 Epoch 2 Architecture | Medallion Delta Lake (Bronze $\rightarrow$ Silver $\rightarrow$ Gold) and Streaming Feature Store. | Verified Pass |
-| **AI Threat Analytics** | Task 4 Epoch 3 Research | Detailed specifications for Command-Line Autoencoders, LightGBM PE/ELF, and Graph GNNs. | Verified Pass |
-| **Completeness & Integrity** | Specification Rigor | Zero placeholders ("TBD", "etc."); fully qualified technical definitions across all sections. | Verified Pass |
+| **Architectural Separation** | Client Agent Boundary | Native compiled binary (C/C++/Rust/Go); zero heavy runtime frameworks or cloud SDKs. | Specified (not experimentally verified) |
+| **Resource Budgets** | Client Agent Footprint | Strict compliance with $<3\%$ sustained CPU usage and $<150\text{ MB}$ RSS memory limit. | Specified (not experimentally verified) |
+| **8-Group Data Taxonomy** | Task 1 Data Completeness | Explicit schema, data type, requirement flag, and purpose provided for all 8 required domains. | Specified (not experimentally verified) |
+| **Taxonomy Alignment** | Industry Standardization | Strict field naming and conceptual alignment with OSSEM, ECS v8.11, and Sysmon v15. | Specified (not experimentally verified) |
+| **Traceability Envelope** | Task 2 Standard Envelope | Complete JSON Schema (Draft-07) and validated concrete JSON payload for deterministic RCA. | Specified (not experimentally verified) |
+| **OS Sourcing Matrix** | Task 3 Platform Coverage | Full matrix contrasting Windows (ETW, Minifilter, Callbacks, WFP) and Linux (eBPF, LSM, Netfilter). | Specified (not experimentally verified) |
+| **Agent Pipeline Design** | Task 3 Sensor Lifecycle | 4-stage pipeline defined: Lock-free Capture $\rightarrow$ In-memory Enrichment $\rightarrow$ Noise Filter $\rightarrow$ Transport. | Specified (not experimentally verified) |
+| **Hot Ingestion Engine** | Task 4 Epoch 1 Architecture | Ingestion broker (Fabric Eventstream/Kafka) and KQL Database with sub-second queries. | Specified (not experimentally verified) |
+| **Lakehouse Architecture** | Task 4 Epoch 2 Architecture | Medallion Delta Lake (Bronze $\rightarrow$ Silver $\rightarrow$ Gold) and Streaming Feature Store. | Specified (not experimentally verified) |
+| **AI Threat Analytics** | Task 4 Epoch 3 Research | Detailed specifications for Command-Line Autoencoders, LightGBM PE/ELF, and Graph GNNs. | Specified (not experimentally verified) |
+| **Completeness & Integrity** | Specification Rigor | Zero placeholders ("TBD", "etc."); fully qualified technical definitions across all sections. | Specified (not experimentally verified) |

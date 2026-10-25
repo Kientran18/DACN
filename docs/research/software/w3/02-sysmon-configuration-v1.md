@@ -1,6 +1,6 @@
 # Sysmon Configuration v1
 
-**File cấu hình:** `configs/sysmon/sysmon-config.xml` · **Schema:** 4.90 (Sysmon 15.x) · **Trạng thái:** viết xong, **chưa cài thử trên máy thật**.
+**File cấu hình:** `poc/sysmon-collector/configs/sysmon-config.xml` · **Schema khai báo:** 4.90, cần xác minh bằng `Sysmon64.exe -s`. Đã có mẫu Sysmon 15.22 thật W3; chưa chứng minh file XML trong repository chính là cấu hình được áp dụng khi thu mẫu.
 
 ## 1. Thiết kế
 

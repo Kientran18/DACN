@@ -1,6 +1,6 @@
 # Chia sẻ mẫu với Cyber và Data
 
-**Điều kiện trước khi gửi:** đã có mẫu thật (file 03 đến 06 và `samples/json/`), đã che SID/tên máy/tên người dùng (`-Sanitize`), và không chứa thông tin cá nhân.
+**Cảnh báo hiện trạng:** mẫu thật hiện diện ở `references/samples/raw/` và `references/samples/json/`, nhưng `references/samples/raw/export_manifest.json` ghi `sanitized: false`. **Chưa có bằng chứng ẩn danh**; cần tạo bản chia sẻ đã khử định danh riêng và kiểm tra repository public/lịch sử commit.
 
 ## 1. Thông báo mẫu
 

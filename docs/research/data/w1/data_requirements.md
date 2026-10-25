@@ -1,3 +1,9 @@
+# W1 — Bản yêu cầu nghiên cứu dữ liệu EDR (lưu bản yêu cầu lịch sử)
+
+> **Lưu ý:** File này là văn bản đề bài nghiên cứu gốc, không phải kiến trúc đã triển khai hoặc chỉ dẫn vận hành. Các phần Fabric/Kafka/OneLake/native agents mô tả phương án enterprise; Phase 1 thực tế sử dụng Windows Sysmon + Python collector và hướng thiết kế local Bronze/Silver/Gold. Xem `docs/scope/data_pipeline_phase_1_scope.md`. Các ngưỡng CPU/RAM chưa benchmark.
+
+## Nguyên văn đề bài ban đầu
+
 # SYSTEM PROMPT: ENDPOINT SECURITY ARCHITECT & DATA ENGINEER (AGENT ANTIGRAVITY)
 
 ## 1. IDENTITY & ROLE

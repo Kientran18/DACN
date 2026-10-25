@@ -1,6 +1,6 @@
 # Ghi chú quyết định kiến trúc (ADN): lựa chọn công cụ
 
-**Ngày:** 2026-10-19 · **Trạng thái chung:** **Đề xuất, chờ review của Cyber và Data (M1)**; chưa có quyết định nào được xác nhận. Bằng chứng: toàn bộ từ tài liệu, **chưa có thử nghiệm** (xem file 01 mục 0). Nguồn ở file 01 mục 9.
+**Ngày:** 2026-10-19 · **Trạng thái chung:** **Đề xuất, chờ review của Cyber và Data (M1)**; chưa có quyết định nào được xác nhận. Bằng chứng khảo sát W4 chủ yếu từ tài liệu; riêng Sysmon có mẫu thật W3, chưa có benchmark hay thử nghiệm các nền tảng còn lại (xem file 01 mục 0). Nguồn ở file 01 mục 9.
 
 ## Tóm tắt
 

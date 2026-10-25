@@ -1,9 +1,9 @@
 # ADR 0004: Quyết Định Lựa Chọn Công Cụ Thu Thập, Sinh Nhãn Và Tham Khảo Kiến Trúc (Góc Nhìn Dữ Liệu)
 
-* **Trạng thái:** ACCEPTED
+* **Trạng thái:** Quyết định kiến trúc đề xuất từ Data; cần minh chứng xác nhận liên nhóm để nghiệm thu M1
 * **Người đề xuất:** Huỳnh Hữu Nhật (Data Engineer)
 * **Ngày quyết định:** 24/10/2026 (Tuần 4)
-* **Các bên tham gia đồng thuận:** Cyber Security Team, Software Team, Data Engineering Team
+* **Các bên cần xác nhận:** Cyber Security Team, Software Team, Data Engineering Team; chưa có bằng chứng review độc lập liên kết tại đây
 * **Phụ thuộc:** `ADR 0001` (Deterministic UUIDv5), `ADR 0002` (Process Correlation via GUID), `ADR 0003` (Raw Data Preservation), `Endpoint Event Schema v1` (`#15`)
 
 ---
@@ -22,8 +22,8 @@ Dưới góc nhìn của nhóm Kỹ thuật Dữ liệu (Data Engineering), côn
 
 ## 2. Phân Tích Các Công Cụ Khảo Sát (Evaluation Summary)
 
-1. **Microsoft Sysmon (v15.15):**
-   * *Đánh giá:* Hoạt động ở cấp Kernel Minifilter + ETW, cung cấp `ProcessGuid`, `ParentProcessGuid` và `EventRecordID` trên cả 4 nhóm sự kiện với chi phí tài nguyên cực thấp. Đã được kiểm chứng thực nghiệm thành công 100% trong PoC Tuần 2 và Tuần 3.
+1. **Microsoft Sysmon (mẫu lab v15.22; khảo sát Data ghi v15.15):**
+   * *Đánh giá:* Hoạt động ở cấp Kernel Minifilter + ETW, cung cấp `ProcessGuid`, `ParentProcessGuid` và `EventRecordID` trên cả 4 nhóm sự kiện với chi phí tài nguyên cực thấp. Có mẫu thực tế W3 nhưng không có bằng chứng 100% độ phủ/detection hay benchmark.
 2. **Atomic Red Team (`Invoke-AtomicRedTeam` v2.2+):**
    * *Đánh giá:* Không phải là công cụ thu thập (Collector), mà là framework mô phỏng hành vi kẻ tấn công theo chuẩn MITRE ATT&CK. Cung cấp metadata kịch bản (`auto_generated_guid`, `attack_technique`) và nhật ký thực thi (`runner_pid`, `start_time_utc`, `end_time_utc`) lý tưởng để làm nguồn gắn nhãn Ground-Truth.
 3. **Wazuh (v4.9.x):**
@@ -52,9 +52,9 @@ Nhóm chính thức thống nhất phân bổ vai trò cho 5 công cụ như sau
 ## 4. Hệ Quả & Đánh Giá Tác Động (Consequences)
 
 ### Tích cực (Positive)
-* **Bảo toàn 100% thiết kế Tuần 3:** Không phải thay đổi bất kỳ trường nào trong `Endpoint Event Schema v1` hay viết lại logic chuẩn hóa `UUIDv5` và `process_guid`.
+* **Cần đối chiếu schema:** W3 v1 còn khác biệt với Event 5/22 và tên trường; xem W5 schema v1.1 và ADR 0006.
 * **Pipeline Tuần 5 đơn giản, tốc độ cao:** Nhóm Data chỉ cần tập trung xây dựng một luồng ETL vững chắc từ Sysmon JSONL sang DuckDB Silver/Gold mà không bị phân tán nguồn lực vào việc duy trì nhiều bộ parser phức tạp.
 * **Giải quyết bài toán thiếu dữ liệu có nhãn cho AI:** Sự kết hợp giữa **Sysmon (Telemetry)** và **Atomic Red Team (Ground-Truth Metadata)** tạo ra bộ dữ liệu có nhãn chất lượng cao, truy vết chính xác theo cây tiến trình.
 
 ### Ràng buộc & Biện pháp giảm thiểu (Constraints & Mitigations)
-* Việc chỉ dùng Sysmon đòi hỏi tệp cấu hình `sysmon-config.xml` của Software/Cyber Team phải được thiết lập đầy đủ các luật lọc cho Event ID `1, 3, 5, 11, 12, 13, 14, 22, 23` (đã được kiểm chứng và khóa cấu hình ở Tuần 2–3).
+* Việc chỉ dùng Sysmon đòi hỏi tệp cấu hình `sysmon-config.xml` của Software/Cyber Team phải được thiết lập đầy đủ các luật lọc cho Event ID `1, 3, 5, 11, 12, 13, 14, 22, 23` (chưa có bằng chứng toàn bộ cấu hình đã khóa hoặc kiểm chứng từng Event ID).

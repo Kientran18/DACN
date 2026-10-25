@@ -3,7 +3,7 @@
 **Dự án:** Hệ thống Giám sát & Phát hiện Xâm nhập Điểm cuối Cục bộ (Local EDR)  
 **Phiên bản:** 1.0.0  
 **Tác giả:** Data Engineering Team  
-**Đồng thuận:** Cyber Security Team, Software Team  
+**Trạng thái:** Bản đặc tả lịch sử W3; các điểm chưa tương thích đã được hiệu chỉnh bằng schema v1.1 ở W5, không mặc định đã được Cyber/Software phê duyệt  
 **Căn chỉnh chuẩn:** ECS v8.11, OSSEM, Microsoft Sysmon v15+
 
 ---
@@ -21,7 +21,7 @@ Mọi sự kiện thu thập từ điểm cuối Windows khi chuẩn hóa vào t
 | `channel` | `VARCHAR` | Không | `Microsoft-Windows-Sysmon/Operational` | Tên kênh Windows Event Log nguồn. |
 | `record_id` | `BIGINT` | **Có** | Giá trị số nguyên dương | Chỉ số bản ghi tuần tự `EventRecordID` của hệ điều hành. |
 | `hostname` | `VARCHAR` | **Có** | Fallback: `LOCAL-HOST` | Định danh máy trạm phát sinh sự kiện (`Computer`). |
-| `process_guid` | `VARCHAR(36)` | **Có** | UUID chuẩn (đã xóa `{}`) | GUID duy nhất của tiến trình thực hiện hành vi, thay thế triệt để PID. |
+| `process_guid` | `VARCHAR(36)` | **Theo loại event** | UUID chuẩn (đã xóa `{}`), NULL khi event không cung cấp, ví dụ Sysmon 4/16 | GUID của tiến trình theo dõi khi có; không áp dụng cho mọi loại sự kiện. |
 | `raw_data` | `JSON` | **Có** | Chuỗi JSON nguyên bản | Lưu giữ 100% dictionary `EventData` gốc phục vụ điều tra chuyên sâu và kiểm toán. |
 
 *Danh mục chuẩn hóa `event_type`:* `PROCESS_START`, `PROCESS_TERMINATE`, `FILE_CREATE`, `FILE_DELETE`, `REGISTRY_SET_VALUE`, `REGISTRY_CREATE_KEY`, `REGISTRY_DELETE_VALUE`, `NETWORK_CONNECT`.
@@ -37,8 +37,8 @@ Lưu vết toàn bộ vòng đời khởi tạo và kết thúc tiến trình. L
 | :--- | :--- | :---: | :--- | :--- |
 | *Envelope* | *Envelope v1* | **Có** | *Header* | Kế thừa 100% khung bao đóng chung. |
 | `pid` | `INTEGER` | **Có** | `ProcessId` | Định danh tiến trình tạm thời của OS tại thời điểm ghi nhận. |
-| `ppid` | `INTEGER` | **Có** | `ParentProcessId` | Định danh tiến trình cha tạm thời của OS. |
-| `parent_guid` | `VARCHAR(36)` | **Có** | `ParentProcessGuid` | GUID duy nhất của tiến trình cha, dùng dựng Process Tree đệ quy. |
+| `ppid` | `INTEGER` | **Chỉ Event 1** | `ParentProcessId` | Sysmon Event 5 không có trường parent. |
+| `parent_guid` | `VARCHAR(36)` | **Chỉ Event 1** | `ParentProcessGuid` | Sysmon Event 5 không có trường parent. |
 | `image_path` | `VARCHAR` | **Có** | `Image` | Đường dẫn tệp nhị phân thực thi đầy đủ. |
 | `command_line` | `VARCHAR` | Không | `CommandLine` | Toàn bộ cờ và đối số thực thi; dùng tính Shannon Entropy và bắt LOLBins. |
 | `current_working_directory`| `VARCHAR` | Không | `CurrentDirectory` | Thư mục làm việc hiện hành khi tiến trình thực thi. |
@@ -78,18 +78,24 @@ Lưu vết can thiệp khóa cấu hình hệ thống: thiết lập Persistence
 | `details` | `VARCHAR` | Không | `Details` | Dữ liệu gán vào khóa Registry (`new_data_str`). |
 | `image_path` | `VARCHAR` | Không | `Image` | Tiến trình thực hiện ghi đè cấu hình Registry. |
 
-### 2.4 Network Event Schema (Sysmon Event ID 3 & 22)
+### 2.4 Network connection (Event ID 3) và DNS query (Event ID 22)
 Lưu vết mở Socket và kết nối mạng: phát hiện C2 beaconing, tải tệp độc hại từ ngoài vào máy trạm.
 
 | Trường Dữ Liệu | Kiểu Dữ Liệu | Bắt Buộc | Nguồn Sysmon | Mục Đích Phục Vụ Cyber & AI |
 | :--- | :--- | :---: | :--- | :--- |
 | *Envelope* | *Envelope v1* | **Có** | *Header* | Kế thừa 100% khung bao đóng chung. |
-| `protocol` | `VARCHAR` | **Có** | `Protocol` | Giao thức mạng (`TCP`, `UDP`), chuẩn hóa in hoa. |
-| `direction` | `VARCHAR` | **Có** | `Initiated` | Hướng kết nối: `OUTBOUND` (nếu Initiated=true), ngược lại `INBOUND`. |
+| `protocol` | `VARCHAR` | **Chỉ Event 3** | `Protocol` | DNS Event 22 không có trường Protocol/socket tuple. |
+| `direction` | `VARCHAR` | **Chỉ Event 3** | `Initiated` | Không được suy diễn hướng mạng cho DNS Event 22. |
 | `ip_version` | `VARCHAR` | Không | `SourceIsIpv6` | Phiên bản giao thức: `IPv4` hoặc `IPv6`. |
-| `src_ip` | `VARCHAR` | **Có** | `SourceIp` | Địa chỉ IP nguồn. |
-| `src_port` | `INTEGER` | **Có** | `SourcePort` | Cổng dịch vụ nguồn. |
-| `dest_ip` | `VARCHAR` | **Có** | `DestinationIp` | Địa chỉ IP đích liên lạc. |
-| `dest_port` | `INTEGER` | **Có** | `DestinationPort` | Cổng dịch vụ đích. |
+| `src_ip` | `VARCHAR` | **Chỉ Event 3** | `SourceIp` | NULL với DNS Event 22. |
+| `src_port` | `INTEGER` | **Chỉ Event 3** | `SourcePort` | NULL với DNS Event 22. |
+| `dest_ip` | `VARCHAR` | **Chỉ Event 3** | `DestinationIp` | NULL với DNS Event 22; không tự lấy từ QueryResults làm socket IP. |
+| `dest_port` | `INTEGER` | **Chỉ Event 3** | `DestinationPort` | NULL với DNS Event 22. |
 | `image_path` | `VARCHAR` | Không | `Image` | Tiến trình thực hiện kết nối mạng. |
 | `dns_query_name` | `VARCHAR` | Không | `QueryName` (ID 22) | Tên miền phân giải trước khi mở socket. |
+
+## 3. Ghi chú tương thích và hiệu chỉnh W3 → W5 (25/10/2026)
+
+Đây là tài liệu baseline W3 được sửa để không xung đột với mẫu thật; **contract áp dụng cho thiết kế pipeline mới** là [Schema v1.1](../w5/schema_reconciliation_and_dictionary_v1_1.md) và [ADR 0006](../../decisions/0006_schema_v1_1_reconciliation_and_dns_support.md). Các ví dụ Event 5 và 22 xem `references/samples/raw/`. `timestamp` ưu tiên `System.TimeCreated.SystemTime`; `EventData.UtcTime` lưu riêng để điều tra lệch thời gian. Event 29 (`FILE_EXECUTABLE_DETECTED`) là loại dữ liệu bổ sung và không được gán nhầm thành Event 11.
+
+Không suy diễn rằng `raw_data` JSON tại Silver chứa toàn bộ bản XML: raw XML đầy đủ cần bảo toàn riêng tại Bronze. Các trường tùy loại sự kiện không được ép non-null để đạt “coverage” giả.

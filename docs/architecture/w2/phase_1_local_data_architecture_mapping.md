@@ -2,7 +2,7 @@
 
 ## 1. Mục đích
 Tài liệu này đóng vai trò cầu nối (bridge) giữa Đặc tả Kiến trúc Dữ liệu Tổng thể (`edr_data_requirements_architecture.md`) và Phạm vi Giai đoạn 1 (`phase-1-scope.md`). 
-Trong Phase 1, hệ thống vận hành hoàn toàn cục bộ (Local EDR) trên 1 Windows Endpoint, do đó Data Pipeline được down-scale để phù hợp với tài nguyên máy trạm (RAM < 150MB) nhưng vẫn giữ nguyên Schema Pydantic và cấu trúc Medallion.
+Trong Phase 1, hệ thống vận hành hoàn toàn cục bộ (Local EDR) trên 1 Windows Endpoint, do đó Data Pipeline được down-scale để phù hợp với tài nguyên máy trạm (RAM target to be decided/benchmarked (historical documents state <150MB and <200MB inconsistently)) nhưng vẫn giữ nguyên Schema Pydantic và cấu trúc Medallion.
 
 ## 2. Ánh xạ Kiến trúc (Architecture Down-Scaling)
 
