@@ -65,4 +65,4 @@ The new test verifies exact input→Bronze→adapter output, validation, success
 | Cyber (#28) | Contract supports raw traceability design, pending joint review | — |
 | Team (#26) | Not accepted until Data+Software resolve open questions | — |
 
-**References:** [Team #26](https://github.com/Kientran18/DACN/issues/26), [Data #27](https://github.com/Kientran18/DACN/issues/27), [Software #29](https://github.com/Kientran18/DACN/issues/29), [Cyber W05](../../research/cyber/w5/03-security-review-schema-quality-retention.md).
+**References:** [Team #26](https://github.com/Kientran18/DACN/issues/26), [Data #27](https://github.com/Kientran18/DACN/issues/27), [Software #29](https://github.com/Kientran18/DACN/issues/29), [Cyber W05](../../../research/cyber/w5/03-security-review-schema-quality-retention.md).
