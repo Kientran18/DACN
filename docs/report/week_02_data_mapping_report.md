@@ -1,84 +1,29 @@
-# Báo Cáo Tiến Độ Tuần 2: Behavior-to-Telemetry Mapping & Data Requirements
+# Báo cáo W02 Data — Behavior-to-Telemetry Mapping và yêu cầu dữ liệu
 
-**Dự án:** Hệ thống Giám sát & Phát hiện Xâm nhập Điểm cuối Cục bộ (Local EDR)  
-**Vai trò phụ trách:** Data Engineer / Pipeline & Storage  
-**Thời gian hoàn thành:** Tuần 2 (Kế hoạch 12 tuần ĐACN)  
-**Trạng thái:** REVIEW (Sẵn sàng họp chéo với Cyber & Software)
+**Issue:** [#8](https://github.com/Kientran18/DACN/issues/8) · **Trạng thái:** Bộ tài liệu nghiên cứu đã có, review liên nhóm cần xác minh. Không tuyên bố benchmark hay ETL/Gold Layer đã vận hành.
 
----
+## 1. Mục tiêu và nguồn tham chiếu
 
-## 1. Mục Tiêu & Phạm Vi Công Việc Tuần 2
-Tiếp nối tầng lưu trữ Silver Layer (DuckDB) đã xây dựng ở Tuần 1, mục tiêu của Tuần 2 là kết nối logic giữa 3 bộ phận (Cyber, Software, Data). Cụ thể: ánh xạ 13 hành vi tấn công MITRE ATT&CK đã chốt của Cyber thành các Telemetry type, đối chiếu với Event ID của Sysmon (Software), và định nghĩa rõ schema/trường dữ liệu nào phục vụ cho Rule-based, trường nào cho AI/Feature Engineering.
+Ánh xạ [13 MITRE techniques](../scope/selected_mitre_techniques_v1.md) do Cyber lựa chọn sang observable behavior, nguồn telemetry Windows/Sysmon, trường dùng rule detection và ứng viên trích xuất đặc trưng AI.
 
-**Definition of Done (DoD) đạt 100%:** Đã hoàn tất mọi tài liệu ánh xạ, định nghĩa trường dữ liệu và hoàn thành POC nghiên cứu trích xuất đặc trưng.
+Tài liệu bàn giao gốc: [Behavior-to-Telemetry Mapping](week_02_behavior_telemetry_mapping.md), [Windows source mapping](../research/software/w2/02-telemetry-source-mapping-table%20(1).md), [local architecture mapping](../architecture/w2/phase_1_local_data_architecture_mapping.md).
 
----
+## 2. Kết quả phân tích
 
-## 2. Cấu Trúc Tài Liệu Đã Bổ Sung (Architecture & Scope)
-Để tương thích với thiết kế "Local EDR" (không dùng server trung tâm) của Phase 1, các tài liệu sau đã được thêm vào hệ thống:
+- **Process:** Sysmon Event 1 (command line, image, parent lineage, hashes khi có); Event 5 chỉ có dữ liệu terminate, không bắt buộc parent.
+- **File:** Event 11/26/29 cho tạo, xóa, PE creation theo config; không phải full file write/rename. Event 11 thường không cung cấp file size/hash.
+- **Registry:** Event 12/13/14 theo cấu hình, phân loại thao tác và key path; `Details` không luôn đủ để suy ra registry native type.
+- **Network/DNS:** Event 3 là socket metadata; Event 22 chỉ có DNS name/results/status, **không** chứa đầy đủ IP/port socket.
+- **Common:** `hostname`, `timestamp`, `source`, `sysmon_event_id`, `record_id`, `event_id`, `process_guid` *nếu nguồn có*, `raw_data`. Những quyết định W3 được đối chiếu mẫu thực W3 và hiệu chỉnh tại [schema W5 v1.1](../architecture/w5/schema_reconciliation_and_dictionary_v1_1.md).
 
-```text
-ĐACN/
-├── architecture/
-│   ├── phase_1_local_data_architecture_mapping.md   # Down-scale từ Lakehouse xuống DuckDB
-│   └── sysmon_to_silver_schema_mapping.md           # Ánh xạ Sysmon Event ID sang Pydantic Schema
-├── scope/
-│   └── data_pipeline_phase_1_scope.md               # Giới hạn in-scope/out-of-scope của Data Phase 1
-└── research/                                        # Các POC truy vấn & thuật toán cho tầng Gold
-    ├── duckdb_process_tree_recursive_cte.md         
-    ├── duckdb_sliding_window_aggregations.md        
-    └── shannon_entropy_feature_extraction.md
-```
+Bộ rule DET-001..010 của Cyber là **ý tưởng thiết kế**. Mô hình AI/Gold mới có ứng viên như command-line entropy, process tree và sliding-window counters; không có bằng chứng tất cả đã được hiện thực hoặc benchmark trong W2.
 
----
+## 3. Nghiên cứu thuật toán, không phải benchmark
 
-## 3. Các Thành Phần Đã Hoàn Thiện (Deliverables)
-### 3.1. Deliverable 1: Behavior-to-Telemetry Mapping v1
-Bảng ma trận liên kết giữa Kịch bản tấn công (Cyber) $\rightarrow$ Năng lực thu thập (Software) $\rightarrow$ Bảng lưu trữ (Data):
+Có ba tài liệu nghiên cứu: [Recursive CTE](../research/data/w2/duckdb_process_tree_recursive_cte.md), [Window Aggregations](../research/data/w2/duckdb_sliding_window_aggregations.md), [Shannon Entropy](../research/data/w2/shannon_entropy_feature_extraction.md). Chúng minh họa cách tính/toán, **không phải log chạy kiểm thử hay số liệu đo CPU, RAM, truy vấn < 50 ms**. Vì vậy không chấp nhận phát biểu “PoC performance passed” hoặc “DoD đạt 100%” khi chưa có bằng chứng review.
 
-| MITRE Technique | Observable Behavior | Telemetry Type (Sysmon) | Silver Table (DuckDB) | Correlation Key |
-|---|---|---|---|---|
-| **T1204.002 (Malicious File)** | File rơi vào Temp rồi thực thi | File Create (11), Process (1) | `file_events`, `process_events` | `image_path` == `file_path` |
-| **T1059.001 (PowerShell)** | Chạy `powershell` với cờ ẩn, tải payload | Process (1), Network (3) | `process_events`, `network_events` | `process_guid` |
-| **T1059.003 (CMD)** | Word/Excel spawn `cmd.exe` | Process Create (1) | `process_events` | `parent_guid` $\rightarrow$ `process_guid` |
-| **T1547.001 (Run Keys)** | Sửa khóa AutoRun trỏ tới mã độc | Registry (12, 13) | `registry_events` | `process_guid`, `target_object` |
-| **T1105 (Ingress Tool)** | Socket ra ngoài rồi ghi file nhị phân | Network (3), File Create (11) | `network_events`, `file_events` | `process_guid`, time delta |
-| **T1486 (Ransomware)** | Đổi tên/ghi file hàng loạt trong thời gian ngắn | File Write/Rename/Delete (11, 23) | `file_events` | `process_guid`, rate/sec |
+## 4. Review và kế hoạch
 
-*(Lưu ý: Bảng chi tiết 13 kỹ thuật đã được lưu trong hồ sơ hệ thống).*
+Đề nghị Cyber xác nhận technique↔detection fields, Software xác nhận những Event ID bật trong cấu hình/lab và mọi giới hạn collection. Giữ các gap như task auditing, file write/rename, timestamp drift, event-specific nullable fields cho W3–W5. **Kết luận W2:** các sản phẩm thiết kế chính hiện diện; hồ sơ approval liên nhóm và kiểm chứng thực nghiệm còn thiếu.
 
-### 3.2 Deliverable 2: Initial Event Field List (Chuẩn hóa Schema)
-
-* **Common Fields (Mọi event đều phải có):** `event_id` (UUIDv4), `timestamp` (UTC chuẩn hóa, không dùng local time để tính sliding window), `event_type`, `host_id` và đặc biệt là `process_guid` (Thay thế hoàn toàn PID để chống rủi ro PID Reuse trên Windows).
-* **Process Events:** `parent_guid`, `image_path`, `command_line`, `user_name`, `file_sha256`.
-* **File/Registry/Network:** `file_path`, `operation`, `target_object`, `dest_ip`, `dest_port`.
-
-### 3.3 Deliverable 3: Telemetry Requirements (Phân lớp Detection vs AI)
-* **Rule-Based Fields (Yêu cầu độ chính xác cao / Exact Match):**
-    * `image_path` & `parent_image`: Bắt các chuỗi bất thường (Word sinh PowerShell).
-    * `command_line`: Regex bắt cờ mã hóa (`-enc`, `-w hidden`).
-    * `target_object`: Khớp regex các khóa Registry nhạy cảm (`\Run`, `Winlogon`).
-    * `file_sha256`: Phục vụ check hash tĩnh.
-* **AI & Feature Engineering Fields (Yêu cầu tính toán logic / Gold Layer):**
-    * Tốc độ/Tần suất (`file_write_rate_per_sec`): Dùng cho Isolation Forest bắt Ransomware.
-    * Độ hỗn loạn (`cmdline_shannon_entropy`): Nhận diện payload bị obfuscate.
-    * Cấu trúc đồ thị (`process_tree_depth`): Tìm Living-off-the-Land (LotL) qua độ sâu của DAG.
-
----
-
-## 4. Kết Quả Nghiên Cứu POC (Research for Gold Layer)
-Để chuẩn bị cho việc xây dựng Feature Store ở Tuần 3, các thử nghiệm công nghệ sau đã thành công:
-1. **Process Tree Reconstruction:** Đã viết thành công câu truy vấn `WITH RECURSIVE` trên DuckDB (thời gian phản hồi < 50ms) để dựng ngược cây tiến trình từ `process_guid` về `parent_guid`.
-2. **Sliding Window Aggregations:** Tận dụng DuckDB Window Functions (`OVER PARTITION BY`) để đếm tần suất ghi file trong cửa sổ 60s/300s mà không làm ngốn CPU của Python pipeline.
-3. **Shannon Entropy:** Đã thiết kế module Python tính độ hỗn loạn của `command_line` (thang điểm 0.0 - 8.0) để nhận diện lệnh Base64/Obfuscated.
-
----
-
-## 5. Bàn Giao & Kế Hoạch Tiếp Theo (Tuần 3)
-
-1. **Giao tiếp liên team (Đóng Tuần 2):**
-    * Đưa Báo cáo và Ma trận này cho Cyber review chốt quy tắc.
-    * Yêu cầu Software cấu hình Sysmon (`sysmon-config.xml`) đảm bảo bật đủ các Event ID: **1, 3, 5, 11, 12, 13, 14, 22, 23/26**.
-2. **Nhiệm vụ trọng tâm Tuần 3 (Data):**
-    * Code logic trích xuất (module `pipeline/features/extractor.py`) dựa trên 3 POC đã nghiên cứu.
-    * Chạy thử nghiệm trên dữ liệu log (Bronze/Silver) hiện tại và xuất thành công ra định dạng `data/gold/feature_store.parquet`.
+**Nguồn:** [Issue #8](https://github.com/Kientran18/DACN/issues/8), [W3 gaps](../research/cyber/w3/telemetry_gap_list_v1.md), [W3 samples](../../references/samples/raw/export_manifest.json).

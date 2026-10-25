@@ -1,97 +1,31 @@
-# Báo Cáo Tiến Độ Tuần 1: Nền Tảng Dữ Liệu EDR Cục Bộ (Local EDR Data Foundation)
+# Báo cáo tuần 1 — Khảo sát nền tảng dữ liệu Local EDR
 
-**Dự án:** Hệ thống Giám sát & Phát hiện Xâm nhập Điểm cuối Cục bộ (Local EDR)  
-**Vai trò phụ trách:** Data Engineer / Pipeline & Storage  
-**Thời gian hoàn thành:** Tuần 1 (Kế hoạch 12 tuần ĐACN)  
-**Trạng thái:** REVIEW
+**Phạm vi:** W01 Data, issue [#2](https://github.com/Kientran18/DACN/issues/2), tổng hợp theo bằng chứng repository tính đến 25/10/2026. **Trạng thái:** Đã có đặc tả đầu vào, chưa đủ bằng chứng để công bố pipeline DuckDB hoạt động ở tuần 1.
 
----
+## 1. Kết quả có thể kiểm chứng
 
-## 1. Mục Tiêu & Phạm Vi Kỹ Thuật
-Xây dựng pipeline dữ liệu chuẩn hóa theo kiến trúc Medallion chạy hoàn toàn trên môi trường cục bộ Windows, phục vụ việc thu thập, kiểm định (validation) và lưu trữ nhật ký sự kiện bảo mật (Sysmon) làm đầu vào cho mô hình AI và luật phát hiện ở các giai đoạn sau.
+- Đã xác định tám nhóm dữ liệu: process, file, registry, network, file metadata, alert, feature và model prediction. Đặc tả nghiên cứu tại [W1 data requirements](../architecture/w1/edr_data_requirements_architecture.md) và [danh mục yêu cầu](../research/data/w1/data_requirements.md).
+- Đã nhận diện các trường truy vết tối thiểu dự kiến: event identity, timestamp, host/source, process context và raw source data; quy tắc đầy đủ theo Event ID được phát triển ở W3 và hiệu chỉnh tại W5.
+- Đã phác thảo backlog Data/AI và kiến trúc Bronze/Silver/Gold. Đây là **thiết kế**, không có nghĩa đã triển khai tính năng, training pipeline hay feature store.
+- Phạm vi Phase 1 được thống nhất trong [local scope](../scope/data_pipeline_phase_1_scope.md) và [architecture mapping](../architecture/w2/phase_1_local_data_architecture_mapping.md): một Windows endpoint; Sysmon/Windows Event Log → Python collector → Bronze JSONL → Silver DuckDB → Gold/AI theo các tuần thiết kế tiếp theo.
 
----
+## 2. Phân biệt tài liệu tham khảo và code hiện có
 
-## 2. Kiến Trúc & Công Nghệ Đã Hiện Thực
+Bản đặc tả W1 ban đầu còn mô tả Kafka/Fabric, native kernel agent, OneLake, GNN và các giới hạn tài nguyên chưa đo. Đó là **phương án mở rộng/định hướng kiến trúc**, không phải hệ thống đã chạy ở Phase 1. Mốc hiện có trên repository đến 25/10:
 
-### Tech Stack
-* **Ngôn ngữ & Quản trị gói:** Python (chạy trên `.venv` bằng `uv`), pytest.
-* **Xác thực Schema:** Pydantic v2 (Silver schemas).
-* **Cơ sở dữ liệu cục bộ:** DuckDB (OLAP storage dạng nhúng, hỗ trợ truy vấn vectorized tốc độ cao).
-* **Thu thập dữ liệu:** `pywin32` (`win32evtlog`), `xml.etree.ElementTree`.
-* **Định dạng dữ liệu:** JSONL (Bronze raw events), DuckDB/Parquet (Silver/Gold layers).
+| Thành phần | Hiện trạng minh chứng | Giới hạn |
+|---|---|---|
+| Tám nhóm dữ liệu, envelope ban đầu | Tài liệu nghiên cứu W1 | Một số trường được sửa ở W3/W5 |
+| Sysmon file-mode collector | `poc/sysmon-collector/sysmon_collector_poc.py`, mẫu thực W3 | Không phải kết quả nghiệm thu W1; chưa chứng minh live mode |
+| DDL Silver/Gold, validator | `src/pipeline/` (công việc giai đoạn W5) | Không quy công triển khai về tuần 1 |
+| `pipeline/schemas/events.py`, `pipeline/storage/db.py`, `pipeline/ingestion/collector.py`, `pipeline/process_pipeline.py` | **Không có các đường dẫn này trong main** | Không tuyên bố đã code/chạy ở W1 |
+| `test_schema.py`, `test_pipeline_e2e.py`, dữ liệu Silver DuckDB vận hành W1 | **Không có bằng chứng file, log test, DB artifact tương ứng trong main** | Bỏ các phát biểu “3/3”, “19/19”, “pipeline E2E PASS” của bản cũ |
+| Performance (CPU/RAM/latency) | Mục tiêu thiết kế, chưa có benchmark W1 | Không ghi số liệu đo giả |
 
-### Cấu Trúc Thư Mục Chuẩn
-```text
-ĐACN/
-├── requirements.txt                         # Quản lý dependencies (pydantic, duckdb, pyarrow,...)
-├── pytest.ini                               # Cấu hình PYTHONPATH cho testing
-├── data/                                    # Dữ liệu cục bộ (.gitignore)
-│   ├── bronze/                              # Raw Sysmon JSONL & Validation Error log
-│   ├── silver/                              # endpoint_silver.duckdb (4 bảng chuẩn)
-│   └── gold/                                # Sẵn sàng cho feature store & alerts
-├── docs/                                    # Đặc tả kỹ thuật & Báo cáo tiến độ
-│   ├── edr_data_requirements_architecture.md
-│   └── week_01_data_foundation_report.md
-├── experiments/                             # Lưu trữ mã nguồn thử nghiệm (POC Rust Agent cũ)
-└── pipeline/                                # Mã nguồn pipeline Python chính
-    ├── schemas/events.py                    # Định nghĩa Silver Schemas (Pydantic)
-    ├── ingestion/collector.py               # Thu thập đa chế độ (Live Sysmon, Dataset, Mock)
-    ├── storage/db.py                        # Quản lý DuckDB (DDL, Bulk Insert, Query)
-    ├── process_pipeline.py                  # Bronze -> Validation -> Silver Pipeline
-    └── tests/                               # Bộ kiểm thử tự động (E2E & Schema tests)
+## 3. Kết quả bàn giao và tồn đọng
 
-```
+**Bàn giao W1:** các nhóm dữ liệu, trường định danh ban đầu, backlog nghiên cứu, phạm vi Windows/local và điểm giao diện cần thống nhất với Cyber/Software.
 
----
+**Còn cần xác nhận:** người review độc lập, tài liệu backlog và lịch planning/review cuối W1; đánh giá tính phù hợp của các trường từ mẫu Sysmon (W3). Trạng thái issue Closed không thay thế bằng chứng xác nhận từng DoD.
 
-## 3. Các Thành Phần Đã Triển Khai
-
-### 3.1. Silver Data Schemas (`pipeline/schemas/events.py`)
-Định nghĩa 4 schema Pydantic kế thừa từ `BaseEvent` (`event_id`, `timestamp`, `source`, `event_type`, `host_id`, `process_guid`):
-1. **`ProcessEvent` (Sysmon ID 1,5):** `pid`, `ppid`, `parent_guid`, `image_path`, `command_line`, `user_name`, `file_sha256`, `current_working_directory`.
-2. **`FileEvent` (Sysmon ID 11):** `file_path`, `file_size_bytes`, `file_extension`.
-3. **`RegistryEvent` (Sysmon ID 12, 13, 14):** `target_object`, `details`.
-4. **`NetworkEvent` (Sysmon ID 3):** `protocol`. `direction` (INBOUND/OUTBOUND), `source_ip`, `source_port`, `dest_ip`, `dest_port`.
-
-### 3.2. Storage Layer DuckDB (`pipeline/storage/db.py`)
-- Thiết kế 4 bảng DDL tương ứng: `silver_process_events`, `silver_file_events`, `silver_registry_events`, `silver_network_events`.
-- Sử dụng khoá chính `PRIMARY KEY (event_id)` và kiểu dữ liệu chuẩn (`TIMESTAMP`, `INTEGER`, `VARCHAR`).
-- Hiện thực cơ chế `_bulk_insert` dùng tham số liên kết (`executemany`) giúp nạp hàng loạt tối ưu bộ nhớ.
-
-### 3.3. Ingestion & Transformation Pipeline
-1. **`pipeline/ingestion/collector.py`:**
-- Hỗ trợ chế độ `--mode live` đọc trực tiếp kênh `Microsoft-Windows-System/Operational` từ Windows Event Log qua quyền Administrator.
-- Hỗ trợ chế độ `--mode file` nạp dataset an ninh mạng bên ngoài (JSONL).
-- Hỗ trợ chế độ `--mode mock` sinh chuỗi hành vi tấn công giả lập phục vụ kiểm thử cô lập.
-2. **`pipeline/process_pipeline.py`:**
-- Parse trường `UtcTime` chuẩn ISO/UTC, bóc tách `SHA256` hash an toàn.
-- Tách luồng ghi log lỗi độc lập tại `data/bronze/validation_errors.jsonl`, không làm dừng pipeline khi dữ liệu gặp lỗi.
-
----
-
-## 4. Kết Quả Kiểm Thử & Dữ Liệu Thực Tế
-
-### 4.1. Kết Quả Testing Tự Động
-1. **Unit Test Schema (`test_schema.py`):** 3/3 test PASSED (kiểm tra parse dữ liệu chuẩn, chặn trường bắt buộc thiếu, chặn sai enum).
-2. **End-to-End Pipeline Test (`test_pipeline_e2e.py`):** 19/19 tests PASSED.
-- Xác thực tính toàn vẹn số lượng đọc/ghi qua DuckDB.
-- Xác thực bộ lọc chuỗi tấn công (PowerShell, file Temp, Registry Run Key, Outbound Network).
-- Xác thực cơ chế cô lập lỗi dữ liệu JSON hỏng và schema sai lệch.
-
-### 4.2. Dữ Liệu Vận Hành Thực Tế Trong Silver DuckDB
-Dữ liệu đã được nạp thành công từ kênh Sysmon thật của máy trạm và ánh xạ vào database `data/silver/endpoint_silver.duckdb`:
-- **`silver_process_events`:** 141 bản ghi (ghi nhận chính xác các lệnh PowerShell mã hóa Base64 `-enc`, Assembly Reflection).
-- **`silver_file_events`:** 105 bản ghi.
-- **`silver_registry_events`:** 105 bản ghi.
-- **`silver_network_events`:** 121 bản ghi.
-- **Tỷ lệ lỗi kiểm thực (Validation errors):** 0%.
-
----
-
-## 5. Bàn Giao & Kế Hoạch Tiếp Theo (Tuần 2)
-1. **Tuần 1 chính thức đóng lại:** Tầng dữ liệu Silver Layer hoạt động ổn định và sẵn sàng cung cấp dữ liệu sạch cho phân tích.
-2. **Nhiệm vụ trọng tâm Tuần 2:**
-- Lập bảng ma trận ánh xạ kỹ thuật tấn công **MITRE ATT&CK &rarr; Telemetry Table**.
-- Thiết kế module trích xuất đặc trưng `pipeline/features/extractor.py` gom nhóm theo cửa sổ trượt (Sliding Window / Process Tree).
-- Xuất tập đặc trưng sang Tầng Gold dưới dạng file `data/gold/feature_store.parquet` phục vụ huấn luyện mô hình AI.
+**Nguồn:** [Issue #2](https://github.com/Kientran18/DACN/issues/2), [architecture W1](../architecture/w1/edr_data_requirements_architecture.md), [W2 mapping](week_02_behavior_telemetry_mapping.md), [W3 schema](../architecture/w3/endpoint_event_schema_v1.md), [W5 schema reconciliation](../architecture/w5/schema_reconciliation_and_dictionary_v1_1.md).
