@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bronze-event/1.0",
+  "title": "Bronze event record v1 (collector to Bronze)",
+  "description": "One JSON object per line in a Bronze segment file. Consumers must ignore unknown fields (forward compatible). Draft for W05 review.",
+  "type": "object",
+  "required": ["schema_version", "event_id", "source", "channel", "provider", "sysmon_event_id", "record_id",
+               "time_created", "hostname", "host_id", "event_data", "raw_xml", "ingest"],
+  "properties": {
+    "schema_version": {"const": "bronze-event/1.0"},
+    "event_id": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                 "description": "UUIDv5 over (computer|channel|record_id); stable across re-exports"},
+    "source": {"type": "string", "enum": ["SYSMON", "WINDOWS_SECURITY_LOG", "PSUTIL_SNAPSHOT", "COLLECTOR_INTERNAL"]},
+    "channel": {"type": "string", "minLength": 1},
+    "provider": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {"name": {"type": "string", "minLength": 1}, "guid": {"type": ["string", "null"]}}
+    },
+    "sysmon_event_id": {"type": "integer", "minimum": 1},
+    "event_version": {"type": ["integer", "null"]},
+    "level": {"type": ["integer", "null"]},
+    "task": {"type": ["integer", "null"]},
+    "opcode": {"type": ["integer", "null"]},
+    "keywords": {"type": ["string", "null"]},
+    "record_id": {"type": "integer", "minimum": 1},
+    "time_created": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?Z$",
+                     "description": "Original SystemTime string, UTC, kept as text (up to 100 ns)"},
+    "writer_process_id": {"type": ["integer", "null"], "description": "System/Execution@ProcessID: the process that wrote the event (Sysmon), not the monitored process"},
+    "writer_thread_id": {"type": ["integer", "null"]},
+    "log_writer_sid": {"type": ["string", "null"], "description": "System/Security@UserID: account that wrote the event (usually SYSTEM), NOT the user of the monitored process"},
+    "hostname": {"type": "string", "minLength": 1},
+    "host_id": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"},
+    "event_data": {"type": "object", "additionalProperties": {"type": "string"},
+                   "description": "Original EventData names and string values, not renamed or converted"},
+    "raw_xml": {"type": "string", "minLength": 1, "description": "Original event XML text, byte-for-byte as rendered"},
+    "ingest": {
+      "type": "object",
+      "required": ["collector", "mode", "collected_at"],
+      "properties": {
+        "collector": {"type": "object", "required": ["name", "version"],
+                      "properties": {"name": {"type": "string"}, "version": {"type": "string"}}},
+        "mode": {"type": "string", "enum": ["live", "file"]},
+        "collected_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?Z$"},
+        "source_file": {"type": ["string", "null"]},
+        "batch_id": {"type": ["string", "null"]},
+        "seq": {"type": ["integer", "null"]}
+      }
+    }
+  }
+}
