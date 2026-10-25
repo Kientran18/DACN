@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-10-14T02:15:30.1234567Z",
+  "source": "SYSMON",
+  "sysmon_event_id": 1,
+  "event_type": "PROCESS_START",
+  "channel": "Microsoft-Windows-Sysmon/Operational",
+  "record_id": 1001,
+  "hostname": "LAB-HOST",
+  "process_guid": "{AAAAAAAA-0000-0000-0000-000000000001}",
+  "event_id": "b5e2f113-264f-5385-ad69-2a584aa3177a",
+  "raw_data": {
+    "ProcessGuid": "{AAAAAAAA-0000-0000-0000-000000000001}",
+    "ProcessId": "4321",
+    "Image": "C:\\Windows\\System32\\cmd.exe",
+    "CommandLine": "cmd.exe /c echo test",
+    "ParentProcessGuid": "{AAAAAAAA-0000-0000-0000-000000000002}",
+    "ParentProcessId": "1234"
+  },
+  "bronze_source": {
+    "schema_version": "bronze-event/1.0",
+    "source_file": "synthetic_process_event1.xml",
+    "batch_id": "lab-batch-001",
+    "seq": 1
+  }
+}
