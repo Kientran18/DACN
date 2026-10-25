@@ -1,5 +1,8 @@
 # Collector-to-Bronze Interface Contract v1
 
+> **Đối chiếu W05 (#26/#27/#29):** Hợp đồng `bronze-event/1.0` trong file này được chọn làm **canonical Bronze proposal**, xem [hợp đồng chung, schema, ví dụ input/output và adapter](../../../architecture/w5/contracts/README.md). Các đường dẫn cũ dạng `contracts/bronze-event.schema.json` trong nội dung lịch sử phải hiểu theo path thực tế `poc/sysmon-collector/bronze-event.schema.json`; mã `bronze_contract.py` đã được đồng bộ. Data/Software **chưa ký xác nhận**; các đề xuất segment/manifest/Windows live vẫn chưa thành phần chạy production.
+
+
 **Issue:** W05 (#26) · **Trạng thái:** DRAFT chờ review Data và Cyber · **Phụ thuộc:** #16 (PoC), #22 (đánh giá công cụ)
 
 ## 0. Mức bằng chứng (đọc trước)

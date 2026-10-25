@@ -8,7 +8,7 @@ import bronze_contract as bc
 import contract_check as cc
 import sysmon_collector_poc as poc
 
-FIXTURE = Path(__file__).parent / "fixtures" / "synthetic_events.xml"
+FIXTURE = Path(__file__).parent / "configs" / "synthetic_events.xml"
 
 
 @pytest.fixture(scope="module")
