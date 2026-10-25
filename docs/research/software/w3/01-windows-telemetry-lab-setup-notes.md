@@ -1,6 +1,6 @@
 # Windows Telemetry Lab Setup Notes
 
-**Phạm vi:** VM Windows 10/11 dùng chung của team (xem `docs/05-windows-lab-environment.md` của Week 1). Mọi lệnh dưới đây **chưa được chạy thử**; ghi kết quả thật vào mục 9.
+**Phạm vi:** VM Windows 10/11 dùng chung của team (xem `docs/research/software/w1/05-windows-lab-environment.md` của Week 1). Đã có evidence hoạt động lab ngày 18/10/2026 ở `references/samples/`; các lệnh dưới đây là hướng dẫn tái hiện và chưa được xác nhận chạy lại đúng phiên bản trong repo. Ghi kết quả mới vào mục 9.
 
 ## 1. Chuẩn bị
 
@@ -53,7 +53,7 @@ Kỳ vọng: có Event 4 (service started) và Event 16 (config change) ngay sau
 ## 6. Sinh hoạt động thử nghiệm
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\poc\run-poc-activities.ps1
+powershell -ExecutionPolicy Bypass -File .\poc\sysmon-collector\scripts\run-poc-activities.ps1
 # tùy chọn: -RunKeyTest (thử khóa Run, được xóa ngay)  -SkipNetwork
 ```
 Script in ra `Marker for this run: EDR_POC_<timestamp>`; ghi lại marker này.

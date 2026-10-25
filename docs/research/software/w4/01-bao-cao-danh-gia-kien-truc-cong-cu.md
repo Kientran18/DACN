@@ -11,7 +11,7 @@
 | **[?]** | Chưa xác minh được trong đợt khảo sát này |
 | **[X]** | Đã thử nghiệm trên máy lab |
 
-**Không có mục nào trong báo cáo này mang nhãn [X].** Nhóm chưa cài đặt hay chạy thử công cụ nào trong 5 công cụ; mọi đánh giá dựa trên tài liệu. Báo cáo cũng **không có số đo** CPU/RAM/độ trễ vì chưa thử nghiệm.
+**Bằng chứng cập nhật:** khảo sát năm công cụ của W4 dựa chủ yếu trên tài liệu. **Sysmon đã có mẫu XML/JSON từ Windows lab 18/10/2026** (`references/samples/`, manifest v15.22). Chỉ có thể xác nhận các loại event/field quan sát được, không suy ra detector đã hoạt động hay hiệu năng; không có benchmark CPU/RAM.
 
 ## 1. Đầu vào đã đọc
 
@@ -21,7 +21,7 @@
 - Ngân sách tài nguyên ghi không nhất quán giữa các tài liệu (RAM < 150 MB hoặc < 200 MB; CPU < 3% hoặc spike ≤ 5%), chưa có số đo (Q-D5).
 - Chỉ dùng mô phỏng vô hại; 13 kỹ thuật MITRE và DET-001 đến DET-010 của Cyber.
 
-**Kết quả collector PoC Tuần 3:** có mã PoC và 13 unit test đạt **trên sự kiện giả lập**; **chưa có mẫu sự kiện thật**, chưa chạy live, chưa chạy script/config trên Windows. Vì vậy báo cáo này **không dựa vào số liệu thực nghiệm nào từ PoC**.
+**Kết quả W3 được đối chiếu lại:** XML/JSON thật và evidence hoạt động PoC có trong `references/samples/`; parser có unit test giả lập. Chưa có bằng chứng collector Python **live mode** hoặc benchmark trên Windows. Báo cáo W4 chỉ sử dụng mẫu cho nhận diện trường/event, không chứng minh đã chạy detection.
 
 ## 2. Phân biệt vai trò: năm công cụ không thay thế nhau
 
@@ -133,7 +133,7 @@
 
 | Mã | Điều cần xác minh | Cách làm | Trạng thái |
 |---|---|---|---|
-| U1 | Sysmon v15.22 có chạy trên Windows 10 lab không, hay phải dùng Windows 11? | Cài thử trên VM đang dùng | Chưa thực hiện |
+| U1 | Tái hiện phiên bản Sysmon 15.22 và đúng cấu hình repo trên lab Windows | Đối chiếu config đang dùng với export manifest và chạy lại | Có mẫu W3, chưa chứng minh tái hiện đúng config |
 | U2 | Dùng Sysmon tích hợp sẵn của Windows 11 hay bản standalone ghim phiên bản? | Quyết định ở ADN-001 | Chờ review |
 | U3 | Giá trị chuỗi có xuất hiện trong Details của Event 13 không? | Mẫu thật Week 3 (thí nghiệm E5/E6) | Chờ mẫu |
 | U4 | Atomic test nào có sẵn cho từng trong 13 kỹ thuật và test nào an toàn? | `Invoke-AtomicTest <T-id> -ShowDetailsBrief` trên VM | Chưa thực hiện |
