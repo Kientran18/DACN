@@ -1,0 +1,43 @@
+{
+  "schema_version": "bronze-event/1.0",
+  "event_id": "b5e2f113-264f-5385-ad69-2a584aa3177a",
+  "source": "SYSMON",
+  "channel": "Microsoft-Windows-Sysmon/Operational",
+  "provider": {
+    "name": "Microsoft-Windows-Sysmon",
+    "guid": null
+  },
+  "sysmon_event_id": 1,
+  "event_version": null,
+  "level": null,
+  "task": null,
+  "opcode": null,
+  "keywords": null,
+  "record_id": 1001,
+  "time_created": "2026-10-14T02:15:30.1234567Z",
+  "writer_process_id": null,
+  "writer_thread_id": null,
+  "log_writer_sid": null,
+  "hostname": "LAB-HOST",
+  "host_id": "4e9ead22-5957-5cb2-a961-c06b86109986",
+  "event_data": {
+    "ProcessGuid": "{AAAAAAAA-0000-0000-0000-000000000001}",
+    "ProcessId": "4321",
+    "Image": "C:\\Windows\\System32\\cmd.exe",
+    "CommandLine": "cmd.exe /c echo test",
+    "ParentProcessGuid": "{AAAAAAAA-0000-0000-0000-000000000002}",
+    "ParentProcessId": "1234"
+  },
+  "raw_xml": "<Event xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><System><Provider Name=\"Microsoft-Windows-Sysmon\"/><EventID>1</EventID><TimeCreated SystemTime=\"2026-10-14T02:15:30.1234567Z\"/><EventRecordID>1001</EventRecordID><Channel>Microsoft-Windows-Sysmon/Operational</Channel><Computer>LAB-HOST</Computer></System><EventData><Data Name=\"ProcessGuid\">{AAAAAAAA-0000-0000-0000-000000000001}</Data><Data Name=\"ProcessId\">4321</Data><Data Name=\"Image\">C:\\Windows\\System32\\cmd.exe</Data><Data Name=\"CommandLine\">cmd.exe /c echo test</Data><Data Name=\"ParentProcessGuid\">{AAAAAAAA-0000-0000-0000-000000000002}</Data><Data Name=\"ParentProcessId\">1234</Data></EventData></Event>",
+  "ingest": {
+    "collector": {
+      "name": "sysmon_collector_poc",
+      "version": "0.2.0-contract"
+    },
+    "mode": "file",
+    "collected_at": "2026-10-14T02:16:00.000000Z",
+    "source_file": "synthetic_process_event1.xml",
+    "batch_id": "lab-batch-001",
+    "seq": 1
+  }
+}
