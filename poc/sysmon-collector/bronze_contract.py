@@ -1,6 +1,6 @@
 """Bronze record contract v1: reference builder and validator (Week 5 design support).
 
-Builds the record described in contracts/bronze-event.schema.json from a raw Sysmon event XML string.
+Builds the canonical bronze-event/1.0 in bronze-event.schema.json from raw Sysmon XML.
 This is a DESIGN-LEVEL reference: it is tested on SYNTHETIC events and has not run on a real Windows host.
 It keeps the original XML text and the original EventData names, and does no semantic mapping
 (mapping to Silver stays in the Silver transform owned by Data).
@@ -20,7 +20,7 @@ import sysmon_collector_poc as poc
 SCHEMA_VERSION = "bronze-event/1.0"
 COLLECTOR_NAME = "sysmon_collector_poc"
 COLLECTOR_VERSION = "0.2.0-contract"
-SCHEMA_PATH = Path(__file__).parent / "contracts" / "bronze-event.schema.json"
+SCHEMA_PATH = Path(__file__).parent / "bronze-event.schema.json"
 # Fixed namespace: the same computer name always gives the same host_id (Phase 1 is a single host).
 HOST_NAMESPACE = uuid.UUID("0b8f6c3e-5d21-4a7e-8f10-9c2d4e6a1b73")
 
