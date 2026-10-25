@@ -1,56 +1,60 @@
-# Ma Trận Ánh Xạ Dữ Liệu: Sysmon Raw to Silver Layer v1
+# Ánh xạ Sysmon raw sang JSON collector và Silver dự kiến
 
-Tài liệu đặc tả chi tiết logic chuyển đổi (ETL/ELT) từ các trường raw XML/JSON thu thập bởi Sysmon Collector sang các bảng chuẩn hóa trong DuckDB Silver Layer.
+Bản hiệu chỉnh 2026-10-19. Trạng thái chờ review. Tách rõ JSON đã chạy và adapter Silver chưa có code trong main.
 
----
+## Envelope
 
-## 1. Quy Tắc Tiền Xử Lý Chung (Global Normalization Rules)
-1. **Khóa Định Danh `event_id`:** Sử dụng thuật toán `uuid.uuid5` với Namespace DNS cố định:
-   ```python
-   EVENT_ID_NAMESPACE = uuid.UUID("6f1d3c52-8a0e-4b7a-9c1e-3d5a7b9e2f10")
-   key = f"{Computer}|{Channel}|{EventRecordID}"
-   event_id = str(uuid.uuid5(EVENT_ID_NAMESPACE, key))
-   ```
+| Raw XML | JSON collector | Silver dự kiến | Chuyển đổi |
+|---|---|---|---|
+| Computer, Channel, EventRecordID | event_id | event_id | UUIDv5 namespace 6f1d3c52-8a0e-4b7a-9c1e-3d5a7b9e2f10 |
+| TimeCreated.SystemTime | timestamp | timestamp | JSON giữ chuỗi UTC nguồn; adapter DB mới parse timestamp |
+| Hằng số | source | source | SYSMON |
+| System.EventID | sysmon_event_id | sysmon_event_id | integer |
+| System.Channel | channel | channel | string |
+| System.EventRecordID | record_id | record_id | integer |
+| System.Computer | hostname | hostname | Giữ cùng tên chuẩn; host_id ổn định cần thiết kế riêng, không dùng tên máy thay thế ngầm |
+| EventData.ProcessGuid | process_guid | process_guid | Strip {} |
+| EventData | raw_data | raw_data | Dictionary; giữ XML riêng để bảo toàn toàn bộ nguồn |
+| EventID và EventType/Initiated | event_type | event_type | Theo schema v1 |
 
-2. **Loại Bỏ Ngoặc Nhọn GUID:** Tất cả các trường GUID từ Sysmon (`ProcessGuid`, `ParentProcessGuid`) có dạng `{GUID}` phải chạy qua hàm chuẩn hóa:
-    ```python
-    def strip_guid(val: str) -> str:
-        return val.strip().strip("{}") if val else ""
-    ```
+Không gọi namespace tùy chỉnh là uuid.NAMESPACE_DNS. Khóa UUIDv5 chỉ bảo đảm đọc lại cùng record cho cùng ID, chưa giải quyết log clear/reset hoặc clone host.
 
-3. **Múi Giờ UTC Chuẩn:** Trường `TimeCreated.SystemTime` hoặc `UtcTime` được chuyển đổi thành đối tượng Datetime gắn kèm thông tin múi giờ UTC (`tzinfo=timezone.utc`).
+## Payload
 
----
+Các cột dưới nằm trong JSON.data; khi đưa vào bảng Silver thì adapter flatten chúng. Collector chưa ghi DuckDB.
 
-## 2. Ma Trận Ánh Xạ Chi Tiết Theo Loại Sự Kiện 
+| Raw | JSON.data | Silver dự kiến | Loại/logic |
+|---|---|---|---|
+| ProcessId | pid | pid | ID 1/5; int |
+| ParentProcessId | ppid | ppid | Chỉ ID 1; không bắt buộc ID 5 |
+| ParentProcessGuid | parent_guid | parent_guid | Chỉ ID 1; strip {} |
+| Image | image_path | image_path | Các loại có Image |
+| CommandLine | command_line | command_line | ID 1 |
+| CurrentDirectory | current_working_directory | current_working_directory | ID 1 |
+| User | user_name | user_name | Collector hiện ánh xạ ID 1; loại khác giữ raw_data |
+| IntegrityLevel | integrity_level | integrity_level | ID 1 |
+| TerminalSessionId | session_id | session_id | ID 1; int |
+| ParentImage, ParentCommandLine | parent_image, parent_command_line | Cùng tên | ID 1 |
+| Hashes hoặc Hash | hashes, file_sha256 | Cùng tên | Parse key/value; thiếu SHA256 thành null |
+| TargetFilename | file_path, file_extension | Cùng tên | ntpath.splitext cho đường dẫn Windows |
+| IsExecutable, Archived | is_executable, archived | Cùng tên nếu cần | Chỉ khi nguồn có |
+| EventID file | Không có operation trong data | operation nếu bảng cần | Adapter lấy top-level event_type; chưa hiện thực |
+| Registry EventType | operation | operation | Giữ SetValue/CreateKey/DeleteKey/DeleteValue/RenameKey |
+| TargetObject | target_object, hive, key_path, value_name | Cùng tên | value_name chỉ SetValue/DeleteValue |
+| Details | details, new_data_str | Cùng tên nếu cần | new_data_str chỉ SetValue |
+| Details | value_type_inferred | value_type_inferred | DWORD/QWORD/Binary hoặc STRING_UNSPECIFIED |
+| Protocol | protocol | protocol | ID 3; upper |
+| Initiated | direction | direction | ID 3; true OUTBOUND, false INBOUND |
+| SourceIp, SourcePort | src_ip, src_port | src_ip, src_port | ID 3; port int |
+| DestinationIp, DestinationPort | dest_ip, dest_port | dest_ip, dest_port | ID 3; port int |
+| DestinationIsIpv6 | ip_version | ip_version | ID 3; IPv6/IPv4 |
+| QueryName | dns_query_name | dns_query_name | ID 22 |
+| QueryStatus, QueryResults | query_status, query_results | Cùng tên | ID 22 |
 
-| Bảng Silver Đích | Cột Silver Đích | Trường Raw Sysmon Nguồn | Logic Biến Đổi & Chuẩn Hóa |
-| :--- | :--- | :--- | :--- |
-| **Tất cả bảng** | `event_id` | `Computer`, `Channel`, `EventRecordID` | Sinh Deterministic UUIDv5 |
-| **Tất cả bảng** | `timestamp` | `System.TimeCreated.SystemTime` | Parse ISO 8601 UTC string -> Native Timestamp |
-| **Tất cả bảng** | `source` | *Hằng số* | Gán giá trị cứng: `'SYSMON'` |
-| **Tất cả bảng** | `sysmon_event_id` | `System.EventID` | Ép kiểu `int(EventID)` |
-| **Tất cả bảng** | `host_id` | `System.Computer` | Lấy nguyên bản chuỗi máy trạm |
-| **Tất cả bảng** | `process_guid` | `EventData.ProcessGuid` | `strip_guid(ProcessGuid)` |
-| **Tất cả bảng** | `raw_data` | `EventData` | Serialize toàn bộ dictionary sang chuỗi JSON |
-| **silver_process_events** | `event_type` | `System.EventID` | `1` -> `'PROCESS_START'`, `5` -> `'PROCESS_TERMINATE'` |
-| **silver_process_events** | `pid`, `ppid` | `ProcessId`, `ParentProcessId` | Ép kiểu `int` |
-| **silver_process_events** | `parent_guid` | `EventData.ParentProcessGuid` | `strip_guid(ParentProcessGuid)` |
-| **silver_process_events** | `image_path` | `EventData.Image` | Giữ nguyên đường dẫn tệp nhị phân |
-| **silver_process_events** | `command_line` | `EventData.CommandLine` | Giữ nguyên format đối số (UTF-8 an toàn) |
-| **silver_process_events** | `file_sha256` | `EventData.Hashes` | Regex tìm kiếm `SHA256=([A-Fa-f0-9]{64})` |
-| **silver_process_events** | `parent_image` | `EventData.ParentImage` | Giữ nguyên đường dẫn tiến trình cha |
-| **silver_file_events** | `event_type` | `System.EventID` | `11` -> `'FILE_CREATE'`, `23/26` -> `'FILE_DELETE'` |
-| **silver_file_events** | `file_path` | `EventData.TargetFilename` | Giữ nguyên đường dẫn tệp đích |
-| **silver_file_events** | `file_extension` | `EventData.TargetFilename` | `Path(TargetFilename).suffix.lstrip(".").lower()` |
-| **silver_file_events** | `file_sha256` | `EventData.Hashes` | Trích xuất băm SHA256 (sự kiện xóa file ID 23) |
-| **silver_registry_events** | `operation` | `EventData.EventType` | `SetValue`, `CreateKey`, `DeleteKey`, `DeleteValue` |
-| **silver_registry_events** | `target_object` | `EventData.TargetObject` | Giữ nguyên toàn bộ đường dẫn Registry |
-| **silver_registry_events** | `hive` | `EventData.TargetObject` | Lấy phần tử đầu tiên sau split `\`: `parts[0]` |
-| **silver_registry_events** | `value_name` | `EventData.TargetObject` | Lấy phần tử cuối sau split nếu operation là SetValue |
-| **silver_registry_events** | `value_type_inferred` | `EventData.Details` | Nếu `startswith("DWORD")` -> `'REG_DWORD'`; nếu `startswith("Binary")` -> `'REG_BINARY'` |
-| **silver_registry_events** | `details` | `EventData.Details` | Giữ nguyên chuỗi thiết lập cấu hình |
-| **silver_network_events** | `protocol` | `EventData.Protocol` | In hoa chuỗi giao thức: `.upper()` |
-| **silver_network_events** | `direction` | `EventData.Initiated` | `'OUTBOUND'` nếu `Initiated.lower() == 'true'`, ngược lại `'INBOUND'` |
-| **silver_network_events** | `source_ip`, `dest_ip` | `SourceIp`, `DestinationIp` | Giữ nguyên chuỗi địa chỉ IP |
-| **silver_network_events** | `source_port`, `dest_port` | `SourcePort`, `DestinationPort` | Ép kiểu `int` |
+## Null và validation
+
+Theo [schema](endpoint_event_schema_v1.md), required phụ thuộc Event ID. Không áp PPID cho ProcessTerminate hoặc socket fields cho DNS. Giá trị không có không được thay bằng dữ liệu giả; missing size dùng null. Các nhánh 4/16 dùng schema quản trị riêng, không bắt buộc process_guid.
+
+## Tình trạng kiểm chứng
+
+Bốn XML ID 1/11/13/3 tái tạo được đúng bốn JSON đã commit (3/2/2/1). ID 5/22 cần kiểm tra payload riêng. Việc parse/normalize mẫu không chứng minh validator Pydantic, DuckDB, pipeline liên tục hoặc Python live mode đã chạy. Tên cũ host_id/source_ip/source_port chỉ được dùng qua adapter có tên và contract rõ ràng.

@@ -1,18 +1,18 @@
 # Raw File Event Sample (Sysmon Event 11, 26, 29, 15)
 
-**Trạng thái: CHƯA THU THẬP.** Dùng bước 3 của `run-poc-activities.ps1`. File nguồn: `samples/raw/raw_file_create_event11.xml`, `raw_file_delete_event26.xml`, `raw_file_executable_event29.xml`.
+**Trạng thái: ĐÃ CÓ MẪU THẬT.** Xem [XML đã commit](../../../../references/samples/raw/raw_file_create_event11.xml) và [index](00-index-and-dod.md). Các bảng kiểm tra cần reviewer xác nhận; không coi placeholder bên dưới là dữ liệu. Dùng bước 3 của `run-poc-activities.ps1`. File nguồn: `samples/raw/raw_file_create_event11.xml`, `raw_file_delete_event26.xml`, `raw_file_executable_event29.xml`.
 
 ## Mẫu thật – Event 11 (dán vào đây)
 ```xml
-<!-- PASTE REAL SYSMON EVENT 11 HERE -->
+<!-- Xem file XML đã liên kết ở đầu trang; không sao chép mẫu giả vào đây.
 ```
 ## Mẫu thật – Event 26
 ```xml
-<!-- PASTE REAL SYSMON EVENT 26 HERE -->
+<!-- Xem file XML đã liên kết ở đầu trang; không sao chép mẫu giả vào đây.
 ```
 ## Mẫu thật – Event 29 (`_drop.exe`)
 ```xml
-<!-- PASTE REAL SYSMON EVENT 29 HERE (or note that it did not appear) -->
+<!-- Xem file XML đã liên kết ở đầu trang; không sao chép mẫu giả vào đây.
 ```
 
 ## Kiểm tra từng trường

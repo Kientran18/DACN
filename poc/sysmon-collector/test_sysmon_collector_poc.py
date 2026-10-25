@@ -1,17 +1,18 @@
 """Unit tests for sysmon_collector_poc.
 
-All input here is SYNTHETIC (poc/fixtures/synthetic_events.xml). Passing these tests shows that the
+All input here is SYNTHETIC (configs/synthetic_events.xml). Passing these tests shows that the
 parser and normalizer work on events shaped like Sysmon output; it does NOT show that live
 collection works on a real machine.
 """
 import json
+import sys
 from pathlib import Path
 
 import pytest
 
 import sysmon_collector_poc as c
 
-FIXTURE = Path(__file__).parent / "fixtures" / "synthetic_events.xml"
+FIXTURE = Path(__file__).parent / "configs" / "synthetic_events.xml"
 
 
 @pytest.fixture(scope="module")
@@ -110,6 +111,44 @@ def test_cli_jsonl_output(tmp_path):
     assert len(lines) == 4 and all(json.loads(line) for line in lines)
 
 
-def test_live_mode_gives_clear_error_without_pywin32():
+def test_live_mode_gives_clear_error_without_pywin32(monkeypatch):
+    monkeypatch.setitem(sys.modules, "win32evtlog", None)
     with pytest.raises(RuntimeError, match="pywin32"):
         next(c.iter_events_live())
+
+
+SAMPLES = Path(__file__).resolve().parents[2] / "references" / "samples"
+
+
+@pytest.mark.parametrize("name,raw_name,count", [
+    ("process", "raw_process_create_event1", 3),
+    ("file", "raw_file_create_event11", 2),
+    ("registry", "raw_registry_setvalue_event13", 2),
+    ("network", "raw_network_connect_event3", 1),
+])
+def test_real_xml_reproduces_committed_json(name, raw_name, count):
+    parsed = list(c.iter_events_from_file(SAMPLES / "raw" / f"{raw_name}.xml"))
+    actual = [c.normalize(event) for event in parsed]
+    expected = json.loads((SAMPLES / "json" / f"{name}.json").read_text(encoding="utf-8-sig"))
+    assert len(actual) == count
+    assert actual == expected
+
+
+def test_real_termination_does_not_require_creation_fields():
+    parsed = next(c.iter_events_from_file(SAMPLES / "raw" / "raw_process_terminate_event5.xml"))
+    event = c.normalize(parsed)
+    assert event["event_type"] == "PROCESS_TERMINATE"
+    assert event["data"]["pid"] is not None
+    assert "ppid" not in event["data"]
+    assert "parent_guid" not in event["data"]
+
+
+def test_real_dns_has_separate_payload_and_correlates_with_connection():
+    dns = c.normalize(next(c.iter_events_from_file(SAMPLES / "raw" / "raw_dns_query_event22.xml")))
+    network = c.normalize(next(c.iter_events_from_file(SAMPLES / "raw" / "raw_network_connect_event3.xml")))
+    assert dns["event_type"] == "DNS_QUERY"
+    assert dns["data"]["dns_query_name"] == "example.com"
+    assert "src_port" not in dns["data"]
+    assert "protocol" not in dns["data"]
+    assert dns["process_guid"] == network["process_guid"]
+    assert dns["hostname"] == network["hostname"]

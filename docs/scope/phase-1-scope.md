@@ -1,4 +1,4 @@
-# Phase 1 Scope — Windows Endpoint Security Prototype
+# Phạm vi giai đoạn 1 nghiên cứu và thiết kế Endpoint Security
 
 ## 1. System Scope
 
@@ -114,3 +114,11 @@ Giả định các nguồn threat:
 - Prototype chạy trên một endpoint
 - Không có central server trong Phase 1
 - Không yêu cầu enterprise-scale detection
+
+## Cập nhật phạm vi theo kế hoạch 12 tuần
+
+Phần chức năng ở trên là mục tiêu thiết kế của hệ thống đề xuất. Trong Đồ án Chuyên ngành, nhóm nghiên cứu, thiết kế và kiểm chứng bằng PoC tối thiểu; không cam kết hiện thực đầy đủ EPP/EDR, response, AI và dashboard trong 12 tuần. Phần hiện thực và triển khai thử nghiệm đầy đủ chuyển sang Luận văn Tốt nghiệp.
+
+Đầu ra bắt buộc gồm tài liệu, schema/mapping, mẫu telemetry thật và minimal collector tuần 3. PoC mở rộng đến 2–5 detection rules/alert/dashboard là tùy tiến độ. Windows và một endpoint là phạm vi khảo sát chính. Linux, cloud/Fabric, enterprise-scale, kernel driver, GNN và triển khai backend tập trung trong các tài liệu nghiên cứu cũ là tham khảo hoặc Phase 2, chưa phải quyết định sử dụng.
+
+Backlog hiện hành: [12 tuần](../project/research-backlog-12-weeks.md). Owner/reviewer và bằng chứng: [review tuần 1–3](../project/week-01-03-review-and-ownership.md).
