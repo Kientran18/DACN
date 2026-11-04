@@ -98,6 +98,8 @@ Dự án được chia thành hai giai đoạn.
 
 **Thời gian dự kiến:** 12 tuần.
 
+**Kế hoạch chi tiết đã đồng bộ với Local EDR v2:** [Kế hoạch W1–W12 (W6–W12 cập nhật)](docs/plan/ke-hoach-12-tuan-dacn-edr-v2-w6-w12.md). Giữ nguyên trọng tâm W1–W5 và bốn milestone ban đầu; W7 vẫn là Static/Whitelist/Signature, W8 vẫn là AI/Risk/Anomaly.
+
 Trọng tâm là nghiên cứu các công nghệ bảo mật endpoint, đánh giá công cụ mã nguồn mở, xác minh telemetry trên Windows, thiết kế các module và xây dựng kiến trúc tổng thể.
 
 | Thời gian | Nội dung trọng tâm | Kết quả dự kiến |
