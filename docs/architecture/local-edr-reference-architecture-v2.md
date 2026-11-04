@@ -302,16 +302,34 @@ Windows 10/11 (VirtualBox lab / 1 host)
 
 **Priority P0 trước khi gọi kiến trúc đã hiện thực:** (i) owner sign-off Bronze 1.0 + adapter & event-specific schema; (ii) lineage and identity epoch; (iii) Windows collector lifecycle/test; (iv) alert contract fields & permissions.
 
-## 11. Roadmap thực thi và Definition of Done
+## 11. Roadmap thực thi và Definition of Done — aligned với kế hoạch gốc W6–W12
 
-| Đợt | Nội dung tối thiểu | Bằng chứng nghiệm thu |
+> **Lịch ưu tiên được đồng bộ với [Kế hoạch 12 tuần DACN cập nhật W6–W12](../plan/ke-hoach-12-tuan-dacn-edr-v2-w6-w12.md)** (kế thừa file Word gốc do nhóm cung cấp). W1–W5 không thay đổi; **W7 vẫn là Static/Whitelist/Signature, W8 vẫn là AI/Risk/Anomaly**. Các mô-đun về durability/health là workstream hỗ trợ chéo, không dùng thay nội dung học thuật của các tuần.
+
+| Tuần / owner chính | Mục tiêu gốc phải giữ | Bổ sung phù hợp EDR v2 | Minh chứng / DoD thiết kế |
+| --- | --- | --- | --- |
+| **W06 — Cyber lead** | Detection Engine: rule model, process/file/registry/network/parent-child, severity, traceability | Rule Registry/versioning, single event + temporal correlator, evaluation states, evidence completeness; DET-001/003/010 ưu tiên | Detection Architecture v1; 10 rule specifications; Alert/Evidence Contract; positive/benign/missing-data fixtures; Data/Software interface review |
+| **W07 — Cyber + Data; Software interface** | Static Analysis, Whitelist và Threat Knowledge/Signature | SHA-256, entropy, PE/signature metadata, versioned local IOC/allowlist, suspicious candidate review lifecycle | Static Feature List; Whitelist/Signature Schema; Candidate Workflow/Review State; signed/allowlist policy và example fixtures |
+| **W08 — Data/AI lead** | AI Design, Risk Scoring/Anomaly Detection, datasets/baselines/evaluation plan | Feature lineage, risk aggregator contract, model output/version, leakage & false-positive evaluation methodology | AI Design; Feature List; Dataset Plan; Model Baseline Plan; Precision/Recall/F1/FPR Evaluation Plan |
+| **M2 — cuối W08** | Hoàn thành **thiết kế lõi** Data Pipeline W05 + Detection W06 + Static W07 + AI W08 | Inter-module compatibility review, residual risk & implementation backlog | Không đòi live enterprise EDR hoặc production ML |
+| **W09 — Cyber lead** | Investigation, Process Tree, Timeline, Hunting, Alert/Incident, Response design | Raw evidence provenance; manual response approval, audit, protected-target allowlist, recovery metadata | Investigation/Response Design; Incident Schema; Hunt Query Set; Dashboard Wireframe; safety gate |
+| **W10 — Cyber scenarios, Data expected, Software VM** | Test Scenario Matrix theo MITRE/Atomic Red Team, expected telemetry/detection/alerts và demo plan | Positive/negative/missing evidence; crash/replay/DLQ/late-event drills; measured-vs-expected evidence | Test Scenario Matrix; Demo Plan; Expected Telemetry/Alert Set; Test Environment Notes; optional verified PoC |
+| **M3 — cuối W10** | Thiết kế Investigation/Response và bộ kịch bản kiểm thử/demo hoàn tất | Defensible evidence and limitations | Không nhận đã có response production nếu chỉ có workflow |
+| **W11 — Cả nhóm** | Tổng hợp, review và đóng băng kiến trúc: Agent/Collector/Pipeline/Detection/AI/Storage/Risk/Alert/Investigation/Dashboard | Trust boundaries, control/operations planes, versioned contracts, ADR/open-decision log | Architecture Final v1; Component/Data Flow/Data Model/Sequence; ADRs; owners and cross-team design freeze |
+| **W12 — Cả nhóm** | Validation, final report/slide, architecture package, backlog Luận văn, optional PoC demo | Requirements→design→test traceability, attack coverage & gap disclosure, evidence-based status | Final Report; Presentation; Final Architecture Package; Thesis Backlog; optional demo |
+| **M4 — cuối W12** | Giai đoạn 1 bàn giao thiết kế kỹ thuật làm đầu vào cho Luận văn | Experimental reproducibility + bounded scope | Phân biệt Designed / Implemented / Tested / Deferred |
+
+### Workstream kỹ thuật xuyên suốt (không thay trọng tâm từng tuần)
+
+| Workstream | Owner | Cách lồng vào tiến độ |
 | --- | --- | --- |
-| **W06 (Cyber-led)** | Rule Model/Registry, Evaluation Contract, correlation design, DET-001/003/010 ưu tiên; ADR/diagram review | Rule specs, labelled fixtures positive/negative/missing, Mermaid, peer sign-off |
-| **W07 (Software+Data)** | Collector→sealed Bronze→Silver persistent replay (phụ thuộc plan thực tế), ingress metrics, P0 fixes | Crash/restart + duplicate + bad record + log-reset drills trên Windows VM |
-| **W08 (Team)** | Bounded rule PoC + alert store, process tree + evidence trace query | XML→Silver→DetectionResult→alert→raw for one lab scenario; no fabricated threat claim |
-| **W09+** | Investigation UI/CLI, human-approval response, safe restore; rule tuning | Real analyst query workflow, dry-run/approval/audit/rollback |
-| **W10–W12** | Labelled benign and safe adversary-like tests; QA, profiling, documents/demo | Measured false positives, detection coverage by rule; resource budgets benchmarked on VM |
-| **Later phase** | AI model, IOC feeds, richer sensors, optional remote console and XDR connectors | Isolated ADRs, security tests; only after Phase 1 works |
+| **P0: Hợp đồng Bronze/Silver** | Data + Software, Cyber review | Chốt W05 \`bronze-event/1.0\`, mapping, nullable rules, raw reference trước khi test tích hợp; không giả định owner đã ký |
+| **P0: Evidence/identity** | Data + Software | Traceability, \`channel_epoch\`/log reset, Silver provenance ở W06 contract, W09 hunting, W10 tests |
+| **Durable Collector/Replay PoC** | Software + Data | Spike W07–W10 **nếu có thời gian**; không thay W07 Static hoặc W08 AI |
+| **Telemetry Health/Privacy/Retention** | Software + Cyber + Data | Cross-cutting policy, failure test W10, architecture freeze W11 |
+| **Response Safety/Auth/Audit** | Cyber + Software | W09 design, W10 safe tests; Phase 1 default **alert-only** |
+
+**Ranh giới nghiệm thu:** toàn bộ W06–W12 là **thiết kế có thể hiện thực và kiểm chứng PoC có kiểm soát**. PoC gốc tùy tiến độ: Windows Sysmon/Collector → JSON/Bronze → normalize → **2–5 detection rules** → alert/dashboard đơn giản. Không yêu cầu continuous production service, full remote response, cloud XDR, AI production/large training corpus. Thời điểm W10 đo detection quality chỉ công bố chỉ số khi có dữ liệu gắn nhãn và kết quả chạy thực tế.
 
 ### Test matrix tối thiểu
 
