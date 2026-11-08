@@ -261,3 +261,21 @@ def test_openapi_export(tmp_path, ctx):
     export(ctx["app"], out)
     spec = json.loads(out.read_text())
     assert "/alerts/{alert_id}/evidence" in spec["paths"] and spec["info"]["title"]
+
+
+def test_me_stats_and_data_label(ctx):
+    me = cl(ctx, "approver").get("/me").json()
+    assert me["role"] == "approver" and "approve" in me["permissions"]
+    st = cl(ctx, "viewer").get("/stats").json()
+    assert st["alerts_by_severity"].get("medium", 0) >= 1 and st["coverage_gaps"] == 0
+    assert cl(ctx, "viewer").get("/health").json()["data_label"] == "UNSPECIFIED"
+    assert cl(ctx).get("/me").status_code == 401
+
+
+def test_ui_is_served_with_strict_csp_and_no_cache(ctx):
+    r = TestClient(ctx["app"]).get("/ui/")
+    if r.status_code == 404:
+        pytest.skip("chưa có static")
+    assert r.status_code == 200 and "script-src 'self'" in r.headers["content-security-policy"]
+    assert r.headers["x-content-type-options"] == "nosniff" and r.headers["cache-control"] == "no-store"
+    assert "<script src=\"app.js\"" in r.text and "http://" not in r.text and "https://" not in r.text

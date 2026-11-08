@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DACN EDR Dashboard</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="sample-banner" class="sample-banner" hidden>DỮ LIỆU MẪU (SYNTHETIC) — không phải telemetry thật</div>
+<header class="top">
+  <div class="brand">DACN EDR <span class="muted">· bảng điều khiển cục bộ</span></div>
+  <nav id="nav" aria-label="Điều hướng" hidden>
+    <a href="#/overview">Tổng quan</a>
+    <a href="#/events">Telemetry</a>
+    <a href="#/alerts">Alerts</a>
+    <a href="#/response">Response</a>
+    <a href="#/rules">Rules</a>
+  </nav>
+  <div class="who">
+    <span id="mode-badge" class="badge" hidden></span>
+    <span id="whoami" class="muted"></span>
+    <button id="logout" type="button" hidden>Đăng xuất</button>
+  </div>
+</header>
+<main id="view" tabindex="-1"></main>
+<footer class="foot muted">Thời gian hiển thị theo <strong>UTC</strong>. Giao diện chỉ đọc dữ liệu qua API cục bộ; không sửa Bronze/Silver/rule.</footer>
+<dialog id="modal"><div id="modal-body"></div></dialog>
+<script src="app.js"></script>
+</body>
+</html>

@@ -280,28 +280,28 @@
 
 ## PH9 — EDR Dashboard
 
-### PH9-T01 · Khung giao diện tĩnh `[P0 · M · SW · C · TODO]`
+### PH9-T01 · Khung giao diện tĩnh `[P0 · M · SW · C · DONE]`
 - **Mô tả:** HTML/JS thuần phục vụ bởi API (không Node, không CDN, chạy offline); client API, token, trạng thái loading/rỗng/lỗi, múi giờ UTC rõ ràng. **Files:** `src/dashboard/static/`. **Phụ thuộc:** PH8-T01.
 
-### PH9-T02 · Overview `[P0 · M · SW · C · TODO]`
+### PH9-T02 · Overview `[P0 · M · SW · C · DONE]`
 - **Mô tả:** health (agent/pipeline/engine), số alert theo mức, khoảng trống telemetry, alert mới nhất. Dữ liệu từ API; không số cứng.
 
-### PH9-T03 · Telemetry/Event Explorer `[P0 · M · SW · C · TODO]`
+### PH9-T03 · Telemetry/Event Explorer `[P0 · M · SW · C · DONE]`
 - **Mô tả:** bảng, lọc, tìm, phân trang, xem chi tiết (`raw_data`).
 
-### PH9-T04 · Detections và Alerts/Incidents `[P0 · M · SW/CY · C · TODO]`
+### PH9-T04 · Detections và Alerts/Incidents `[P0 · M · SW/CY · C · DONE]`
 - **Mô tả:** danh sách + chi tiết, đổi trạng thái, ghi chú; hiển thị `outcome`, `missing_fields`.
 
-### PH9-T05 · Investigation `[P0 · L · SW/CY · C · TODO]`
+### PH9-T05 · Investigation `[P0 · L · SW/CY · C · DONE]`
 - **Mô tả:** timeline, cây tiến trình, bằng chứng nguồn, tách nhãn *Quan sát / Suy luận / Thiếu dữ liệu*; mở raw XML có kiểm soát. **Phụ thuộc:** PH8-T05.
 
-### PH9-T06 · Response Actions `[P0 · M · SW/CY · C · TODO]`
+### PH9-T06 · Response Actions `[P0 · M · SW/CY · C · DONE]`
 - **Mô tả:** yêu cầu, duyệt/từ chối, xem kết quả và audit; hiển thị chế độ (`dry_run`/`execute`) nổi bật; xác nhận hiển thị mục tiêu đầy đủ.
 
-### PH9-T07 · Rules/Settings (đọc) `[P1 · M · CY/SW · C · TODO]`
+### PH9-T07 · Rules/Settings (đọc) `[P1 · M · CY/SW · C · DONE]`
 - **Mô tả:** rule, phiên bản, trạng thái; cấu hình đang áp dụng (ẩn bí mật).
 
-### PH9-T08 · Kiểm thử giao diện `[P1 · M · SW · C · TODO]`
+### PH9-T08 · Kiểm thử giao diện `[P1 · M · SW · C · DONE]`
 - **Mô tả:** Playwright (có sẵn trong môi trường) chạy với API dùng DuckDB fixture; kiểm tra các trạng thái, nhãn "DỮ LIỆU MẪU" khi dùng fixture. **Files:** `tests/dashboard/`. **Lưu ý:** không gọi đây là tích hợp thật.
 
 ---

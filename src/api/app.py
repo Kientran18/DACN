@@ -10,11 +10,12 @@ from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query as Q, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from alerts.evidence import resolve_evidence
-from alerts.store import AlertStore, InvalidTransition
+from alerts.store import TRANSITIONS, AlertStore, InvalidTransition
 from alerts.timeline import process_tree, timeline
 from pipeline.query import Query
 from response.actions import ActionError, ActionStore
@@ -85,8 +86,16 @@ def _alert_out(a: dict) -> dict:
     return a
 
 
+STATIC_DIR = Path(__file__).resolve().parents[1] / "dashboard" / "static"
+CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; "
+       "base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+
+
 def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy, bronze_dir: Path,
-               health_path: Optional[Path] = None) -> FastAPI:
+               health_path: Optional[Path] = None, data_label: str = "UNSPECIFIED") -> FastAPI:
+    """data_label: 'SAMPLE' = dữ liệu mẫu/synthetic (UI hiện biểu ngữ nổi bật); 'UNSPECIFIED' = chưa xác nhận nguồn."""
+    if data_label not in ("SAMPLE", "UNSPECIFIED"):
+        raise ValueError("data_label không hợp lệ")
     app = FastAPI(title="DACN EDR Local API", version="0.1.0-mvp",
                   description="API cục bộ (loopback). Dữ liệu mẫu/synthetic nếu có sẽ được gắn nhãn ở nguồn.")
     lock = threading.RLock()
@@ -120,7 +129,12 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
         cl_ = request.headers.get("content-length")
         if cl_ and cl_.isdigit() and int(cl_) > MAX_BODY:
             return _err(413, "E-TOO_LARGE", "nội dung yêu cầu quá lớn")
-        return await call_next(request)
+        resp = await call_next(request)
+        resp.headers["X-Content-Type-Options"] = "nosniff"
+        resp.headers["Cache-Control"] = "no-store"
+        if request.url.path.startswith("/ui"):
+            resp.headers["Content-Security-Policy"] = CSP
+        return resp
 
     # -- xác thực ---------------------------------------------------------------------------
     def need(*perms: str):
@@ -148,6 +162,19 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
     def livez():
         return {"status": "ok"}
 
+    @app.get("/me", tags=["health"])
+    def me(who: dict = Depends(need("read", "responder"))):
+        return {"actor": who["actor"], "role": who["role"], "permissions": sorted(ROLES[who["role"]])}
+
+    @app.get("/stats", tags=["health"])
+    def stats(_: dict = Depends(need("read"))):
+        with lock:
+            by = lambda sql: {r[0]: r[1] for r in con.execute(sql).fetchall()}
+            return {"alerts_by_severity": by("select severity, count(*) from alerts group by 1"),
+                    "alerts_by_status": by("select status, count(*) from alerts group by 1"),
+                    "coverage_gaps": con.execute("select count(*) from coverage_gaps").fetchone()[0],
+                    "actions_by_status": by("select status, count(*) from response_actions group by 1")}
+
     @app.get("/health", tags=["health"])
     def health(_: dict = Depends(need("read"))):
         with lock:
@@ -161,7 +188,7 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
         except (OSError, ValueError):
             pass
         lag = (datetime.now(timezone.utc) - led[3]).total_seconds() if led[3] else None
-        return {"agent": agent,
+        return {"data_label": data_label, "agent": agent,
                 "pipeline": {"segments_ingested": led[0], "records_read": int(led[2]), "records_quarantined": int(led[1]),
                              "dlq_rows": dlq, "last_ingest_utc": led[3], "seconds_since_last_ingest": lag},
                 "engine": {"rules_loaded": len(rules), "rules_enabled": sum(r["status"] == "enabled" for r in rules.values()),
@@ -226,7 +253,9 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
     @app.get("/alerts/{alert_id}", tags=["alerts"])
     def alert(alert_id: str, _: dict = Depends(need("read"))):
         with lock:
-            return _alert_out(get_alert(alert_id))
+            out = _alert_out(get_alert(alert_id))
+        out["allowed_transitions"] = sorted(TRANSITIONS.get(out["status"], set()))
+        return out
 
     @app.get("/alerts/{alert_id}/history", tags=["alerts"])
     def history(alert_id: str, _: dict = Depends(need("read"))):
@@ -393,6 +422,12 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
             alerts.record(f"executor({who['actor']})", body.action, "response_action", body.target_id, body.reason)
         return {"ok": True}
 
+    @app.get("/", include_in_schema=False)
+    def root():
+        return RedirectResponse("/ui/")
+
+    if STATIC_DIR.is_dir():
+        app.mount("/ui", StaticFiles(directory=str(STATIC_DIR), html=True), name="ui")
     return app
 
 
