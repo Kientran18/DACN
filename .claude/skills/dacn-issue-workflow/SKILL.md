@@ -1,6 +1,6 @@
 ---
 name: dacn-issue-workflow
-description: Dùng khi triển khai một GitHub Issue của DACN, từ đọc issue và acceptance criteria, phân tích module, lập kế hoạch, tạo branch theo Git Convention, triển khai đúng phạm vi, chạy test và regression, đến báo cáo. Chỉ commit, push hoặc tạo Pull Request khi người dùng yêu cầu rõ; không tự merge, không đổi main.
+description: Quy trình làm một GitHub Issue của DACN từ đầu đến cuối. Tự dùng khi người dùng giao làm, triển khai hoặc xử lý issue số n, hoặc bắt đầu một đầu việc có issue - đọc issue và acceptance criteria, phân tích module, kiểm tra thay đổi đang có, lập kế hoạch, tạo branch đúng convention, triển khai, test, đối chiếu tiêu chí, báo cáo. Chỉ commit, push hoặc tạo PR khi người dùng yêu cầu; không merge.
 ---
 
 # Quy trình triển khai GitHub Issue (DACN)
@@ -79,3 +79,8 @@ Chỉ khi người dùng yêu cầu rõ ràng sau khi đã xem báo cáo. Khi đ
 - [ ] Toàn bộ test đã chạy lại, kết quả có lệnh và thời điểm
 - [ ] Từng acceptance criteria có bằng chứng
 - [ ] Chưa commit/push/PR nếu người dùng chưa yêu cầu
+
+## Phối hợp với skill khác
+- Trước đó: writing-plans
+- Cùng lúc: test-driven-development, dacn-contract-review (nếu chạm contract), systematic-debugging (khi có lỗi)
+- Sau đó: verification-before-completion, dacn-security-review, dacn-documentation-handover

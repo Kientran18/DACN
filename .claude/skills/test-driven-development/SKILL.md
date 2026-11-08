@@ -1,6 +1,6 @@
 ---
 name: test-driven-development
-description: Dùng khi cài đặt tính năng mới hoặc sửa lỗi trong DACN, trước khi viết code cài đặt. Phát triển theo Red → Green → Refactor với pytest/unittest, viết regression test cho lỗi đã được xác minh. Không xóa implementation hiện có và không sửa code ngoài phạm vi issue.
+description: Phát triển theo Red-Green-Refactor với pytest hoặc unittest. Tự dùng khi viết tính năng mới, sửa lỗi hoặc đổi hành vi code Python của DACN, trước khi viết code cài đặt, gồm regression test cho lỗi đã xác minh. Không xóa implementation hiện có, không sửa ngoài phạm vi issue. Không dùng để chẩn đoán lỗi chưa rõ nguyên nhân (dùng systematic-debugging).
 ---
 
 # Phát triển hướng kiểm thử (TDD)

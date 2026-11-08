@@ -1,6 +1,6 @@
 ---
 name: dacn-alert-incident-management
-description: Dùng khi thiết kế hoặc phát triển alert và incident của DACN - alert schema, severity, deduplication, correlation, vòng đời incident, bằng chứng sự kiện, timeline điều tra, acknowledgement, audit trail, truy vết alert về Silver và Bronze. Alert store hiện chưa tồn tại; chỉ dùng trường thực có.
+description: Thiết kế alert và incident DACN. Tự dùng khi làm alert schema, severity, dedup, correlation giữa các alert, vòng đời incident, bằng chứng, audit trail, truy vết alert về Silver và Bronze, hoặc đối chiếu bảng gold_security_alerts. Chỉ dùng trường có thật. Không dùng để điều tra dữ liệu cụ thể (dacn-threat-hunting) hay thiết kế hành động response (dacn-response-safety).
 ---
 
 # Alert và Incident
@@ -40,3 +40,8 @@ Test truy vết hai chiều (TRC-01 trong kiến trúc v2): từ `alert_id` đ�
 
 ## Cần hỏi người dùng
 Đặt schema alert chính thức, thêm bảng incident/audit, đổi ràng buộc `NOT NULL`, chọn quy tắc dedup và cửa sổ.
+
+## Phối hợp với skill khác
+- Trước đó: dacn-detection-engine
+- Cùng lúc: dacn-threat-hunting
+- Sau đó: dacn-backend-api, dacn-dashboard, dacn-response-safety

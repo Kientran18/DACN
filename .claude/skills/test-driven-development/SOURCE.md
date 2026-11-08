@@ -20,3 +20,6 @@
 ## Nội dung không sao chép
 - `testing-anti-patterns.md`: SKILL.md gốc không còn tham chiếu và URL trả về 404 tại thời điểm tải, nên không có bản để sao chép.
 - Mục "Common Rationalizations" và "Red Flags" gốc được rút gọn và chỉnh theo điểm 2.
+
+## Cập nhật sau (2026-11-08)
+Viết lại `description` trong frontmatter để tối ưu khả năng tự động chọn skill (điều kiện kích hoạt, ranh giới với skill khác). Không đổi nội dung hướng dẫn, quyền hay giấy phép.

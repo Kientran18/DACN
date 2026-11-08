@@ -1,6 +1,6 @@
 ---
 name: dacn-windows-agent
-description: Dùng khi thiết kế hoặc phát triển Windows Endpoint Agent của DACN - vòng đời service/collector, nguồn telemetry, đăng ký sự kiện hay polling, bookmark/checkpoint, batching, retry, backpressure, quyền tối thiểu, CPU/RAM trên Windows 10/11. Chỉ thiết kế và viết code theo yêu cầu; không tự cài service hay đổi cấu hình bảo mật Windows.
+description: Thiết kế và phát triển Windows Endpoint Agent hay collector runtime của DACN. Tự dùng khi bàn về service, vòng đời collector, đọc Event Log bằng EvtNext hoặc EvtSubscribe, bookmark, checkpoint, batching, retry, backpressure, quyền tối thiểu, CPU và RAM trên Windows 10/11. Không tự cài service hay đổi cấu hình Windows. Kiểm thử trên Windows VM thuộc dacn-windows-integration-test.
 ---
 
 # Windows Endpoint Agent (collector runtime)
@@ -36,3 +36,8 @@ Thiết kế hoặc patch theo yêu cầu cụ thể, kèm: bảng quyền cần
 
 ## Cần hỏi người dùng
 Trước khi: thêm dependency (`pywin32` đã được dùng, thư viện mới thì hỏi), đổi cấu trúc thư mục dữ liệu, thêm process/service mới, đổi giao diện collector–pipeline (ảnh hưởng Data).
+
+## Phối hợp với skill khác
+- Trước đó: dacn-edr-architecture
+- Cùng lúc: dacn-sysmon-telemetry, test-driven-development
+- Sau đó: dacn-windows-integration-test, dacn-performance-reliability

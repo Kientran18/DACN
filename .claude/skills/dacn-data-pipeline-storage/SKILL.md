@@ -1,6 +1,6 @@
 ---
 name: dacn-data-pipeline-storage
-description: Dùng khi phát triển hoặc đánh giá Data Pipeline và lưu trữ DACN - Bronze → Silver → Gold, ingestion và validation, deduplication, Quarantine/DLQ, replay, storage schema DuckDB/Parquet, truy vấn, retention, lineage từ bản ghi chuẩn hóa về raw event, và chất lượng/quan sát dữ liệu (quarantine ratio, time skew, độ trễ, event loss). Không đổi canonical contract khi chưa được phê duyệt.
+description: Pipeline và lưu trữ dữ liệu DACN. Tự dùng khi phát triển hoặc đánh giá Bronze, Silver, Gold, ingestion, validation, dedup, Quarantine và DLQ, replay, DuckDB và Parquet, truy vấn, retention, lineage về raw, và chất lượng dữ liệu như quarantine ratio, time skew, event loss. Không đổi canonical contract khi chưa được duyệt. Không dùng chỉ để đối chiếu tương thích hợp đồng (dacn-contract-review).
 ---
 
 # Data Pipeline và lưu trữ
@@ -38,3 +38,8 @@ Thiết kế/patch theo yêu cầu cụ thể kèm: sơ đồ luồng và hợp 
 
 ## Cần hỏi người dùng
 Trước khi đổi bảng/cột Silver hay DDL, thêm bảng lineage/ledger, đổi công thức `event_id`, chọn công cụ lưu trữ mới (ví dụ SQLite cho state), hoặc đặt ngưỡng retention/SLO chính thức.
+
+## Phối hợp với skill khác
+- Trước đó: dacn-contract-review
+- Cùng lúc: test-driven-development
+- Sau đó: dacn-detection-engine, dacn-end-to-end-acceptance

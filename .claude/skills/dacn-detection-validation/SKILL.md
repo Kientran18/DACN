@@ -1,6 +1,6 @@
 ---
 name: dacn-detection-validation
-description: Dùng khi thiết kế kiểm thử và đánh giá chất lượng phát hiện của DACN - test case true positive, false positive, false negative, regression cho rule, alert noise, độ trễ phát hiện, bộ dữ liệu kiểm thử an toàn. Không tạo số liệu hiệu quả chưa đo; không chạy mô phỏng tấn công khi chưa được duyệt.
+description: Kiểm thử và đo chất lượng phát hiện DACN. Tự dùng khi cần test case true positive, false positive, false negative, bộ dữ liệu benign và adversary-like an toàn, regression cho rule, alert noise, độ trễ phát hiện. Không bịa số liệu chưa đo, không chạy mô phỏng tấn công. Không dùng để viết rule (dacn-detection-rules-mitre) hay nghiệm thu cả chuỗi (dacn-end-to-end-acceptance).
 ---
 
 # Kiểm thử và đánh giá phát hiện
@@ -39,3 +39,8 @@ Mỗi số liệu có: tập dữ liệu (đường dẫn + nhãn), lệnh, phi�
 
 ## Cần hỏi người dùng
 Trước khi thêm fixture vào `tests/`/`references/` (cần phê duyệt vị trí), trước khi người dùng chạy kịch bản có tác dụng phụ, trước khi đặt ngưỡng chấp nhận (ví dụ giới hạn FPR).
+
+## Phối hợp với skill khác
+- Trước đó: dacn-detection-rules-mitre
+- Cùng lúc: test-driven-development
+- Sau đó: dacn-end-to-end-acceptance

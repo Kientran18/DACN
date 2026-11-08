@@ -1,6 +1,6 @@
 ---
 name: dacn-response-safety
-description: Dùng khi thiết kế, rà soát hoặc phát triển Response Engine của DACN - terminate process, quarantine file, block hash, add whitelist, authorization, xác nhận của người dùng, dry-run, audit, rollback, ngăn thực thi sai. Mặc định chỉ thiết kế, mô phỏng hoặc dry-run; không bao giờ thực hiện response thật khi chưa có cho phép rõ ràng.
+description: Thiết kế và rà soát an toàn Response Engine DACN gồm terminate process, quarantine file, block hash, add whitelist. Tự dùng để phân tích rủi ro, cổng phê duyệt, dry-run, audit, rollback. Skill chỉ phân tích và thiết kế, không thực hiện response thật; thực thi thật phải do người dùng yêu cầu rõ, chạy trên VM lab, và hiện chưa có skill thực thi.
 ---
 
 # An toàn của Response Engine
@@ -39,3 +39,8 @@ Test với thư mục/tiến trình giả: dry-run không thay đổi gì; thi�
 
 ## Cần hỏi người dùng
 Mọi bước chạm vào tiến trình/file/mạng thật; mở khóa chế độ không dry-run; thêm quyền cho service; chọn cơ chế block hash; đặt allowlist mặc định.
+
+## Phối hợp với skill khác
+- Trước đó: dacn-alert-incident-management, dacn-security-threat-modeling
+- Cùng lúc: dacn-security-review
+- Sau đó: dacn-backend-api, dacn-dashboard

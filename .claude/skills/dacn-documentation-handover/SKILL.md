@@ -1,6 +1,6 @@
 ---
 name: dacn-documentation-handover
-description: Dùng khi soạn hoặc cập nhật tài liệu kỹ thuật, báo cáo tuần/milestone, hướng dẫn cài đặt Windows, test report, release notes, tài liệu bàn giao cho AI Agent và tổng hợp trạng thái dự án DACN. Mọi kết luận về tiến độ phải dựa trên bằng chứng từ code, issue và kết quả test; tài liệu viết bằng tiếng Việt.
+description: Tài liệu, báo cáo và bàn giao DACN bằng tiếng Việt. Tự dùng khi soạn báo cáo tuần hoặc milestone, test report, hướng dẫn cài đặt Windows, tài liệu kỹ thuật, tổng hợp trạng thái dự án, bàn giao cho AI Agent. Kết luận tiến độ phải có bằng chứng từ code, issue, test. Release notes thuộc dacn-ci-cd-release.
 ---
 
 # Tài liệu và bàn giao
@@ -10,7 +10,7 @@ description: Dùng khi soạn hoặc cập nhật tài liệu kỹ thuật, báo
 
 ## Quy trình
 1. **Thu thập bằng chứng, không dựa trí nhớ:** `git log`/`git status`, kết quả test chạy lại ngay (kèm lệnh và thời điểm), trạng thái issue/PR đọc từ GitHub, ADR hiện hành. Không chép lại số liệu từ tài liệu cũ như thể còn đúng.
-2. **Xác định loại tài liệu và người đọc:** hướng dẫn nhà phát triển, hướng dẫn Windows (chỉ ghi bước người dùng tự thực hiện; phần chưa kiểm chứng trên Windows ghi rõ), báo cáo tuần/milestone, test report, release notes, bàn giao AI Agent, tổng hợp trạng thái.
+2. **Xác định loại tài liệu và người đọc:** hướng dẫn nhà phát triển, hướng dẫn Windows (chỉ ghi bước người dùng tự thực hiện; phần chưa kiểm chứng trên Windows ghi rõ), báo cáo tuần/milestone, test report, bàn giao AI Agent, tổng hợp trạng thái. Release notes do `dacn-ci-cd-release` đảm nhiệm; skill này chỉ tham chiếu.
 3. **Phân đoạn CURRENT / TARGET** trong mọi tài liệu trạng thái; liệt kê "chưa được chứng minh" (xem `CLAUDE.md` mục 3.1) khi liên quan.
 4. **Đối chiếu yêu cầu đồ án:** bảng yêu cầu/phạm vi (`docs/scope/`) ↔ trạng thái (đã làm có bằng chứng / một phần / chưa) ↔ bằng chứng (file, test, issue).
 5. **Mâu thuẫn:** nêu rõ khi tài liệu, issue và code khác nhau (ví dụ trạng thái sign-off giữa các nhóm), không tự "hòa giải".
@@ -33,3 +33,8 @@ Bản nháp tài liệu trong phản hồi (hoặc ghi file khi được yêu c�
 
 ## Cần hỏi người dùng
 Trước khi ghi/sửa file trong `docs/`, `README.md`, `CLAUDE.md`; trước khi nêu kết luận tiến độ cho người ngoài nhóm; khi nguồn bằng chứng mâu thuẫn.
+
+## Phối hợp với skill khác
+- Trước đó: verification-before-completion
+- Cùng lúc: -
+- Sau đó: dacn-ci-cd-release (release notes)

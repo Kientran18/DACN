@@ -1,6 +1,6 @@
 ---
 name: dacn-contract-review
-description: Dùng khi cần rà soát tính tương thích giữa raw telemetry, Bronze contract bronze-event/1.0, adapter Bronze → Silver, event identity UUIDv5, raw preservation, JSON Schema và Silver validator/Quarantine/DLQ của DACN, hoặc khi một thay đổi có thể gây breaking change giữa các nhóm Software, Data và Cybersecurity. Chỉ rà soát và báo cáo, không tự đổi schema hay field mapping.
+description: Rà soát tương thích hợp đồng dữ liệu DACN. Tự dùng khi code hoặc tài liệu chạm bronze-event/1.0, bronze_contract, bronze-event.schema.json, bronze_to_silver_adapter, validator_poc, event_id UUIDv5, raw_xml và event_data, mã lỗi ERR_ hoặc C-00x, hoặc khi cần biết một thay đổi có phá vỡ tương thích giữa Software, Data, Cybersecurity không. Chỉ đọc và báo cáo, không sửa schema hay mapping. Không dùng để thiết kế pipeline mới (dacn-data-pipeline-storage).
 ---
 
 # Rà soát hợp đồng dữ liệu DACN
@@ -108,3 +108,8 @@ Lệnh cuối ghi báo cáo ra file ngoài repository; không ghi vào thư mụ
 ```
 
 Phân biệt rõ phần CURRENT STATE (có code và test) với TARGET (segment sealing, manifest, replay, epoch: chưa tồn tại).
+
+## Phối hợp với skill khác
+- Trước đó: dacn-edr-architecture hoặc dacn-data-pipeline-storage khi đề xuất đổi
+- Cùng lúc: dacn-sysmon-telemetry
+- Sau đó: dacn-end-to-end-acceptance

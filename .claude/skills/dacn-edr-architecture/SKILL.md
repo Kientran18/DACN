@@ -1,6 +1,6 @@
 ---
 name: dacn-edr-architecture
-description: Dùng khi phân tích, đánh giá hoặc đề xuất kiến trúc EDR của DACN - ranh giới module, data flow và control flow, coupling, độ tin cậy, khả năng bảo trì, lộ trình từ PoC lên hệ thống tích hợp trong giới hạn 12 tuần. Chỉ phân tích và đề xuất; không tự đổi kiến trúc hoặc ADR đã phê duyệt.
+description: Kiến trúc tổng thể EDR DACN. Tự dùng khi cần đánh giá hoặc đề xuất ranh giới module, data flow và control flow, coupling, độ tin cậy, lộ trình PoC lên hệ thống tích hợp trong 12 tuần, hoặc câu hỏi nên đặt thành phần X ở đâu. Chỉ phân tích và đề xuất, không đổi ADR đã duyệt. Không dùng cho chi tiết pipeline (dacn-data-pipeline-storage), agent (dacn-windows-agent), detection (dacn-detection-engine).
 ---
 
 # Kiến trúc EDR DACN
@@ -47,3 +47,8 @@ Giúp đánh giá và thiết kế kiến trúc **local-first, một endpoint Wi
 
 ## Cần hỏi người dùng trước khi tiếp tục
 Đề xuất thay đổi ADR/contract/identity; thêm công nghệ hoặc process mới; chuyển phạm vi giữa các tuần; ghi tài liệu kiến trúc vào `docs/` (chỉ làm khi được yêu cầu).
+
+## Phối hợp với skill khác
+- Trước đó: -
+- Cùng lúc: dacn-security-threat-modeling
+- Sau đó: writing-plans, rồi skill chuyên biệt theo thành phần

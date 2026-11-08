@@ -1,6 +1,6 @@
 ---
 name: writing-plans
-description: Dùng khi đã có issue, spec hoặc yêu cầu nhiều bước và cần lập kế hoạch triển khai trước khi sửa code. Chia việc thành các bước nhỏ, xác định file cần sửa, dependencies, test case và tiêu chí nghiệm thu. Chỉ lập kế hoạch, không tự thực thi và không tự commit.
+description: Lập kế hoạch triển khai. Tự dùng khi có issue, spec hoặc yêu cầu nhiều bước và cần kế hoạch trước khi sửa code - chia task nhỏ, liệt kê file cần sửa, dependency, test case, tiêu chí nghiệm thu. Chỉ lập kế hoạch, không thực thi hay commit. Không dùng cho kiến trúc tổng thể (dacn-edr-architecture) hoặc chạy trọn quy trình issue (dacn-issue-workflow).
 ---
 
 # Lập kế hoạch triển khai

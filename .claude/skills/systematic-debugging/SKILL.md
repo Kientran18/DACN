@@ -1,6 +1,6 @@
 ---
 name: systematic-debugging
-description: Dùng khi gặp bất kỳ lỗi nào, test fail hoặc hành vi bất thường, trước khi đề xuất cách sửa. Tìm nguyên nhân gốc bằng bằng chứng trước, không sửa theo triệu chứng.
+description: Gỡ lỗi có hệ thống. Tự dùng khi gặp test fail, lỗi khi chạy, exception, traceback, build fail, hành vi sai hoặc lỗi tích hợp giữa các module, TRƯỚC khi đề xuất hay thử sửa. Bắt buộc tìm nguyên nhân gốc bằng bằng chứng, không sửa theo triệu chứng. Không dùng để thiết kế tính năng mới (dùng writing-plans).
 ---
 
 # Gỡ lỗi có hệ thống

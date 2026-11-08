@@ -1,6 +1,6 @@
 ---
 name: dacn-end-to-end-acceptance
-description: Dùng khi lập kế hoạch và nghiệm thu kiểm thử tích hợp end-to-end của DACN - luồng Agent → Ingestion → Pipeline → Detection → Alert → Dashboard, response ở chế độ an toàn, contract verification, regression liên module, báo cáo nghiệm thu milestone. Không tuyên bố cả hệ thống hoạt động khi mới kiểm thử từng module.
+description: Nghiệm thu end-to-end DACN. Tự dùng khi cần kế hoạch hoặc báo cáo kiểm thử xuyên module (Agent, Pipeline, Detection, Alert, Dashboard), contract verification, truy vết hai chiều, regression liên module, nghiệm thu milestone. Không tuyên bố cả hệ thống hoạt động khi mới test từng module. Không dùng riêng cho Windows VM (dacn-windows-integration-test) hay đo hiệu năng (dacn-performance-reliability).
 ---
 
 # Nghiệm thu end-to-end
@@ -43,3 +43,8 @@ Bảng nghiệm thu không có ô "Đạt" thiếu bằng chứng; mọi mắt x
 
 ## Cần hỏi người dùng
 Chốt kịch bản và tiêu chí nghiệm thu, thêm fixture vào repository, ghi báo cáo vào `docs/report/`, chuyển trạng thái issue/milestone (chỉ người dùng thực hiện).
+
+## Phối hợp với skill khác
+- Trước đó: dacn-detection-validation, dacn-windows-integration-test
+- Cùng lúc: dacn-contract-review
+- Sau đó: dacn-documentation-handover

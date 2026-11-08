@@ -1,6 +1,6 @@
 ---
 name: dacn-detection-rules-mitre
-description: Dùng khi viết hoặc rà soát detection rule của DACN và ánh xạ MITRE ATT&CK - phân tích telemetry hiện có, tham khảo Sigma, xác định yêu cầu nguồn dữ liệu, phân biệt rule triển khai được với rule bị chặn do thiếu telemetry, metadata và version rule. Không gán MITRE technique ID khi chưa có căn cứ.
+description: Viết và rà soát từng detection rule DACN cùng ánh xạ MITRE ATT&CK. Tự dùng khi nhắc DET-001 đến DET-010, technique Txxxx, Sigma, hoặc hỏi một hành vi có phát hiện được với telemetry hiện có không. Phân loại rule triển khai được, một phần, hoặc bị chặn do thiếu telemetry; không gán technique khi chưa có căn cứ. Không dùng cho kiến trúc engine (dacn-detection-engine).
 ---
 
 # Detection rules và MITRE ATT&CK
@@ -35,3 +35,8 @@ Rule spec (YAML hoặc bảng) + bảng ánh xạ MITRE có căn cứ + danh sá
 
 ## Cần hỏi người dùng
 Mở rộng ngoài 13 technique, đặt `rule_id` chính thức, thêm Event ID vào cấu hình Sysmon (chạm `sysmon-config.xml`), dùng nội dung Sigma/ATT&CK vào repository.
+
+## Phối hợp với skill khác
+- Trước đó: dacn-detection-engine
+- Cùng lúc: test-driven-development
+- Sau đó: dacn-detection-validation
