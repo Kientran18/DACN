@@ -376,7 +376,7 @@ AT-41:
   expected: Mọi liên kết tương đối trỏ tới tệp tồn tại
   tests: []
   check: doc_links
-  gaps: "Chỉ kiểm tra liên kết nội bộ; user guide và báo cáo cuối thuộc PH12 chưa viết"
+  gaps: "Chỉ kiểm tra liên kết nội bộ; user guide, hướng dẫn cài đặt chưa được ai làm theo trên VM sạch (AT-35)"
   limits: ""
 AT-42:
   req: R-11

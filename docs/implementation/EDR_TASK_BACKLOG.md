@@ -349,11 +349,11 @@
 
 ## PH12 — Hoàn thiện và Bàn giao
 
-### PH12-T01 · Tài liệu kiến trúc cuối `[P0 · M · SW · C · TODO]` — cập nhật `EDR_TARGET_ARCHITECTURE.md` theo thực tế (Implemented/Tested/Designed/Future).
-### PH12-T02 · User guide và hướng dẫn triển khai `[P0 · M · SW · C · TODO]` — dựa trên PH2-T10 và PH10-T06.
-### PH12-T03 · Báo cáo kiểm thử `[P0 · M · SW/CY/DA · C · TODO]` — từ PH11.
-### PH12-T04 · Tổng hợp hạn chế và rủi ro `[P0 · S · CY · C · TODO]`.
-### PH12-T05 · Nội dung báo cáo/bảo vệ đồ án `[P1 · M · Cả nhóm · C · TODO]` — dùng `dacn-documentation-handover`.
+### PH12-T01 · Tài liệu kiến trúc cuối `[P0 · M · SW · C · REVIEW]` — cập nhật `EDR_TARGET_ARCHITECTURE.md` theo thực tế (Implemented/Tested/Designed/Future).
+### PH12-T02 · User guide và hướng dẫn triển khai `[P0 · M · SW · C · REVIEW]` — dựa trên PH2-T10 và PH10-T06.
+### PH12-T03 · Báo cáo kiểm thử `[P0 · M · SW/CY/DA · C · REVIEW]` — từ PH11.
+### PH12-T04 · Tổng hợp hạn chế và rủi ro `[P0 · S · CY · C · REVIEW]`.
+### PH12-T05 · Nội dung báo cáo/bảo vệ đồ án `[P1 · M · Cả nhóm · C · REVIEW]` — dùng `dacn-documentation-handover`.
 ### PH12-T06 · Cập nhật `CLAUDE.md` mục 3, 4 theo trạng thái thực `[P1 · S · SW · U · TODO]` — chỉ khi người dùng cho phép.
 
 ---

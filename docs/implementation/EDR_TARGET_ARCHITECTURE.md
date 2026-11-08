@@ -166,6 +166,24 @@ tests/         common/ agent/ pipeline/ detection/ alerts/ response/ api/ dashbo
 | Dữ liệu nhạy cảm | Lộ user/path/command line | Fixture đã khử định danh; raw XML chỉ cho vai trò được phép và có audit |
 | Giới hạn | Agent user-space dựa Sysmon | Không tuyên bố tamper-resistant; ghi trong báo cáo |
 
-## 13. Trạng thái triển khai (cập nhật khi làm)
+## 13. Trạng thái triển khai (cập nhật PH12, 2026-11-08)
 
-Tất cả thành phần ở mục 3–6 hiện **PLANNED** trừ Bronze contract, adapter, validator và DDL (IMPLEMENTED, xem [EDR_AUDIT_REPORT.md](EDR_AUDIT_REPORT.md)).
+Nhãn: **Implemented** = có code; **Tested (L)** = có test tự động trên Linux với dữ liệu synthetic/giả lập; **Tested (W)** = đã kiểm chứng trên Windows VM thật; **Designed** = có thiết kế/tài liệu, chưa có code; **Future** = ngoài phạm vi MVP. Bằng chứng: [acceptance/ACCEPTANCE_REPORT.md](acceptance/ACCEPTANCE_REPORT.md).
+
+| Thành phần | Vị trí | Implemented | Tested (L) | Tested (W) | Ghi chú |
+|---|---|---|---|---|---|
+| Collector PoC file mode, Bronze contract, adapter, validator | `poc/sysmon-collector/`, `src/pipeline/validator_poc.py` | Có | Có | Không | Hợp đồng chưa được phê duyệt chéo |
+| Agent: nguồn giả/tệp, Bronze sealed + manifest, checkpoint, recover | `src/agent/` | Có | Có | Không | At-least-once; trùng được Silver dedup |
+| Agent đọc Event Log thật (`EventLogSource`) | `src/agent/sources/eventlog.py` | Có | Chỉ lớp `_Api` giả | **Không (UNKNOWN)** | Cần pywin32 + quyền đọc channel |
+| Silver DuckDB, replay, quarantine, lineage | `src/pipeline/` | Có | Có | Không | Dùng DDL v1.1 + **đề xuất v1.2 chưa được duyệt** |
+| Detection Engine, 4 rule, IOC/allowlist, correlation | `src/detection/` | Có | Có (fixture) | Không | Tất cả rule `synthetic_only`; DET-010 cửa sổ chưa hiệu chỉnh |
+| Alert/Incident, audit hash-chain, evidence resolver, timeline, process tree | `src/alerts/` | Có | Có | Không | Audit phát hiện chứ không ngăn sửa |
+| Response Engine (dry-run, approval, terminate, quarantine/restore, block-hash=detection) | `src/response/` | Có | Có (backend giả/Linux) | **Không** | `WinProcessApi` chưa chạy trên Windows; chưa từng thực thi hành động thật |
+| API loopback + auth + audit | `src/api/` | Có | Có | Không | Không TLS (chỉ loopback) |
+| Dashboard tĩnh | `src/dashboard/` | Có | Có (Playwright/Chromium) | Không | Thiếu kiểm tra tự động loading và kết quả response |
+| Core service, launcher `edr_ctl`, responder tách tiến trình | `src/core/`, `src/edr_ctl.py`, `src/response/__main__.py` | Có | Có (tiến trình thật trên Linux) | Không | |
+| Script lab SC01–SC07, so khớp kỳ vọng | `scripts/lab/`, `tests/e2e/` | Có | Phân tích tĩnh + so khớp trên XML synthetic | **Chưa chạy** | PowerShell chưa từng được chạy |
+| Gold/Feature, Add whitelist (hành động response), ML | — | Không | — | — | **Designed/Future**; ML interface có, tắt mặc định; chưa có mô hình |
+| Dịch vụ Windows, watchdog, cập nhật có chữ ký, retention tự động (PH3-T09) | — | Không | — | — | Future |
+
+Kết luận: chuỗi Telemetry → Pipeline → Detection → Alert → Investigation → Safe Response → Dashboard **chạy thông trên Linux với dữ liệu synthetic**. Chưa được chứng minh trên Windows 10 VM; điều kiện nghiệm thu MVP ([EDR_ACCEPTANCE_MATRIX.md](EDR_ACCEPTANCE_MATRIX.md)) chưa đạt.

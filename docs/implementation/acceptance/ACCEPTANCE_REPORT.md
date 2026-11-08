@@ -5,8 +5,8 @@
 
 ## Môi trường chạy
 
-- Thời điểm (UTC): 2026-11-08T13:19:43Z · thời lượng: 25.0 s
-- Commit: `da94bd4` (cây làm việc có thay đổi chưa commit)
+- Thời điểm (UTC): 2026-11-08T13:24:32Z · thời lượng: 25.8 s
+- Commit: `00d5645` (cây làm việc có thay đổi chưa commit)
 - Python 3.13.18 · Linux 6.18.44-fc-v310
 - Thư viện: pytest 9.2.0, duckdb 2.0.0, fastapi 0.162.2, uvicorn 0.54.0, httpx 0.28.1, pydantic 2.13.5, PyYAML 6.0.3, jsonschema 4.26.0
 - Mức bằng chứng: L (Linux, dữ liệu synthetic/giả lập); W (Windows) chưa chạy
@@ -489,8 +489,8 @@ PARTIAL = test đạt nhưng catalog ghi rõ phần Expected chưa được ph�
 - **Preconditions:** Repo
 - **Steps:** 1. Kiểm tra liên kết tương đối trong docs/implementation
 - **Expected:** Mọi liên kết tương đối trỏ tới tệp tồn tại
-- **Actual:** 29 liên kết tương đối đã kiểm tra; hỏng: không
-- **Chưa phủ:** Chỉ kiểm tra liên kết nội bộ; user guide và báo cáo cuối thuộc PH12 chưa viết
+- **Actual:** 46 liên kết tương đối đã kiểm tra; hỏng: không
+- **Chưa phủ:** Chỉ kiểm tra liên kết nội bộ; user guide, hướng dẫn cài đặt chưa được ai làm theo trên VM sạch (AT-35)
 
 ### AT-42 · R-11 · mức L · **PASS**
 
