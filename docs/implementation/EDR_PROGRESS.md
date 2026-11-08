@@ -32,11 +32,11 @@ Chi tiết trạng thái từng task: [EDR_TASK_BACKLOG.md](EDR_TASK_BACKLOG.md)
 
 | Trạng thái | Số task |
 |---|---|
-| TODO | 68 |
+| TODO | 61 |
 | IN_PROGRESS | 1 (PH2-T05) |
 | BLOCKED | 2 (ML-T06, ML-T07) |
-| REVIEW | 5 (PH2-T06, PH2-T08, PH4-T02, PH5-T01, PH5-T02) |
-| DONE | 28 (PH5-T03; PH4-T01,T03..T10; PH1-T01,T02,T03,T08,T09,T11; PH2-T01,T02,T03,T04,T07; PH3-T01,T02,T03,T05,T06,T07,T08) |
+| REVIEW | 7 (PH2-T06, PH2-T08, PH3-T04, PH4-T02, PH5-T01, PH5-T02, PH6-T01) |
+| DONE | 33 (PH6-T02..T06; PH5-T03; PH4-T01,T03..T10; PH1-T01,T02,T03,T08,T09,T11; PH2-T01,T02,T03,T04,T07; PH3-T01,T02,T03,T05,T06,T07,T08) |
 
 ## 4. Task đã hoàn thành
 
@@ -84,3 +84,4 @@ Chưa có bằng chứng triển khai. Khi có, ghi theo mẫu:
 | 2026-11-08 | PH3 | `src/pipeline/`: `segment_reader` (V-007), `silver_store` (DuckDB bền vững, ledger, transaction, ON CONFLICT DO NOTHING, DLQ lưu payload), `replay` (`python -m pipeline --from-bronze D --to NEW.duckdb`), `query` (tham số hóa, danh sách trắng), `worker` (metrics.jsonl, hook `on_batch` cho PH4), `quality`. Thêm `requirements.txt` (cần `pytz`). `python -m pytest -q` → 80 pass (Linux) | Đã commit. Chưa làm: PH3-T04 (cột lineage cần DDL v1.2 được duyệt), PH3-T09 (retention). Hostname vẫn theo validator hiện tại (PH1-T04 chưa quyết định); Event 4/16 vẫn vào DLQ (PH1-T06); chưa kiểm trên Windows/Bronze thật từ agent live |
 | 2026-11-08 | PH4 | `src/detection/`: `schema`, `loader` (từ chối rule sai, MITRE cần `mitre_basis`, mặc định `alert_only`), `evaluator`, `correlator` (DET-010), `paths`, `ioc` (không tự tải feed; allowlist ưu tiên; IOC hết hạn bị bỏ), `engine` (khử trùng theo `rule_id+version+subject+window`, PENDING→MATCH được nâng cấp, bảng `_detection_results`), `ml/interface` (NullDetector). Rule: DACN-DET-001, 003, 010, 101 (101 là rule nền tảng do Claude đặt số, cần Cyber xác nhận). Harness `tests/detection/` (fixture synthetic có nhãn, một lệnh `python -m pytest tests/detection`). `python -m pytest -q` → toàn bộ pass (Linux) | Đã commit. Mọi rule `validation_status: synthetic_only`; chưa đo FP/FN thật; `time_window_seconds=300` là TBD_UNCALIBRATED; DetectionResult schema chờ Cyber+Data duyệt (PH4-T02). Chưa làm PH4-T11 (rule bổ sung) |
 | 2026-11-08 | PH5 (phần Linux) | `scripts/lab/dacn_lab_scenarios.ps1` (SC01–SC07; `-WhatIf`; guard thư mục lab; dọn từng mục), `scripts/lab/README.md` (danh mục kịch bản, bảng đối chiếu cấu hình Sysmon), `tests/e2e/scenarios.yaml` + `compare_expected.py` (PASS/FAIL/NOT RUN/OBSERVED), `tests/test_lab_script_safety.py` (kiểm tĩnh script). `python -m pytest -q` → 110 pass (Linux) | Đã commit. **PowerShell chưa chạy được ở đây (không có pwsh), script chưa được chạy ở đâu cả**; dữ liệu kiểm compare là synthetic. Chờ người dùng đọc, chạy `-WhatIf`, rồi chạy thật (PH5-T04); PH5-T05 chỉ làm sau khi có số liệu thật |
+| 2026-11-08 | PH6 | `silver_gold_schema_and_views_v1_2_proposal.sql` (ĐỀ XUẤT, bảng mới, không sửa v1.1: lineage, alerts, history, coverage_gaps, incidents, notes, audit_log), `src/alerts/`: `builder` (MATCH→alert; INSUFFICIENT→coverage gap; PENDING/NO_MATCH không tạo alert), `store` (dedup nhóm, máy trạng thái, incident, audit chuỗi băm phát hiện sửa/xóa), `evidence` (alert→Silver→Bronze→raw_xml, hai chiều, xác minh hash, trạng thái FULL/RAW_EXPIRED/SEGMENT_INVALID/NO_LINEAGE), `timeline` (skew, PARTIAL_ANCESTRY). `SilverStore` giờ áp DDL v1.2 đề xuất và ghi lineage. `python -m pytest -q` → toàn bộ pass (Linux) | Đã commit. DDL v1.2 chờ Data+Cyber+Software duyệt (PH6-T01, PH3-T04): `SilverStore` đang phụ thuộc vào bản đề xuất này. Audit chuỗi băm chỉ PHÁT HIỆN sửa, DuckDB không chặn UPDATE (chặn ở lớp API khi làm PH8). Cửa sổ dedup 600s là giá trị tạm. Chưa kiểm khớp mẫu W03 thật (PH6-T05 chỉ kiểm trên synthetic) |

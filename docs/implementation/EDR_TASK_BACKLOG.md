@@ -113,7 +113,7 @@
 ### PH3-T03 · Persist Quarantine/DLQ `[P0 · M · DA · C · DONE]`
 - **Mô tả:** ghi DLQ vào bảng `silver_quarantine_dlq` và `quarantine/*.jsonl` (giữ nguyên payload); mã lỗi và retry policy theo `validation_quality_lineage_and_governance_v1.md` mục 3.2. **Phụ thuộc:** PH3-T02. **DoD:** không bản ghi nào bị bỏ âm thầm; tổng đọc = valid + dedup + quarantine.
 
-### PH3-T04 · Cột lineage về Bronze `[P0 · M · DA/SW · U · TODO]`
+### PH3-T04 · Cột lineage về Bronze `[P0 · M · DA/SW · U · REVIEW]`
 - **Mô tả:** thêm `bronze_segment_id`, `bronze_line_no`, `bronze_content_hash`, `mapper_version` vào Silver (đề xuất DDL v1.2, **cần phê duyệt**). Cho phép alert → Silver → Bronze → raw XML. **Phụ thuộc:** PH6-T01 (chung DDL v1.2). **DoD:** resolver trả được `raw_xml` từ một `event_id`.
 
 ### PH3-T05 · Lệnh replay/rebuild Silver từ Bronze `[P0 · M · DA · C · DONE]`
@@ -193,22 +193,22 @@
 
 ## PH6 — Alert & Incident Management
 
-### PH6-T01 · Đề xuất DDL v1.2 (detection/alert/incident/audit/response) `[P0 · M · DA · U · TODO]`
+### PH6-T01 · Đề xuất DDL v1.2 (detection/alert/incident/audit/response) `[P0 · M · DA · U · REVIEW]`
 - **Mô tả:** đối chiếu `gold_security_alerts` với hợp đồng: `process_guid NOT NULL` (không cho health alert/khóa registry không gắn process), `mitre_technique_id` đơn trị, thiếu `rule_version`/`coverage_status`/`missing_fields`/trạng thái; thêm `detection_results`, `alert_events`, `incidents`, `incident_notes`, `response_actions`, `audit_log`, cột lineage (PH3-T04). **Output:** `src/pipeline/sql/silver_gold_schema_and_views_v1_2_proposal.sql` + ghi chú migration. **Cần Data + Cyber + Software duyệt.** **DoD:** DDL chạy được trên DuckDB trong test; không sửa file v1.1.
 
-### PH6-T02 · Bộ dựng alert `[P0 · M · CY · C · TODO]`
+### PH6-T02 · Bộ dựng alert `[P0 · M · CY · C · DONE]`
 - **Mô tả:** `DetectionResult(MATCH)` → alert (severity + lý do, MITRE nếu có căn cứ, `contributing_event_ids`, tham chiếu Bronze). `INSUFFICIENT_TELEMETRY` tạo mục "coverage gap", không phải alert đe dọa. **Files:** `src/alerts/builder.py`. **Phụ thuộc:** PH4-T02, PH6-T01.
 
-### PH6-T03 · Alert store, dedup, máy trạng thái `[P0 · L · CY/DA · C · TODO]`
+### PH6-T03 · Alert store, dedup, máy trạng thái `[P0 · L · CY/DA · C · DONE]`
 - **Mô tả:** lưu alert; dedup `rule_id + host + subject + cửa sổ` có `suppression_reason`; trạng thái `NEW → TRIAGED → INVESTIGATING → (FALSE_POSITIVE|CONFIRMED|CLOSED)` với người/thời điểm/ghi chú; chuyển trạng thái sai bị từ chối. **Files:** `src/alerts/store.py`. **DoD:** replay không tạo alert trùng; test máy trạng thái.
 
-### PH6-T04 · Evidence resolver (alert → raw) `[P0 · L · DA/CY · C · TODO]`
+### PH6-T04 · Evidence resolver (alert → raw) `[P0 · L · DA/CY · C · DONE]`
 - **Mô tả:** từ `alert_id` ra danh sách sự kiện Silver, segment Bronze, dòng và `raw_xml` (đọc có xác minh hash); nếu Bronze hết hạn → `RAW_EXPIRED/PARTIAL`. **Files:** `src/alerts/evidence.py`. **Phụ thuộc:** PH3-T04. **DoD:** test TRC-01 hai chiều.
 
-### PH6-T05 · Timeline và process tree `[P0 · M · CY · C · TODO]`
+### PH6-T05 · Timeline và process tree `[P0 · M · CY · C · DONE]`
 - **Mô tả:** timeline theo `System.TimeCreated`/`record_id` kèm skew; cây tiến trình theo `process_guid` (ghi `PARTIAL_ANCESTRY`). **Files:** `src/alerts/timeline.py`. **DoD:** kết quả khớp mẫu W03.
 
-### PH6-T06 · Ghi chú incident và audit trail `[P1 · M · CY · C · TODO]`
+### PH6-T06 · Ghi chú incident và audit trail `[P1 · M · CY · C · DONE]`
 - **Mô tả:** ghi chú, gán alert vào incident, audit append-only (actor, hành động, lý do). **DoD:** audit không sửa/xóa được qua API.
 
 ---

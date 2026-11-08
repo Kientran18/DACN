@@ -5,6 +5,7 @@ Giữ nguyên SilverValidatorEngine và DDL v1.1. Hostname: giữ hành vi hiệ
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
 from datetime import datetime, timezone
@@ -20,6 +21,8 @@ from .segment_reader import SegmentError, read_segment
 from agent.bronze_writer import _sha256
 
 DDL = Path(__file__).parent / "sql" / "silver_gold_schema_and_views_v1_1.sql"
+DDL_V12 = Path(__file__).parent / "sql" / "silver_gold_schema_and_views_v1_2_proposal.sql"  # ĐỀ XUẤT, chưa duyệt
+MAPPER_VERSION = "bronze_to_silver_adapter+validator_poc/v1.1-poc"
 TABLES = {"silver_process": "silver_process_events", "silver_file": "silver_file_events",
           "silver_registry": "silver_registry_events", "silver_network": "silver_network_events"}
 
@@ -37,6 +40,7 @@ class SilverStore:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         self.con = duckdb.connect(str(path))
         self.con.execute(DDL.read_text(encoding="utf-8"))
+        self.con.execute(DDL_V12.read_text(encoding="utf-8"))
         self.con.execute(LEDGER_DDL)
         self._cols = {t: [r[0] for r in self.con.execute(
             "select column_name from information_schema.columns where table_name=? order by ordinal_position",
@@ -116,6 +120,11 @@ class SilverStore:
                 for attr, table in TABLES.items():
                     for row in getattr(eng, attr):
                         n += self._insert(table, row)
+                if n:
+                    self.con.execute(
+                        "insert into silver_event_lineage values (?,?,?,?,?,?) on conflict do nothing",
+                        [rec["event_id"], seg.name, line_no,
+                         hashlib.sha256(rec["raw_xml"].encode("utf-8")).hexdigest(), MAPPER_VERSION, run_id])
                 res["inserted" if n else "duplicates"] += 1
             self._write_ledger(seg.name, sha, "INGESTED", res, run_id)
             self.con.execute("commit")
