@@ -1,0 +1,10 @@
+# Cấu hình mẫu DACN EDR (PH10-T02). KHÔNG chứa bí mật: token nằm ở tệp riêng do `python -m api.auth` tạo.
+# Sao chép thành edr.yaml rồi chỉnh. Khóa không hỗ trợ sẽ bị từ chối khi nạp.
+home: C:\dacn_edr            # thư mục dữ liệu: bronze\, silver\, logs\, run\, ioc\, agent\ (đường dẫn ngắn, tránh dấu cách)
+api:
+  host: 127.0.0.1             # chỉ loopback được chấp nhận
+  port: 8765
+  tokens_file: C:\dacn_edr\api_tokens.json   # băm sha256 của token; tạo bằng: python -m api.auth --config edr.yaml --role analyst --actor <tên>
+response:
+  mode: dry-run               # MVP chỉ hỗ trợ dry-run ở cấu hình này; policy response nằm ở config\response-policy.yaml
+# Ngưỡng segment của agent hiện đặt trong mã (BronzeWriter: 5000 bản ghi / 8 MiB / 300 s); chưa có khóa cấu hình.

@@ -92,13 +92,14 @@ CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'se
 
 
 def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy, bronze_dir: Path,
-               health_path: Optional[Path] = None, data_label: str = "UNSPECIFIED") -> FastAPI:
+               health_path: Optional[Path] = None, data_label: str = "UNSPECIFIED",
+               lock: Optional[threading.RLock] = None) -> FastAPI:
     """data_label: 'SAMPLE' = dữ liệu mẫu/synthetic (UI hiện biểu ngữ nổi bật); 'UNSPECIFIED' = chưa xác nhận nguồn."""
     if data_label not in ("SAMPLE", "UNSPECIFIED"):
         raise ValueError("data_label không hợp lệ")
     app = FastAPI(title="DACN EDR Local API", version="0.1.0-mvp",
                   description="API cục bộ (loopback). Dữ liệu mẫu/synthetic nếu có sẽ được gắn nhãn ở nguồn.")
-    lock = threading.RLock()
+    lock = lock or threading.RLock()     # dùng chung với worker ghi để một kết nối DuckDB không bị truy cập song song
     con = store.con
     alerts, actions = AlertStore(con), ActionStore(con, AlertStore(con))
     actions.require_distinct = policy.require_distinct_approver

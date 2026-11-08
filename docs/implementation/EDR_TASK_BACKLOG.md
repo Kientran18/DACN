@@ -308,13 +308,13 @@
 
 ## PH10 — Tích hợp end-to-end
 
-### PH10-T01 · Launcher `edr_ctl` `[P0 · M · SW · C · TODO]`
+### PH10-T01 · Launcher `edr_ctl` `[P0 · M · SW · C · DONE]`
 - **Mô tả:** `python -m edr_ctl start|stop|status|logs` khởi động/dừng agent, core (ingest+detect+API), responder; PID file, dừng sạch, trạng thái rõ. Không cài service. **Files:** `src/edr_ctl.py`. **DoD:** start/stop lặp lại không để tiến trình mồ côi (test với tiến trình giả).
 
-### PH10-T02 · Tệp cấu hình mẫu `[P0 · S · SW · C · TODO]`
+### PH10-T02 · Tệp cấu hình mẫu `[P0 · S · SW · C · DONE]`
 - **Mô tả:** `config/edr.example.yaml` (đường dẫn, cổng, token, ngưỡng segment, policy). Không chứa bí mật thật.
 
-### PH10-T03 · Test tích hợp trên Linux bằng nguồn giả `[P0 · L · SW/DA/CY · C · TODO]`
+### PH10-T03 · Test tích hợp trên Linux bằng nguồn giả `[P0 · L · SW/DA/CY · C · DONE]`
 - **Mô tả:** `FakeEventSource` (kịch bản đầy đủ) → agent → Bronze → core → Silver → rule → alert → API → evidence; kiểm tra tại từng giao diện. **Files:** `tests/e2e/test_pipeline_fake_source.py`. **Skill:** `dacn-end-to-end-acceptance`. **Lưu ý khi báo cáo:** đây là tích hợp với nguồn giả, **không** thay cho kiểm chứng Windows.
 
 ### PH10-T04 · Chạy tích hợp trên Windows VM `[P0 · L · SW · W · TODO]`
@@ -323,7 +323,7 @@
 ### PH10-T05 · Diễn tập lỗi `[P1 · L · SW/DA · W · TODO]`
 - **Mô tả:** kill agent/core giữa chừng, đầy đĩa giả lập nhỏ, segment hỏng, restart; kỳ vọng vs quan sát (OPS-01).
 
-### PH10-T06 · Hướng dẫn cài đặt toàn hệ thống `[P0 · M · SW · C · TODO]`
+### PH10-T06 · Hướng dẫn cài đặt toàn hệ thống `[P0 · M · SW · C · REVIEW]`
 - **Mô tả:** từ VM sạch tới hệ thống chạy; liệt kê dependency chính xác với phiên bản; cách gỡ. **DoD:** người dùng làm theo được (xác nhận ở PH10-T04).
 
 ---
