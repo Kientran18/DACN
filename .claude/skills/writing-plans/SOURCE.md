@@ -18,3 +18,6 @@
 
 ## Nội dung không sao chép
 Bản gốc không có file phụ thuộc trong thư mục này (đã thử tải `plan-document-reviewer-prompt.md`, trả về 404, và SKILL.md gốc không tham chiếu nó). Các tham chiếu tới skill `superpowers:*` khác không được mang theo.
+
+## Cập nhật sau (2026-11-08)
+Viết lại `description` trong frontmatter để tối ưu khả năng tự động chọn skill (điều kiện kích hoạt, ranh giới với skill khác). Không đổi nội dung hướng dẫn, quyền hay giấy phép.

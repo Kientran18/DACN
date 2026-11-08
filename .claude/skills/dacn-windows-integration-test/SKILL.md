@@ -1,6 +1,6 @@
 ---
 name: dacn-windows-integration-test
-description: Dùng khi lập kế hoạch, hướng dẫn thực hiện hoặc ghi nhận kết quả kiểm thử tích hợp trên Windows 10/11 VM thật cho DACN - Sysmon, quyền đọc Event Log, file mode và live mode, đối chiếu raw XML với bản ghi chuẩn hóa. Claude lập test plan và mẫu báo cáo; người dùng tự chạy trên VM lab và gửi kết quả.
+description: Kế hoạch và báo cáo kiểm thử tích hợp trên Windows 10/11 VM thật cho DACN. Tự dùng khi cần test plan hoặc ghi nhận kết quả cho Sysmon thật, quyền đọc Event Log, live mode, đối chiếu raw XML với bản ghi chuẩn hóa, crash và restart trên Windows. Claude không tự chạy được trên Windows; người dùng chạy rồi gửi kết quả. Không dùng cho test file mode trên Linux (dacn-sysmon-telemetry).
 ---
 
 # Kiểm thử tích hợp trên Windows
@@ -44,3 +44,8 @@ Mỗi ca có kết quả Đạt / Không đạt / Chưa chạy, kèm bằng ch�
 
 ## Cần hỏi người dùng
 Trước khi đề xuất lệnh có tác dụng phụ (xóa log, bật audit, cài Sysmon), trước khi ghi báo cáo hay mẫu vào `docs/`, trước khi chạy bất kỳ kịch bản mô phỏng tấn công nào (kể cả Atomic Red Team: duyệt từng test GUID).
+
+## Phối hợp với skill khác
+- Trước đó: dacn-windows-agent, dacn-sysmon-telemetry
+- Cùng lúc: systematic-debugging khi có lỗi
+- Sau đó: dacn-end-to-end-acceptance, dacn-documentation-handover

@@ -1,6 +1,6 @@
 ---
 name: dacn-security-threat-modeling
-description: Dùng khi xây dựng hoặc cập nhật mô hình đe dọa cho chính hệ thống EDR của DACN - tài sản, trust boundary, giả mạo/thay đổi telemetry, rule/config/log tampering, leo thang đặc quyền của response, bảo mật giao tiếp giữa các thành phần. Dùng STRIDE phục vụ thiết kế phòng thủ; không thực hiện tấn công.
+description: Mô hình đe dọa nhắm vào chính EDR DACN theo STRIDE. Tự dùng khi cần xác định tài sản, trust boundary, nguy cơ giả mạo hoặc sửa telemetry, rule, config, log, leo thang đặc quyền của response, và biện pháp phòng thủ cho một thiết kế. Chỉ phục vụ phòng thủ. Không dùng để rà soát một diff cụ thể (dacn-security-review).
 ---
 
 # Threat modeling cho chính EDR
@@ -40,3 +40,8 @@ Mỗi mối đe dọa có: tài sản, boundary, loại STRIDE, bằng chứng h
 
 ## Cần hỏi người dùng
 Trước khi đề xuất thay đổi quyền (service account, ACL), thêm cơ chế ký/xác thực mới, hoặc mô phỏng tấn công có tác dụng phụ trên máy; trước khi ghi báo cáo vào `docs/`.
+
+## Phối hợp với skill khác
+- Trước đó: dacn-edr-architecture
+- Cùng lúc: dacn-response-safety khi liên quan response
+- Sau đó: dacn-security-review

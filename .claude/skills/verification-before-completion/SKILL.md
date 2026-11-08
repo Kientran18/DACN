@@ -1,6 +1,6 @@
 ---
 name: verification-before-completion
-description: Dùng khi sắp khẳng định công việc đã hoàn thành, đã sửa xong hoặc test đã pass, kể cả trước khi commit, tạo Pull Request hoặc báo cáo kết quả. Bắt buộc chạy lệnh kiểm chứng và đọc đầy đủ kết quả trước mọi tuyên bố thành công. Bằng chứng trước khẳng định, luôn luôn.
+description: Kiểm chứng trước khi báo xong. Tự dùng ngay trước khi nói đã hoàn thành, đã sửa, test đã pass, và trước khi commit, push, tạo Pull Request hoặc nộp báo cáo kết quả. Bắt buộc chạy lệnh kiểm chứng mới và đọc đủ output rồi mới khẳng định. Không dùng để tìm nguyên nhân lỗi (dùng systematic-debugging).
 ---
 
 # Kiểm chứng trước khi hoàn thành

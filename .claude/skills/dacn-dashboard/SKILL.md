@@ -1,6 +1,6 @@
 ---
 name: dacn-dashboard
-description: Dùng khi thiết kế hoặc phát triển giao diện quản lý EDR của DACN - tổng quan endpoint, danh sách alert, telemetry explorer, điều tra process tree/timeline, quản lý rule, thao tác response, lọc/tìm/phân trang, trạng thái loading/lỗi/rỗng. Chạy được trên máy cấu hình vừa phải; không hiển thị dữ liệu mẫu như dữ liệu thời gian thực.
+description: Thiết kế giao diện quản lý EDR DACN. Tự dùng khi làm màn hình tổng quan endpoint, danh sách alert, telemetry explorer, process tree, timeline, quản lý rule, hàng chờ response, lọc, tìm, phân trang, trạng thái loading, lỗi, rỗng. Dữ liệu mẫu phải gắn nhãn rõ, không giả làm dữ liệu thật. Không dùng cho thiết kế API (dacn-backend-api).
 ---
 
 # Dashboard EDR
@@ -35,3 +35,8 @@ Wireframe/mô tả màn hình, bảng ánh xạ màn hình → nguồn dữ li�
 
 ## Cần hỏi người dùng
 Chọn công nghệ UI và thư viện, thêm trang hiển thị raw XML, bật bất kỳ thao tác response, hoặc đưa ảnh chụp màn hình vào tài liệu.
+
+## Phối hợp với skill khác
+- Trước đó: dacn-backend-api
+- Cùng lúc: dacn-threat-hunting (luồng điều tra), dataviz (biểu đồ)
+- Sau đó: dacn-end-to-end-acceptance

@@ -1,6 +1,6 @@
 ---
 name: dacn-ci-cd-release
-description: Dùng khi thiết kế quy trình kiểm thử tự động, CI, đóng gói artifact, phiên bản và phát hành của DACN - GitHub Actions nếu được duyệt, lint/type check khi đã chọn công cụ, danh sách kiểm tra release, release notes, đánh giá khả năng rollback. Chỉ đề xuất và soạn nội dung; không thêm deployment tự động hay secret khi chưa được phê duyệt.
+description: CI/CD và phát hành DACN. Tự dùng khi cần quy trình test tự động, bản nháp GitHub Actions, lint hoặc type check đã chọn, đóng gói, phiên bản, release checklist, release notes từ commit và issue, rollback. Không tự tạo workflow, tag hay release, chỉ soạn nội dung. Không dùng cho báo cáo tiến độ hay bàn giao (dacn-documentation-handover).
 ---
 
 # CI/CD và phát hành
@@ -35,3 +35,8 @@ Bản nháp workflow hoặc tài liệu quy trình, release checklist, bản nh�
 
 ## Cần hỏi người dùng
 Mọi thay đổi trong `.github/`, chọn lint/type tool, quyết định đóng gói, đặt phiên bản đầu tiên, phát hành.
+
+## Phối hợp với skill khác
+- Trước đó: verification-before-completion
+- Cùng lúc: dacn-security-review
+- Sau đó: dacn-documentation-handover

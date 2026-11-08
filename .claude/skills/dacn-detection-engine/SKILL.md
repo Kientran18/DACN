@@ -1,6 +1,6 @@
 ---
 name: dacn-detection-engine
-description: Dùng khi thiết kế hoặc phát triển Detection Engine của DACN - rule model và registry, evaluation contract (MATCH / NO_MATCH / INSUFFICIENT_TELEMETRY / PENDING_LATE_EVENTS), correlation theo process_guid và cửa sổ thời gian, IOC/hash matching, severity, versioning rule, DetectionResult và kết nối với Silver. Chỉ dùng trường dữ liệu thực sự có; Detection Engine hiện chưa tồn tại.
+description: Thiết kế Detection Engine DACN. Tự dùng khi làm rule model và registry, evaluation contract (MATCH, NO_MATCH, INSUFFICIENT_TELEMETRY, PENDING_LATE_EVENTS), correlation theo process_guid và cửa sổ thời gian, IOC và hash matching, severity, DetectionResult. Chỉ dùng trường dữ liệu có thật. Không dùng để viết từng rule và gán MITRE (dacn-detection-rules-mitre) hay đo chất lượng phát hiện (dacn-detection-validation).
 ---
 
 # Detection Engine
@@ -35,3 +35,8 @@ Tài liệu thiết kế hoặc code theo yêu cầu: rule model, evaluation con
 
 ## Cần hỏi người dùng
 Đặt ID rule và schema `DetectionResult` chính thức (chạm Cyber + Data), thêm cột Silver/Gold, đổi ngưỡng/cửa sổ, chọn thư viện (ví dụ cho Sigma/YARA), hoặc đưa rule vào repository thật.
+
+## Phối hợp với skill khác
+- Trước đó: dacn-data-pipeline-storage
+- Cùng lúc: dacn-detection-rules-mitre
+- Sau đó: dacn-detection-validation, dacn-alert-incident-management

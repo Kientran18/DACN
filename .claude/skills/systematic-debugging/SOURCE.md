@@ -17,3 +17,6 @@
 
 ## Nội dung không sao chép
 Ba file tham chiếu nói trên.
+
+## Cập nhật sau (2026-11-08)
+Viết lại `description` trong frontmatter để tối ưu khả năng tự động chọn skill (điều kiện kích hoạt, ranh giới với skill khác). Không đổi nội dung hướng dẫn, quyền hay giấy phép.

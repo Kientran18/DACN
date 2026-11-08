@@ -1,6 +1,6 @@
 ---
 name: dacn-threat-hunting
-description: Dùng khi điều tra và truy vết trên dữ liệu telemetry DACN được cung cấp - giả thuyết hunting, process tree theo process_guid, quan hệ process/file/registry/network/DNS, timeline, IOC, ánh xạ ATT&CK khi có bằng chứng, báo cáo điều tra. Chỉ dùng dữ liệu hợp lệ người dùng cung cấp hoặc có trong repository; phân biệt sự kiện quan sát, suy luận và dữ liệu thiếu.
+description: Điều tra và threat hunting trên dữ liệu telemetry do người dùng cung cấp hoặc có trong repository. Tự dùng khi cần giả thuyết hunting, process tree theo process_guid, quan hệ process, file, registry, network, DNS, timeline, IOC, báo cáo điều tra. Tách rõ quan sát, suy luận và dữ liệu thiếu. Không thu thập thêm dữ liệu, không response. Không dùng để thiết kế alert store (dacn-alert-incident-management).
 ---
 
 # Threat hunting và điều tra
@@ -44,3 +44,8 @@ Mỗi nhận định có `event_id` dẫn chứng; process tree kiểm tra đư�
 
 ## Cần hỏi người dùng
 Trước khi đề xuất hành động containment (chuyển `dacn-response-safety`), mở rộng phạm vi dữ liệu, hoặc tra cứu nguồn ngoài; trước khi lưu báo cáo vào `docs/`.
+
+## Phối hợp với skill khác
+- Trước đó: dacn-data-pipeline-storage (nguồn dữ liệu)
+- Cùng lúc: dacn-detection-rules-mitre khi cần gán technique
+- Sau đó: dacn-alert-incident-management, dacn-response-safety khi cần containment

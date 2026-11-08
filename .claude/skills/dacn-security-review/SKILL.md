@@ -1,6 +1,6 @@
 ---
 name: dacn-security-review
-description: Dùng khi rà soát bảo mật mã nguồn, thiết kế hoặc git diff của DACN - input validation, secret và dữ liệu nhạy cảm, đường dẫn/tệp, quyền, logging, cấu hình, API, dependency. Ưu tiên đọc và báo cáo; không tự sửa vấn đề ngoài phạm vi được giao. Khác với /security-review có sẵn ở chỗ gắn với bất biến và dữ liệu của DACN.
+description: Rà soát bảo mật một thay đổi cụ thể trong DACN. Tự dùng khi cần review git diff, PR hoặc module về input validation, XML và JSON không tin cậy, đường dẫn tệp, secret và dữ liệu nhạy cảm, quyền, logging, cấu hình, dependency, API. Chỉ đọc và báo cáo. Không dùng cho mô hình đe dọa mức thiết kế (dacn-security-threat-modeling).
 ---
 
 # Rà soát bảo mật DACN
@@ -44,3 +44,8 @@ Mỗi phát hiện có bằng chứng tái kiểm tra được; không có giá 
 
 ## Cần hỏi người dùng
 Trước khi sửa mã để khắc phục, đổi quyền/cấu hình, thêm công cụ quét hoặc dependency, hoặc nếu phát hiện secret thật đã nằm trong lịch sử git (cần quy trình xử lý riêng, không tự viết lại lịch sử).
+
+## Phối hợp với skill khác
+- Trước đó: dacn-security-threat-modeling
+- Cùng lúc: dacn-contract-review khi diff chạm contract
+- Sau đó: verification-before-completion

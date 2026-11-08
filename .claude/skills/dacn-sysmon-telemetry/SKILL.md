@@ -1,6 +1,6 @@
 ---
 name: dacn-sysmon-telemetry
-description: Dùng khi phát triển, sửa hoặc kiểm thử Sysmon collector của DACN - Sysmon Event ID, Windows Event Log, raw XML, EventData, sự kiện Process/File/Registry/Network/DNS, normalization và validation, kiểm thử file mode và live mode. Đọc mapping thực tế từ repository, không suy đoán field, không tuyên bố live mode hoạt động khi chưa kiểm chứng trên Windows thật.
+description: Sysmon và telemetry Windows trong DACN. Tự dùng khi làm việc với sysmon_collector_poc, Sysmon Event ID, raw XML và EventData, mapping process, file, registry, network, DNS, normalization, kiểm thử file mode trên mọi hệ điều hành. Đọc mapping thật, không đoán field, không nói live mode chạy nếu chưa kiểm chứng trên Windows. Không dùng cho kế hoạch kiểm thử trên Windows VM (dacn-windows-integration-test).
 ---
 
 # Sysmon telemetry cho DACN
@@ -90,3 +90,8 @@ python poc/sysmon-collector/sysmon_collector_poc.py --mode live --max 20 --outpu
 ## Test đã chạy (lệnh, thời điểm, kết quả)
 ## Chưa kiểm chứng (live mode, service, bookmark...)
 ```
+
+## Phối hợp với skill khác
+- Trước đó: dacn-contract-review khi đổi mapping
+- Cùng lúc: test-driven-development
+- Sau đó: dacn-windows-integration-test (phần cần Windows thật)

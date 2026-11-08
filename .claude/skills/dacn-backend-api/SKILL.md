@@ -1,6 +1,6 @@
 ---
 name: dacn-backend-api
-description: Dùng khi thiết kế hoặc phát triển API cục bộ của DACN - API contract, truy vấn sự kiện, quản lý alert, rule, health và (khi được phép) response; xác thực, phân quyền, validate input, xử lý lỗi, kiểm thử API. Chưa có quyết định về framework; kiểm tra stack và ADR trước khi đề xuất.
+description: Thiết kế API cục bộ của DACN. Tự dùng khi cần API contract, truy vấn sự kiện, alert, rule, health, xác thực, phân quyền, validate input, xử lý lỗi, kiểm thử API. Chưa có quyết định framework nên kiểm tra stack và ADR trước. Không dùng cho giao diện (dacn-dashboard) hay thiết kế hành động response (dacn-response-safety).
 ---
 
 # Backend API (local-first)
@@ -35,3 +35,8 @@ API spec (bảng hoặc OpenAPI), mô hình quyền, danh sách quyết định 
 
 ## Cần hỏi người dùng
 Chọn framework/transport, thêm dependency, cơ chế xác thực, mở bất kỳ cổng nào, hoặc đưa API vào repository.
+
+## Phối hợp với skill khác
+- Trước đó: dacn-alert-incident-management, dacn-data-pipeline-storage
+- Cùng lúc: dacn-security-review
+- Sau đó: dacn-dashboard

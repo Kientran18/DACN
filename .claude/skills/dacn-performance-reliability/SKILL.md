@@ -1,6 +1,6 @@
 ---
 name: dacn-performance-reliability
-description: Dùng khi thiết kế phép đo và đánh giá hiệu năng, độ ổn định của DACN trên VM lab - CPU/RAM, throughput sự kiện, hàng đợi/buffer, độ trễ ingestion và detection, hiệu năng truy vấn, phục hồi lỗi, profiling. Mọi con số phải đến từ phép đo có thể lặp lại; không tạo tải quá mức ngoài môi trường thử nghiệm.
+description: Đo hiệu năng và độ ổn định DACN trên VM lab. Tự dùng khi cần phép đo CPU và RAM, throughput, hàng đợi và buffer, độ trễ ingestion và detection, hiệu năng truy vấn DuckDB, profiling, phục hồi sau lỗi. Mọi số phải từ phép đo lặp lại được; không tạo tải quá mức ngoài môi trường thử nghiệm. Không dùng cho chỉ số chất lượng dữ liệu (dacn-data-pipeline-storage).
 ---
 
 # Hiệu năng và độ tin cậy
@@ -42,3 +42,8 @@ Mỗi số có: lệnh/kịch bản, dữ liệu vào (kích thước, nhãn), c
 
 ## Cần hỏi người dùng
 Trước khi chạy tải thử có thể tốn đĩa/CPU, trước khi dùng profiler, hoặc đặt ngưỡng hiệu năng chính thức.
+
+## Phối hợp với skill khác
+- Trước đó: dacn-windows-agent, dacn-data-pipeline-storage
+- Cùng lúc: systematic-debugging khi có điểm nghẽn
+- Sau đó: dacn-end-to-end-acceptance, dacn-documentation-handover
