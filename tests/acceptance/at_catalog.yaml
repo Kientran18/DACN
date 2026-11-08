@@ -1,0 +1,399 @@
+# Danh mục test nghiệm thu AT-01..AT-43 (PH11-T01).
+# level: L = chạy được trên Linux với dữ liệu mẫu/giả lập; W = cần Windows VM thật (Claude không chạy);
+#        D = kiểm tra tài liệu.
+# tests: danh sách pytest node id (hoặc tiền tố) được coi là bằng chứng cho AT đó.
+# gaps: phần của Expected mà các test hiện có KHÔNG phủ -> trạng thái tối đa là PARTIAL.
+# Không có mục nào được điền PASS bằng tay: trạng thái do run_acceptance.py suy ra từ kết quả pytest.
+# Tất cả dữ liệu là synthetic/fixture trừ khi ghi khác.
+AT-01:
+  req: R-01
+  level: L
+  goal: Nguồn giả -> segment sealed, manifest đúng hash
+  pre: Thư mục home tạm; FakeSource phát N sự kiện XML synthetic
+  steps: ["Chạy AgentRunner với FakeSource", "Đọc manifest của segment đã niêm phong", "Tính lại sha256"]
+  expected: Segment .jsonl + .manifest.json, sha256 khớp, raw_xml được giữ nguyên
+  tests: [tests/agent/test_bronze_writer.py::test_seal_writes_manifest_with_correct_hash, tests/agent/test_bronze_writer.py::test_raw_xml_preserved, tests/agent/test_runner.py::test_full_run_writes_all_and_health]
+  limits: Không chứng minh đọc Event Log thật
+AT-02:
+  req: R-01
+  level: L
+  goal: Dừng/chết giữa chừng -> khởi động lại không mất bản ghi (có thể trùng)
+  pre: FakeSource có thể dừng/lỗi giữa chừng
+  steps: ["Chạy agent, dừng giữa chừng", "Khởi động lại", "Đếm bản ghi trong Bronze"]
+  expected: Không mất bản ghi; trùng lặp được chấp nhận (at-least-once)
+  tests: [tests/agent/test_runner.py::test_stop_midway_then_restart_loses_nothing, tests/agent/test_runner.py::test_crash_after_write_before_checkpoint_may_duplicate_not_lose, tests/agent/test_bronze_writer.py::test_recover_truncates_partial_line_and_seals]
+  limits: Giả lập; chưa thử kill tiến trình trên Windows (AT-05)
+AT-03:
+  req: R-01
+  level: W
+  goal: Agent live nhận sự kiện mới và khớp wevtutil export
+  pre: Windows 10 VM, Sysmon chạy, quyền đọc channel Sysmon/Operational
+  steps: ["python -m agent --live", "Sinh sự kiện (mở notepad)", "wevtutil qe ... /f:xml so với raw_xml trong Bronze"]
+  expected: raw_xml trong Bronze trùng EventRecordID/nội dung với wevtutil
+  tests: []
+  limits: Một VM, một phiên bản Sysmon
+AT-04:
+  req: R-01
+  level: W
+  goal: Không có quyền đọc channel -> lỗi C-006 rõ ràng
+  pre: Windows, chạy agent bằng tài khoản không có quyền
+  steps: ["Chạy agent --live bằng user thường", "Xem bronze/errors/collector_errors.jsonl"]
+  expected: Mã lỗi C-006, agent không crash âm thầm
+  tests: []
+  limits: Phần logic ánh xạ lỗi đã có test Linux (test_access_denied_maps_to_c006) nhưng đó không phải bằng chứng trên Windows
+AT-05:
+  req: R-01
+  level: W
+  goal: Kill agent giữa chừng trên Windows -> phục hồi
+  pre: Windows VM, agent live đang chạy
+  steps: ["taskkill /F agent", "Khởi động lại", "Kiểm tra recover và không mất sự kiện"]
+  expected: recover_dir niêm phong .part, checkpoint tiếp tục
+  tests: []
+  limits: ""
+AT-06:
+  req: R-02
+  level: L
+  goal: Segment hỏng 1 byte -> quarantine segment, segment khác vẫn nạp
+  pre: 2 segment hợp lệ, sửa 1 byte của một segment
+  steps: ["ingest_dir", "Kiểm tra quarantine và Silver"]
+  expected: Segment hỏng bị quarantine; segment còn lại vào Silver
+  tests: [tests/pipeline/test_silver_store.py::test_tampered_segment_is_quarantined_not_ingested, tests/pipeline/test_silver_store.py::test_reader_rejects_tampered_segment, tests/e2e/test_pipeline_fake_source.py::test_corrupt_segment_quarantined_others_still_processed]
+  limits: ""
+AT-07:
+  req: R-02
+  level: L
+  goal: Nạp hai lần -> không trùng; tổng đọc = valid + dedup + DLQ
+  pre: Segment synthetic
+  steps: ["ingest 2 lần", "Đối chiếu số đếm"]
+  expected: Silver không trùng event_id; sổ cái cộng khớp
+  tests: [tests/pipeline/test_silver_store.py::test_ingest_and_total_accounting, tests/pipeline/test_silver_store.py::test_replay_is_idempotent, tests/pipeline/test_silver_store.py::test_same_events_in_new_segment_are_deduped]
+  limits: ""
+AT-08:
+  req: R-02
+  level: L
+  goal: Replay từ Bronze dựng lại Silver trùng bản gốc
+  pre: Bronze đã nạp vào Silver
+  steps: ["python -m pipeline --from-bronze D --to NEW.duckdb", "So sánh tập event_id"]
+  expected: Cùng tập event_id; từ chối ghi đè đích đã tồn tại
+  tests: [tests/pipeline/test_query_replay.py::test_replay_rebuilds_same_event_ids, tests/pipeline/test_query_replay.py::test_replay_refuses_existing_target, tests/e2e/test_pipeline_fake_source.py::test_replay_from_bronze_reproduces_alerts]
+  limits: ""
+AT-09:
+  req: R-02
+  level: L
+  goal: Bản ghi thiếu field bắt buộc -> DLQ ERR_*, không điền mặc định
+  pre: Bản ghi Bronze thiếu field
+  steps: ["ingest", "Kiểm tra DLQ"]
+  expected: Vào quarantine_dlq kèm payload, không có bản ghi Silver giả
+  tests: [tests/pipeline/test_silver_store.py::test_bad_bronze_record_goes_to_dlq_with_payload, tests/test_validator_poc_w5.py::TestDataPipelineW05::test_05_negative_samples_routed_to_quarantine_dlq]
+  limits: ""
+AT-10:
+  req: R-02
+  level: L
+  goal: Alert/Silver -> Bronze -> raw_xml truy vết được
+  pre: Alert từ synthetic
+  steps: ["Gọi evidence resolver", "So raw_xml với nguồn"]
+  expected: Trạng thái FULL, raw_xml bằng XML nguồn, hash được xác minh; PARTIAL/RAW_EXPIRED khi thiếu
+  tests: [tests/alerts/test_alerts.py::test_evidence_resolves_to_raw_xml_both_ways, tests/alerts/test_alerts.py::test_evidence_partial_when_bronze_missing_or_tampered, tests/e2e/test_pipeline_fake_source.py::test_full_chain_each_interface]
+  limits: ""
+AT-11:
+  req: R-03
+  level: L
+  goal: DET-001 dương/lành tính/thiếu dữ liệu đúng kỳ vọng
+  pre: Fixture detection (synthetic)
+  steps: ["Chạy harness nhãn"]
+  expected: Expected == observed cho từng fixture DET-001
+  tests: [tests/detection/test_rules_harness.py::test_label_matrix_all_expected_equal_observed, tests/detection/test_rules_harness.py::test_missing_required_field_is_insufficient_not_benign]
+  limits: Fixture, chưa phải telemetry live. Test ma trận nhãn chạy chung mọi rule, không tách riêng từng rule
+AT-12:
+  req: R-03
+  level: L
+  goal: DET-003 như trên
+  pre: Fixture detection (synthetic)
+  steps: ["Chạy harness nhãn"]
+  expected: Expected == observed cho fixture DET-003
+  tests: [tests/detection/test_rules_harness.py::test_label_matrix_all_expected_equal_observed]
+  limits: Không có mẫu Run key thật trước PH5; test ma trận nhãn chạy chung mọi rule
+AT-13:
+  req: R-03
+  level: L
+  goal: DET-010 chuỗi đủ -> MATCH; thiếu Event 26 -> PENDING_LATE_EVENTS
+  pre: Fixture chuỗi 11->1->26
+  steps: ["Chạy harness", "Thêm Event 26 đến muộn"]
+  expected: MATCH khi đủ; PENDING_LATE_EVENTS khi thiếu; nâng lên MATCH khi 26 đến
+  tests: [tests/detection/test_rules_harness.py::test_label_matrix_all_expected_equal_observed, tests/detection/test_rules_harness.py::test_pending_upgrades_to_match_when_delete_arrives]
+  limits: Cửa sổ 300 s là TBD_UNCALIBRATED
+AT-14:
+  req: R-03
+  level: L
+  goal: IOC khớp hash tệp thử nghiệm; allowlist không bị gắn cờ
+  pre: Kho IOC synthetic
+  steps: ["Đánh giá sự kiện có hash IOC", "Đánh giá hash trong allowlist"]
+  expected: IOC -> MATCH kèm lý do nói rõ hash không chứng minh độc hại; allowlist thắng IOC; IOC hết hạn bị bỏ qua
+  tests: [tests/detection/test_rules_harness.py::test_ioc_match_and_reason_states_hash_is_not_proof, tests/detection/test_rules_harness.py::test_allowlist_wins_over_ioc, tests/detection/test_rules_harness.py::test_expired_ioc_ignored]
+  limits: Hash không chứng minh độc hại
+AT-15:
+  req: R-03
+  level: L
+  goal: Replay không sinh DetectionResult trùng
+  pre: Silver đã phát hiện một lần
+  steps: ["Chạy detection lại", "Đếm DetectionResult"]
+  expected: Không trùng; đổi rule_version thì tạo đánh giá mới
+  tests: [tests/detection/test_rules_harness.py::test_rule_version_bump_creates_new_evaluation, tests/alerts/test_alerts.py::test_rebuild_is_idempotent, tests/e2e/test_pipeline_fake_source.py::test_interrupted_agent_then_restart_gives_same_alerts_as_uninterrupted]
+  limits: ""
+AT-16:
+  req: R-03
+  level: W
+  goal: SC-01..SC-04 phát hiện trên VM, ghi nguồn phát hiện (EDR/Defender)
+  pre: VM lab, Sysmon, script lab đã được người dùng đọc
+  steps: ["Chạy dacn_lab_scenarios.ps1 SC01-SC04", "python tests/e2e/compare_expected.py"]
+  expected: Báo cáo so khớp scenarios.yaml
+  tests: []
+  limits: Chỉ trên tập kịch bản đã chạy
+AT-17:
+  req: R-04
+  level: L
+  goal: MATCH -> alert đủ trường, severity có lý do
+  pre: DetectionResult MATCH synthetic
+  steps: ["Dựng alert", "Kiểm tra trường"]
+  expected: Alert có rule_version, MITRE (nếu có căn cứ), severity và lý do
+  tests: [tests/alerts/test_alerts.py::test_match_becomes_alert_with_rule_version_and_mitre]
+  limits: Severity là heuristic chưa hiệu chỉnh
+AT-18:
+  req: R-04
+  level: L
+  goal: Máy trạng thái alert chặn chuyển sai
+  pre: Alert NEW
+  steps: ["Thử chuyển trạng thái hợp lệ và không hợp lệ"]
+  expected: Chuyển sai bị từ chối; lịch sử và audit hash-chain ghi đủ
+  tests: [tests/alerts/test_alerts.py::test_state_machine_and_history, tests/alerts/test_alerts.py::test_audit_chain_detects_tampering, tests/api/test_api.py::test_alert_transition_flow_and_invalid]
+  limits: Audit chain phát hiện nhưng không ngăn sửa đổi
+AT-19:
+  req: R-04
+  level: L
+  goal: Dedup alert; INSUFFICIENT_TELEMETRY thành coverage gap, không phải alert đe dọa
+  pre: Nhiều MATCH cùng nhóm; một INSUFFICIENT
+  steps: ["Dựng alert", "Liệt kê alerts và coverage-gaps"]
+  expected: Nhóm trùng bị gộp và đếm; INSUFFICIENT chỉ ở coverage_gaps
+  tests: [tests/alerts/test_alerts.py::test_duplicate_group_is_suppressed_and_counted, tests/alerts/test_alerts.py::test_insufficient_telemetry_is_coverage_gap_not_alert, tests/api/test_api.py::test_detections_and_coverage_gaps]
+  limits: Bucket 600 s là giá trị tạm
+AT-20:
+  req: R-04
+  level: L
+  goal: Timeline + cây tiến trình đúng với mẫu
+  pre: Sự kiện synthetic có quan hệ cha-con
+  steps: ["Gọi timeline và process-tree"]
+  expected: Thứ tự đúng, cảnh báo lệch giờ, tổ tiên thiếu được đánh dấu PARTIAL
+  tests: [tests/alerts/test_alerts.py::test_timeline_orders_and_reports_skew_and_tree_flags_partial_ancestry, tests/api/test_api.py::test_timeline_and_process_tree_404_without_process]
+  limits: Chưa kiểm trên dữ liệu live
+AT-21:
+  req: R-05
+  level: L
+  goal: Mặc định dry_run, không đổi hệ thống
+  pre: Policy mặc định
+  steps: ["Duyệt và thực thi một hành động"]
+  expected: Chỉ ghi kế hoạch; tiến trình/tệp không đổi; execute cần cả hai khóa
+  tests: [tests/response/test_response.py::test_shipped_policy_is_dry_run_and_locked, tests/response/test_response.py::test_execute_needs_both_locks, tests/response/test_response.py::test_dry_run_changes_nothing_and_records_plan, tests/response/test_response.py::test_dry_run_quarantine_leaves_file, tests/response/test_response.py::test_execute_blocked_without_both_locks_falls_back_to_dry_run, tests/response/test_response.py::test_factory_never_enables_execute_on_non_windows]
+  limits: Backend giả/Linux; không phải Windows
+AT-22:
+  req: R-05
+  level: L
+  goal: Thiếu approval -> từ chối
+  pre: Hành động ở trạng thái REQUESTED
+  steps: ["Thực thi khi chưa duyệt"]
+  expected: Bị từ chối; responder chỉ nhận hành động đã duyệt; không giả mạo audit
+  tests: [tests/response/test_response.py::test_unapproved_action_not_executed, tests/response/test_response.py::test_distinct_approver_enforced_when_configured, tests/api/test_api.py::test_responder_cannot_claim_unapproved_or_forge_audit, tests/api/test_api.py::test_response_request_approve_and_role_separation]
+  limits: ""
+AT-23:
+  req: R-05
+  level: L
+  goal: Mục tiêu thuộc allowlist bảo vệ -> từ chối
+  pre: Yêu cầu nhắm lsass.exe, explorer.exe, System, thư mục hệ thống
+  steps: ["Gửi yêu cầu, kể cả khi đã duyệt"]
+  expected: Từ chối trước khi tới backend, kể cả có marker; marker ngoài thư mục lab vẫn bị từ chối
+  tests: [tests/response/test_response.py::test_protected_process_names_always_denied_even_in_lab, tests/response/test_response.py::test_protected_dir_and_non_lab_and_self_denied, tests/response/test_response.py::test_marker_in_name_outside_lab_dir_is_still_denied_path_traversal, tests/response/test_response.py::test_protected_target_denied_before_backend_even_if_approved, tests/response/test_response.py::test_file_target_must_be_inside_lab, tests/response/test_response.py::test_quarantine_outside_lab_denied]
+  limits: Danh sách bảo vệ là tập tối thiểu, chưa đầy đủ cho mọi hệ thống
+AT-24:
+  req: R-05
+  level: L
+  goal: PID tái sử dụng -> phát hiện và từ chối
+  pre: Backend giả báo creation time/image khác
+  steps: ["Thực thi terminate"]
+  expected: Từ chối khi danh tính không khớp hoặc tiến trình đã biến mất
+  tests: [tests/response/test_response.py::test_pid_reuse_is_refused, tests/response/test_response.py::test_process_gone_is_refused, tests/response/test_response.py::test_creation_time_iso_tolerance_and_filetime_conversion]
+  limits: Giả lập; WinProcessApi chưa chạy trên Windows
+AT-25:
+  req: R-05
+  level: W
+  goal: Terminate tiến trình thử nghiệm (marker lab) khi execute + audit
+  pre: VM, người dùng bật execute_unlocked và mode execute
+  steps: ["Chạy tiến trình marker", "Duyệt terminate", "Kiểm tra Task Manager và audit"]
+  expected: Tiến trình bị kết thúc; audit trước/sau đủ
+  tests: []
+  limits: Chỉ tiến trình thử nghiệm
+AT-26:
+  req: R-05
+  level: W
+  goal: Quarantine tệp thử nghiệm rồi restore, hash khớp
+  pre: VM, tệp trong thư mục lab
+  steps: ["Duyệt quarantine", "Restore", "So sha256"]
+  expected: Hash khớp, không ghi đè, không xóa vĩnh viễn
+  tests: []
+  limits: Chỉ thư mục lab. Logic đã có test Linux (quarantine/restore) nhưng không thay cho Windows
+AT-27:
+  req: R-06
+  level: L
+  goal: Xác thực - thiếu/sai token -> 401/403
+  pre: API với token store
+  steps: ["Gọi endpoint không token, sai token, sai vai trò"]
+  expected: 401/403 mã lỗi thống nhất; /livez công khai và tối thiểu; token lưu dạng hash
+  tests: [tests/api/test_api.py::test_endpoints_require_token, tests/api/test_api.py::test_wrong_token_rejected_and_livez_is_public_and_minimal, tests/api/test_api.py::test_viewer_cannot_write, tests/api/test_api.py::test_responder_cannot_read_data, tests/api/test_api.py::test_tokens_stored_hashed_and_cli_helper]
+  limits: Chỉ loopback; không có TLS
+AT-28:
+  req: R-06
+  level: L
+  goal: Validate input - tham số sai/quá lớn -> lỗi mã ổn định
+  pre: API
+  steps: ["Gửi tham số sai, chuỗi SQLi, body quá 64 KB"]
+  expected: Lỗi định dạng {error:{code,message}}, không rò rỉ nội bộ
+  tests: [tests/api/test_api.py::test_events_sqli_string_is_inert_and_bad_params_rejected, tests/api/test_api.py::test_oversized_body_rejected_and_errors_do_not_leak, tests/api/test_api.py::test_reject_needs_reason]
+  limits: ""
+AT-29:
+  req: R-06
+  level: L
+  goal: Endpoint events/detections/alerts/response trả đúng schema
+  pre: API với dữ liệu synthetic
+  steps: ["Gọi các endpoint", "Đối chiếu openapi.json"]
+  expected: Đúng schema; phân trang; không lộ raw_data; openapi export khớp
+  tests: [tests/api/test_api.py::test_events_pagination_filter_and_no_raw_data, tests/api/test_api.py::test_alert_list_detail_and_validation, tests/api/test_api.py::test_detections_and_coverage_gaps, tests/api/test_api.py::test_incident_flow, tests/api/test_api.py::test_rules_read_only, tests/api/test_api.py::test_health_reports_measured_state_only, tests/api/test_api.py::test_openapi_export, tests/api/test_api.py::test_evidence_raw_only_for_allowed_roles_and_audited]
+  limits: ""
+AT-30:
+  req: R-07
+  level: L
+  goal: Dashboard hiển thị dữ liệu từ API, có tìm/lọc/chi tiết
+  pre: Node + Playwright Chromium, API với dữ liệu mẫu có nhãn SAMPLE
+  steps: ["Chạy tests/dashboard/test_dashboard_ui.py"]
+  expected: Các kiểm tra UI đạt; banner dữ liệu mẫu hiển thị; XSS chỉ hiện dạng text
+  tests: [tests/dashboard/test_dashboard_ui.py::test_dashboard_ui_checks, tests/api/test_api.py::test_ui_is_served_with_strict_csp_and_no_cache, tests/api/test_api.py::test_me_stats_and_data_label]
+  limits: Fixture gắn nhãn DỮ LIỆU MẪU; một trình duyệt (Chromium)
+AT-31:
+  req: R-07
+  level: L
+  goal: Trạng thái loading/lỗi/rỗng
+  pre: như AT-30
+  steps: ["Token sai -> trạng thái lỗi", "Bộ lọc không có kết quả -> trạng thái rỗng"]
+  expected: Có trạng thái lỗi (role=alert), rỗng và loading
+  tests: [tests/dashboard/test_dashboard_ui.py::test_dashboard_ui_checks]
+  gaps: "Test UI hiện kiểm tra trạng thái lỗi và rỗng; trạng thái loading chưa có kiểm tra tự động riêng"
+  limits: ""
+AT-32:
+  req: R-07
+  level: L
+  goal: Chi tiết alert hiển thị nguồn bằng chứng + kết quả response
+  pre: như AT-30
+  steps: ["Mở chi tiết alert"]
+  expected: Hiển thị đường dẫn bằng chứng và trạng thái hành động response
+  tests: [tests/dashboard/test_dashboard_ui.py::test_dashboard_ui_checks]
+  gaps: "Chưa kiểm tra tự động rằng màn chi tiết alert hiển thị kết quả response; cần xác nhận bằng ảnh chụp/ngắm thủ công"
+  limits: ""
+AT-33:
+  req: R-07
+  level: W
+  goal: Dashboard trên VM hiển thị cảnh báo thật của SC-01
+  pre: Hệ thống chạy trên VM
+  steps: ["Chạy SC-01", "Mở /ui"]
+  expected: Alert DET-001 hiển thị với bằng chứng
+  tests: []
+  limits: ""
+AT-34:
+  req: R-08
+  level: W
+  goal: edr_ctl start/status/stop khởi động/dừng sạch, không tiến trình mồ côi trên Windows
+  pre: Windows VM
+  steps: ["edr_ctl start/status/stop", "Kiểm tra tasklist"]
+  expected: Không còn tiến trình mồ côi
+  tests: []
+  limits: "Đã có test Linux (tests/test_edr_ctl.py, tests/e2e/test_edr_ctl_real_processes.py) - không thay cho Windows"
+AT-35:
+  req: R-08
+  level: W
+  goal: Làm theo hướng dẫn cài từ VM sạch tới hệ thống chạy
+  pre: VM snapshot sạch
+  steps: ["Làm từng bước EDR_INSTALL_GUIDE.md"]
+  expected: Hệ thống chạy; ghi lại bước nào sai
+  tests: []
+  limits: ""
+AT-36:
+  req: R-09
+  level: W
+  goal: Chuỗi đầy đủ SC-01 từ snapshot sạch
+  pre: VM snapshot sạch
+  steps: ["Theo EDR_DEMO_PLAN mục 4"]
+  expected: SC-01 -> alert -> bằng chứng -> dashboard
+  tests: []
+  limits: ""
+AT-37:
+  req: R-09
+  level: W
+  goal: Chuỗi đầy đủ SC-03 -> alert -> duyệt response -> terminate/quarantine
+  pre: VM, execute bật bởi người dùng
+  steps: ["SC-03", "SC-08"]
+  expected: Alert, duyệt, thực thi, audit
+  tests: []
+  limits: ""
+AT-38:
+  req: R-09
+  level: W
+  goal: Kiểm soát lành tính SC-06 không sinh alert đe dọa
+  pre: VM
+  steps: ["SC-06"]
+  expected: NO_MATCH
+  tests: []
+  limits: Cỡ mẫu nhỏ
+AT-39:
+  req: R-09
+  level: W
+  goal: Thiếu telemetry SC-07 -> INSUFFICIENT/PENDING, không báo giả
+  pre: VM
+  steps: ["SC-07"]
+  expected: PENDING_LATE_EVENTS hoặc INSUFFICIENT_TELEMETRY
+  tests: []
+  limits: ""
+AT-40:
+  req: R-09
+  level: W
+  goal: Lặp lại demo lần 2 từ snapshot sạch cho kết quả tương đương
+  pre: VM
+  steps: ["Khôi phục snapshot", "Chạy lại demo"]
+  expected: Kết quả tương đương lần 1
+  tests: []
+  limits: ""
+AT-41:
+  req: R-10
+  level: D
+  goal: Tài liệu cài đặt/user guide/báo cáo đầy đủ, liên kết hợp lệ
+  pre: Repo
+  steps: ["Kiểm tra liên kết tương đối trong docs/implementation"]
+  expected: Mọi liên kết tương đối trỏ tới tệp tồn tại
+  tests: []
+  check: doc_links
+  gaps: "Chỉ kiểm tra liên kết nội bộ; user guide và báo cáo cuối thuộc PH12 chưa viết"
+  limits: ""
+AT-42:
+  req: R-11
+  level: L
+  goal: Toàn bộ test contract/identity xanh; UUIDv5 từ Silver tái dựng được
+  pre: Repo
+  steps: ["pytest poc/sysmon-collector tests/test_validator_poc_w5.py"]
+  expected: Tất cả đạt
+  tests: [poc/sysmon-collector/test_bronze_contract.py, poc/sysmon-collector/test_canonical_bronze_contract.py, poc/sysmon-collector/test_sysmon_collector_poc.py, tests/test_validator_poc_w5.py, tests/pipeline/test_query_replay.py::test_replay_rebuilds_same_event_ids]
+  limits: Phụ thuộc quyết định hostname (D-07); hợp đồng chưa được phê duyệt chéo
+AT-43:
+  req: R-12
+  level: L
+  goal: Tắt ML = hành vi không đổi; detector giả hoạt động
+  pre: Repo
+  steps: ["Chạy test ML interface"]
+  expected: ML tắt mặc định, không kích hoạt response
+  tests: [tests/detection/test_rules_harness.py::test_ml_off_by_default_and_never_triggers_response]
+  gaps: "Chưa có test cho detector giả bật ML ngoài việc kiểm tra tắt mặc định"
+  limits: Chưa có mô hình ML thật

@@ -330,17 +330,20 @@
 
 ## PH11 — Nghiệm thu và Demo
 
-### PH11-T01 · Bộ test nghiệm thu `[P0 · M · SW/CY/DA · C · TODO]`
+### PH11-T01 · Bộ test nghiệm thu `[P0 · M · SW/CY/DA · C · REVIEW]`
 - **Mô tả:** mỗi test: Preconditions, Steps, Expected, Actual, PASS/FAIL/NOT RUN, Evidence, Known limitations — điền vào `EDR_ACCEPTANCE_MATRIX.md`.
+- **Ghi chú (đã làm):** `tests/acceptance/at_catalog.yaml` (43 AT) + `scripts/acceptance/run_acceptance.py` suy ra trạng thái từ pytest; báo cáo `docs/implementation/acceptance/ACCEPTANCE_REPORT.md`. Các AT mức W để NOT RUN; Steps của AT mức W cần đối chiếu lệnh thật với `EDR_INSTALL_GUIDE.md`.
 
 ### PH11-T02 · Chạy nghiệm thu trên VM `[P0 · XL · SW/CY/DA · W · TODO]`
 - **Mô tả:** người dùng chạy theo bộ test; Claude phân tích kết quả và ghi bằng chứng.
 
-### PH11-T03 · Diễn tập demo `[P0 · M · CY · W · TODO]`
+### PH11-T03 · Diễn tập demo `[P0 · M · CY · W · IN_PROGRESS]`
 - **Mô tả:** chạy kịch bản demo hai lần liên tiếp từ snapshot sạch; có phương án dự phòng dùng dữ liệu lưu sẵn (ghi rõ là dữ liệu lưu sẵn).
+- **Ghi chú:** runbook và bảng diễn tập đã soạn (`acceptance/DEMO_RUNBOOK.md`); chưa diễn tập lần nào.
 
-### PH11-T04 · Gói bằng chứng nghiệm thu `[P0 · M · SW · C · TODO]`
+### PH11-T04 · Gói bằng chứng nghiệm thu `[P0 · M · SW · C · REVIEW]`
 - **Mô tả:** tổng hợp lệnh, phiên bản, đầu ra, ảnh chụp (đã che định danh), liên kết commit/PR.
+- **Ghi chú:** `acceptance/EVIDENCE_PACK.md` (mức L). Chưa có ảnh chụp/đầu ra từ VM.
 
 ---
 

@@ -8,18 +8,18 @@ Quy ước trạng thái: `PASS` · `FAIL` · `NOT RUN` · `N/A`. Cột *Mức b
 
 | ID | Yêu cầu (từ mục tiêu MVP) | Module | Hiện thực | Test chính | Bằng chứng | Trạng thái |
 |---|---|---|---|---|---|---|
-| R-01 | Thành phần Windows thu thập telemetry Sysmon liên tục | `src/agent/` | PH2 (chưa có). Hiện có `poc/sysmon-collector/` file mode (L) | AT-01…AT-05 | Chưa có (live mode `UNKNOWN`) | NOT RUN |
-| R-02 | Pipeline tiếp nhận, chuẩn hóa, kiểm tra, lưu sự kiện | `src/pipeline/` | PoC trong bộ nhớ (L); bền vững: PH3 | AT-06…AT-10 | Chạy 18 sự kiện mẫu → 16 Silver / 2 DLQ (L, 2026-11-08, ngoài test suite) | NOT RUN (bền vững) |
-| R-03 | Detection Engine phát hiện hành vi/IOC/mẫu test | `src/detection/` | PH4 | AT-11…AT-16 | Chưa có | NOT RUN |
-| R-04 | Cảnh báo có thông tin và bằng chứng | `src/alerts/` | PH6 | AT-17…AT-20 | Chưa có | NOT RUN |
-| R-05 | Phản ứng có kiểm soát (terminate/quarantine thử nghiệm khi được phép) | `src/response/` | PH7 | AT-21…AT-26 | Chưa có | NOT RUN |
-| R-06 | Backend API kết nối module | `src/api/` | PH8 | AT-27…AT-29 | Chưa có | NOT RUN |
-| R-07 | Dashboard giám sát endpoint/sự kiện/phát hiện/cảnh báo/phản ứng | `src/dashboard/` | PH9 | AT-30…AT-33 | Chưa có | NOT RUN |
-| R-08 | Cài đặt/khởi động toàn hệ thống theo quy trình tài liệu hóa | `src/edr_ctl.py`, tài liệu | PH10 | AT-34, AT-35 | Chưa có | NOT RUN |
-| R-09 | Bộ kiểm thử end-to-end trên Windows 10 VM | `tests/e2e/`, `scripts/lab/` | PH5, PH10, PH11 | AT-36…AT-40 | Chưa có | NOT RUN |
-| R-10 | Tài liệu kỹ thuật, hướng dẫn, báo cáo nghiệm thu | `docs/` | PH12 | AT-41 | Bộ kế hoạch này (chỉ là kế hoạch) | NOT RUN |
-| R-11 | Hợp đồng dữ liệu không bị phá vỡ (Bronze 1.0, UUIDv5, raw preservation) | contract tests | Có test (L) | AT-42 | 3 + 10 test contract chạy trên Linux; 1 test fail (C-002) | FAIL (1 test) |
-| R-12 | Khả năng thêm ML mà không viết lại engine | `src/detection/ml/` | PH4-T10 | AT-43 | Chưa có | NOT RUN |
+| R-01 | Thành phần Windows thu thập telemetry Sysmon liên tục | `src/agent/` | PH2 (Linux: nguồn giả/tệp; live Windows chưa kiểm chứng) | AT-01…AT-05 | Báo cáo nghiệm thu mức L; live Windows `UNKNOWN` | 3 NOT RUN, 2 PASS |
+| R-02 | Pipeline tiếp nhận, chuẩn hóa, kiểm tra, lưu sự kiện | `src/pipeline/` | PH3 (DuckDB bền vững, replay; L) | AT-06…AT-10 | Báo cáo nghiệm thu mức L | 5 PASS |
+| R-03 | Detection Engine phát hiện hành vi/IOC/mẫu test | `src/detection/` | PH4 | AT-11…AT-16 | Báo cáo nghiệm thu mức L | 1 NOT RUN, 5 PASS |
+| R-04 | Cảnh báo có thông tin và bằng chứng | `src/alerts/` | PH6 | AT-17…AT-20 | Báo cáo nghiệm thu mức L | 4 PASS |
+| R-05 | Phản ứng có kiểm soát (terminate/quarantine thử nghiệm khi được phép) | `src/response/` | PH7 | AT-21…AT-26 | Báo cáo nghiệm thu mức L | 2 NOT RUN, 4 PASS |
+| R-06 | Backend API kết nối module | `src/api/` | PH8 | AT-27…AT-29 | Báo cáo nghiệm thu mức L | 3 PASS |
+| R-07 | Dashboard giám sát endpoint/sự kiện/phát hiện/cảnh báo/phản ứng | `src/dashboard/` | PH9 | AT-30…AT-33 | Báo cáo nghiệm thu mức L | 1 NOT RUN, 2 PARTIAL, 1 PASS |
+| R-08 | Cài đặt/khởi động toàn hệ thống theo quy trình tài liệu hóa | `src/edr_ctl.py`, tài liệu | PH10 | AT-34, AT-35 | Báo cáo nghiệm thu mức L | 2 NOT RUN |
+| R-09 | Bộ kiểm thử end-to-end trên Windows 10 VM | `tests/e2e/`, `scripts/lab/` | PH5, PH10, PH11 | AT-36…AT-40 | Báo cáo nghiệm thu mức L | 5 NOT RUN |
+| R-10 | Tài liệu kỹ thuật, hướng dẫn, báo cáo nghiệm thu | `docs/` | PH12 | AT-41 | Kiểm tra liên kết; user guide/báo cáo cuối thuộc PH12 | 1 PARTIAL |
+| R-11 | Hợp đồng dữ liệu không bị phá vỡ (Bronze 1.0, UUIDv5, raw preservation) | contract tests | Có test (L) | AT-42 | Test contract chạy lại mức L, xem báo cáo | 1 PASS |
+| R-12 | Khả năng thêm ML mà không viết lại engine | `src/detection/ml/` | PH4-T10 | AT-43 | Báo cáo nghiệm thu mức L | 1 PARTIAL |
 
 **Điều kiện sẵn sàng nghiệm thu MVP:** R-01…R-09 đều `PASS` ở mức bằng chứng `W` (hoặc `L` cho R-06 phần logic), chuỗi `Telemetry → Pipeline → Detection → Alert → Investigation → Safe Response → Dashboard` được chạy thật ít nhất một kịch bản (SC-01 hoặc SC-03) và lặp lại được.
 
@@ -86,14 +86,17 @@ Mức: `F/L/W`. Tất cả `Actual` hiện **chưa có**; Status = `NOT RUN`.
 | AT-42 | R-11 | L | Toàn bộ test contract/identity xanh; UUIDv5 từ Silver tái dựng được | Phụ thuộc quyết định hostname (D-07) |
 | AT-43 | R-12 | L | Tắt ML = hành vi không đổi; detector giả hoạt động | |
 
-## 4. Tình trạng tổng hợp (cập nhật khi có bằng chứng)
+## 4. Tình trạng tổng hợp (sinh từ `scripts/acceptance/run_acceptance.py`)
+
+Chạy lúc 2026-11-08T13:19:43Z (UTC), commit `da94bd4`, mức bằng chứng **L** (Linux). Chi tiết từng AT: [acceptance/ACCEPTANCE_REPORT.md](acceptance/ACCEPTANCE_REPORT.md); việc cho người dùng trên VM: [acceptance/WINDOWS_ACCEPTANCE_CHECKLIST.md](acceptance/WINDOWS_ACCEPTANCE_CHECKLIST.md).
 
 | Trạng thái | Số test nghiệm thu (AT) |
 |---|---|
-| PASS | 0 |
+| PASS | 25 |
+| PARTIAL (test đạt, còn khoảng trống ghi trong báo cáo) | 4 |
 | FAIL | 0 |
-| NOT RUN | 43 |
+| NOT RUN (cần Windows VM) | 14 |
 
-Ghi chú: yêu cầu R-11 hiện có bằng chứng một test **hiện có** của repository đang fail (`test_collector_errors_use_reason_codes`, đo 2026-11-08) nên yêu cầu mang trạng thái FAIL; test nghiệm thu AT-42 chưa chạy.
+Ghi chú: các AT PASS ở mức L dùng dữ liệu synthetic/giả lập; các mục đã thay đổi so với bản đầu: R-11 không còn FAIL vì lỗi mã `C-002` đã được sửa và chạy lại. Điều kiện sẵn sàng nghiệm thu MVP (mục 1) **chưa đạt**: R-01, R-05, R-07, R-08, R-09 còn AT mức W chưa chạy.
 
 Giới hạn chung: kết quả `L`/`F` không thay cho kiểm chứng trên Windows; tỷ lệ phát hiện chỉ có nghĩa trên tập kịch bản đã chạy; không suy rộng sang malware ngoài thực tế.
