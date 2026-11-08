@@ -88,7 +88,7 @@
 ### PH2-T07 · Vòng chạy agent, tín hiệu dừng, health `[P0 · M · SW · C · DONE]`
 - **Mô tả:** `AgentRunner`: đọc lô → ghi Bronze → bookmark; backpressure (hàng đợi giới hạn); xử lý Ctrl+C/`stop` file; ghi `health.json` (heartbeat, `last_event_at`, `last_seal_at`, `queue_depth`, số lỗi theo mã). **Files:** `src/agent/runner.py`, `health.py`, `__main__.py`. **Test:** nguồn giả chạy 10.000 sự kiện, dừng giữa chừng, khởi động lại → không mất. **DoD:** CLI `python -m agent run --config edr.yaml`.
 
-### PH2-T08 · Sysmon config cho các kịch bản MVP `[P0 · S · CY · U · TODO]`
+### PH2-T08 · Sysmon config cho các kịch bản MVP `[P0 · S · CY · U · REVIEW]`
 - **Mô tả:** đối chiếu `poc/sysmon-collector/configs/sysmon-config.xml` với telemetry cần cho SC-01..SC-04 (Event 1, 3, 5, 11, 12/13, 22, 23/26, 29; hash SHA256/IMPHASH). Đề xuất thay đổi qua PR vào cấu hình trong repository (không sửa trực tiếp trên máy). **Người dùng** áp dụng trên VM. **DoD:** bảng "kịch bản → Event ID cần có → đã bật?".
 
 ### PH2-T09 · Kiểm chứng agent trên Windows VM `[P0 · L · SW · W · TODO]`
@@ -174,13 +174,13 @@
 
 > Mọi kịch bản chỉ chạy trên Windows 10 VM lab có snapshot sạch, do **người dùng** thực hiện. Chi tiết: [EDR_DEMO_PLAN.md](EDR_DEMO_PLAN.md).
 
-### PH5-T01 · Danh mục kịch bản và kỳ vọng `[P0 · M · CY · C · TODO]`
+### PH5-T01 · Danh mục kịch bản và kỳ vọng `[P0 · M · CY · C · REVIEW]`
 - **Mô tả:** SC-01..SC-07 (PowerShell mã hóa vô hại, Run key vô hại, drop-execute-delete, hash IOC của tệp thử nghiệm, EICAR tùy chọn, kiểm soát lành tính, trường hợp thiếu telemetry), mỗi kịch bản có tiền điều kiện, telemetry kỳ vọng, `expected DetectionResult`, cleanup. **DoD:** người dùng duyệt từng kịch bản.
 
-### PH5-T02 · Script mô phỏng an toàn `[P0 · L · CY/SW · C · TODO]`
+### PH5-T02 · Script mô phỏng an toàn `[P0 · L · CY/SW · C · REVIEW]`
 - **Mô tả:** PowerShell có marker `DACN_LAB_<runid>`, chỉ ghi trong `%TEMP%\dacn_lab\` và `HKCU` khóa test, có tham số `-WhatIf`, cleanup đầy đủ, không tải mạng, không tắt công cụ bảo mật. **Vị trí:** thư mục người dùng chọn (đề xuất `scripts/lab/`). **Claude không chạy.** **DoD:** người dùng đọc, đồng ý, chạy `-WhatIf` trước.
 
-### PH5-T03 · Bộ dữ liệu có nhãn và bộ so sánh `[P0 · M · CY/DA · C · TODO]`
+### PH5-T03 · Bộ dữ liệu có nhãn và bộ so sánh `[P0 · M · CY/DA · C · DONE]`
 - **Mô tả:** công cụ đối chiếu `run_id` marker → sự kiện thu được → `DetectionResult` thực tế vs kỳ vọng; xuất bảng PASS/FAIL. **Files:** `tests/e2e/compare_expected.py`. **DoD:** chạy được trên fixture lưu sẵn (Linux) và trên dữ liệu VM.
 
 ### PH5-T04 · Chạy kịch bản trên VM và ghi nhận `[P0 · L · CY · W · TODO]`

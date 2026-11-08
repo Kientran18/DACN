@@ -32,11 +32,11 @@ Chi tiết trạng thái từng task: [EDR_TASK_BACKLOG.md](EDR_TASK_BACKLOG.md)
 
 | Trạng thái | Số task |
 |---|---|
-| TODO | 72 |
+| TODO | 68 |
 | IN_PROGRESS | 1 (PH2-T05) |
 | BLOCKED | 2 (ML-T06, ML-T07) |
-| REVIEW | 2 (PH2-T06, PH4-T02) |
-| DONE | 27 (PH4-T01,T03..T10; PH1-T01,T02,T03,T08,T09,T11; PH2-T01,T02,T03,T04,T07; PH3-T01,T02,T03,T05,T06,T07,T08) |
+| REVIEW | 5 (PH2-T06, PH2-T08, PH4-T02, PH5-T01, PH5-T02) |
+| DONE | 28 (PH5-T03; PH4-T01,T03..T10; PH1-T01,T02,T03,T08,T09,T11; PH2-T01,T02,T03,T04,T07; PH3-T01,T02,T03,T05,T06,T07,T08) |
 
 ## 4. Task đã hoàn thành
 
@@ -83,3 +83,4 @@ Chưa có bằng chứng triển khai. Khi có, ghi theo mẫu:
 | 2026-11-08 | PH2 (phần Linux) | `src/agent/`: sources (base/fake/file/eventlog), `bronze_writer` (segment+manifest+verify+recover), `checkpoint`, `runner`, `__main__`. `python -m pytest -q` → 66 pass (Linux). `EventLogSource` kiểm bằng API giả; Windows thật **UNKNOWN** tới PH2-T09. Mã lỗi theo W5-01 (C-001/002/005/006); mã nội bộ mới `R-*` (phục hồi), `A-001/002` (agent) là mở rộng của mình, cần Software duyệt; log lỗi collector ghi ở `bronze/errors/` thay vì `quarantine/collector` | Đã commit vào `claude_implement`; còn PH2-T05/T09 (Windows), T08, T10 |
 | 2026-11-08 | PH3 | `src/pipeline/`: `segment_reader` (V-007), `silver_store` (DuckDB bền vững, ledger, transaction, ON CONFLICT DO NOTHING, DLQ lưu payload), `replay` (`python -m pipeline --from-bronze D --to NEW.duckdb`), `query` (tham số hóa, danh sách trắng), `worker` (metrics.jsonl, hook `on_batch` cho PH4), `quality`. Thêm `requirements.txt` (cần `pytz`). `python -m pytest -q` → 80 pass (Linux) | Đã commit. Chưa làm: PH3-T04 (cột lineage cần DDL v1.2 được duyệt), PH3-T09 (retention). Hostname vẫn theo validator hiện tại (PH1-T04 chưa quyết định); Event 4/16 vẫn vào DLQ (PH1-T06); chưa kiểm trên Windows/Bronze thật từ agent live |
 | 2026-11-08 | PH4 | `src/detection/`: `schema`, `loader` (từ chối rule sai, MITRE cần `mitre_basis`, mặc định `alert_only`), `evaluator`, `correlator` (DET-010), `paths`, `ioc` (không tự tải feed; allowlist ưu tiên; IOC hết hạn bị bỏ), `engine` (khử trùng theo `rule_id+version+subject+window`, PENDING→MATCH được nâng cấp, bảng `_detection_results`), `ml/interface` (NullDetector). Rule: DACN-DET-001, 003, 010, 101 (101 là rule nền tảng do Claude đặt số, cần Cyber xác nhận). Harness `tests/detection/` (fixture synthetic có nhãn, một lệnh `python -m pytest tests/detection`). `python -m pytest -q` → toàn bộ pass (Linux) | Đã commit. Mọi rule `validation_status: synthetic_only`; chưa đo FP/FN thật; `time_window_seconds=300` là TBD_UNCALIBRATED; DetectionResult schema chờ Cyber+Data duyệt (PH4-T02). Chưa làm PH4-T11 (rule bổ sung) |
+| 2026-11-08 | PH5 (phần Linux) | `scripts/lab/dacn_lab_scenarios.ps1` (SC01–SC07; `-WhatIf`; guard thư mục lab; dọn từng mục), `scripts/lab/README.md` (danh mục kịch bản, bảng đối chiếu cấu hình Sysmon), `tests/e2e/scenarios.yaml` + `compare_expected.py` (PASS/FAIL/NOT RUN/OBSERVED), `tests/test_lab_script_safety.py` (kiểm tĩnh script). `python -m pytest -q` → 110 pass (Linux) | Đã commit. **PowerShell chưa chạy được ở đây (không có pwsh), script chưa được chạy ở đâu cả**; dữ liệu kiểm compare là synthetic. Chờ người dùng đọc, chạy `-WhatIf`, rồi chạy thật (PH5-T04); PH5-T05 chỉ làm sau khi có số liệu thật |

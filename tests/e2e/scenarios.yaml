@@ -1,0 +1,42 @@
+# Kỳ vọng cho SC-01..SC-07 (PH5-T01). NGUỒN SỰ THẬT cho compare_expected.py.
+# Trạng thái: ĐỀ XUẤT, chờ người dùng/Cyber duyệt từng kịch bản. Chưa chạy trên VM.
+# expected: rule -> các outcome chấp nhận được; "NONE" = không được có kết quả nào.
+scenarios:
+  SC01:
+    title: PowerShell EncodedCommand vô hại
+    expect_telemetry: [1]
+    expected: {DACN-DET-001: [MATCH]}
+    notes: marker nằm trong chuỗi base64; công cụ so sánh tự giải mã UTF-16LE
+  SC02:
+    title: Giá trị Run key (xóa ngay)
+    expect_telemetry: [13]
+    expected: {DACN-DET-003: [MATCH]}
+  SC03:
+    title: Drop, execute, delete
+    expect_telemetry: [11, 1, 26]
+    expected: {DACN-DET-010: [MATCH]}
+    notes: rủi ro đường dẫn 8.3 (PROGRA~1, USERNA~1) giữa Event 11 và Event 1 chưa được kiểm trên Windows thật
+  SC04:
+    title: Tệp tự biên dịch khớp IOC hash
+    expect_telemetry: [1]
+    expected: {DACN-DET-101: [MATCH]}
+    requires_ioc: true
+    notes: cần Sysmon HashAlgorithms có SHA256 (cấu hình repo có) và ioc_candidate đã nạp
+  SC05:
+    title: EICAR (tùy chọn)
+    observe_only: true
+    notes: Windows Defender có thể xóa tệp; ghi nhận ai phát hiện, không chấm đạt/trượt
+  SC06:
+    title: Kiểm soát lành tính
+    expect_telemetry: [1]
+    expected:
+      DACN-DET-001: [NONE]
+      DACN-DET-003: [NONE]
+      DACN-DET-010: [NONE]
+      DACN-DET-101: [NONE]
+  SC07:
+    title: Thiếu telemetry (xóa ở nơi Sysmon không theo dõi)
+    expect_telemetry: [11, 1]
+    absent_telemetry: [26, 23]
+    expected: {DACN-DET-010: [PENDING_LATE_EVENTS, NO_MATCH]}
+    notes: không được MATCH đầy đủ khi thiếu bước xóa
