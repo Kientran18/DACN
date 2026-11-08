@@ -215,31 +215,31 @@
 
 ## PH7 — Response Engine (kiểm soát)
 
-### PH7-T01 · Response policy và danh sách bảo vệ `[P0 · M · CY · C · TODO]`
+### PH7-T01 · Response policy và danh sách bảo vệ `[P0 · M · CY · C · DONE]`
 - **Mô tả:** policy (`response-policy.yaml`): hành động cho phép, `mode: dry_run` mặc định, allowlist **bảo vệ** (tiến trình hệ thống, `explorer.exe`, `lsass.exe`, `csrss.exe`, thư mục `%SystemRoot%`, chính tiến trình EDR…), chỉ cho phép mục tiêu mang marker lab hoặc nằm trong thư mục lab được chỉ định. **Files:** `src/response/policy.py`, `config/response-policy.yaml`. **DoD:** mục tiêu thuộc danh sách bảo vệ luôn bị từ chối (test).
 
-### PH7-T02 · Mô hình hành động và hàng đợi `[P0 · M · CY/SW · C · TODO]`
+### PH7-T02 · Mô hình hành động và hàng đợi `[P0 · M · CY/SW · C · DONE]`
 - **Mô tả:** `ResponseAction` (type, target identity, alert_id, requested_by, approval, mode), trạng thái `REQUESTED → APPROVED/REJECTED → EXECUTING → DONE/FAILED`. **Files:** `src/response/actions.py`. **Phụ thuộc:** PH6-T01.
 
-### PH7-T03 · Executor lõi với backend dry-run và giả `[P0 · L · SW · C · TODO]`
+### PH7-T03 · Executor lõi với backend dry-run và giả `[P0 · L · SW · C · DONE]`
 - **Mô tả:** `Executor` gọi backend theo `mode`; `DryRunBackend` (ghi dự kiến, không đổi hệ thống), `FakeOSBackend` (mô phỏng tiến trình/tệp trong thư mục tạm test). Kiểm tra: policy, xác thực người duyệt, xác minh lại danh tính mục tiêu ngay trước khi thực thi (chống TOCTOU/tái sử dụng PID). **Files:** `src/response/executor.py`, `backends/`. **DoD:** thiếu approval, mục tiêu bảo vệ, PID tái sử dụng đều bị từ chối trong test.
 
-### PH7-T04 · Backend Windows: kết thúc tiến trình thử nghiệm `[P0 · L · SW · C+W · TODO]`
+### PH7-T04 · Backend Windows: kết thúc tiến trình thử nghiệm `[P0 · L · SW · C+W · REVIEW]`
 - **Mô tả:** xác minh `(pid, creation time, image path, marker lab)` trước khi `TerminateProcess`; chỉ tiến trình do kịch bản mô phỏng tạo. Mã viết/kiểm thử logic trên Linux bằng lớp giả; thực thi thật chỉ khi người dùng bật `mode: execute` trên VM. **DoD:** mặc định dry-run; log chứng minh hành động.
 
-### PH7-T05 · Backend: cách ly tệp thử nghiệm `[P0 · L · SW · C+W · TODO]`
+### PH7-T05 · Backend: cách ly tệp thử nghiệm `[P0 · L · SW · C+W · REVIEW]`
 - **Mô tả:** di chuyển tệp vào `quarantine\` (đổi tên, ghi SHA-256, đường dẫn gốc, ACL mô tả) và có `restore`; không xóa vĩnh viễn; chỉ trong thư mục lab. **DoD:** restore khớp hash; không thao tác ngoài thư mục lab.
 
-### PH7-T06 · Audit hành động `[P0 · M · SW/CY · C · TODO]`
+### PH7-T06 · Audit hành động `[P0 · M · SW/CY · C · DONE]`
 - **Mô tả:** ghi trước/sau mỗi hành động (actor, lý do, mục tiêu, kết quả, con trỏ rollback) vào `audit_log`; dùng chung PH6-T06. **DoD:** mỗi hành động thật có bản ghi đối chiếu được với log hệ điều hành do người dùng quan sát.
 
-### PH7-T07 · Tiến trình `responder` `[P0 · M · SW · C · TODO]`
+### PH7-T07 · Tiến trình `responder` `[P0 · M · SW · C · REVIEW]`
 - **Mô tả:** tiến trình riêng (quyền tối thiểu), lấy hành động `APPROVED` từ API cục bộ bằng token, thực thi qua `Executor`, gửi kết quả. **Files:** `src/response/responder.py`. **Phụ thuộc:** PH8-T06. **DoD:** core không giữ quyền response.
 
-### PH7-T08 · Auto-response có cổng (mặc định tắt) `[P1 · M · CY · C · TODO]`
+### PH7-T08 · Auto-response có cổng (mặc định tắt) `[P1 · M · CY · C · DONE]`
 - **Mô tả:** chỉ cho rule + mục tiêu được người dùng cho phép rõ ràng trong policy, chỉ khi `mode: execute` và bằng chứng đầy đủ (`coverage_status` đủ). **DoD:** cấu hình mặc định không tự thực thi; test.
 
-### PH7-T09 · Block hash ở mức ứng dụng `[P1 · M · CY/DA · C · TODO]`
+### PH7-T09 · Block hash ở mức ứng dụng `[P1 · M · CY/DA · C · DONE]`
 - **Mô tả:** thêm hash vào danh sách IOC cục bộ có nguồn "analyst-block"; không tuyên bố chặn thực thi ở mức hệ điều hành. **DoD:** hash được gắn cờ ở lần phát hiện sau; tài liệu nêu rõ là detection chứ không phải prevention.
 
 ### PH7-T10 · Kiểm chứng response trên VM `[P0 · L · CY · W · TODO]`

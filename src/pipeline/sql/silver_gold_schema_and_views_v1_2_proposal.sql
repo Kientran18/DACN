@@ -103,3 +103,21 @@ CREATE TABLE IF NOT EXISTS audit_log (
     prev_hash VARCHAR(64) NOT NULL,
     row_hash VARCHAR(64) NOT NULL
 );
+
+-- Response (PH7): hàng đợi hành động có phê duyệt. Kết quả/rollback là JSON.
+CREATE TABLE IF NOT EXISTS response_actions (
+    action_id VARCHAR(36) PRIMARY KEY,
+    alert_id VARCHAR(36),
+    action_type VARCHAR(32) NOT NULL,              -- TERMINATE_PROCESS | QUARANTINE_FILE | RESTORE_FILE
+    target JSON NOT NULL,
+    requested_mode VARCHAR(16) NOT NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'REQUESTED',
+    requested_by VARCHAR NOT NULL,
+    requested_at_utc TIMESTAMPTZ NOT NULL,
+    approved_by VARCHAR,
+    approved_at_utc TIMESTAMPTZ,
+    decision_reason VARCHAR,
+    result JSON,
+    rollback JSON,
+    updated_at_utc TIMESTAMPTZ NOT NULL
+);

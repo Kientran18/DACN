@@ -50,6 +50,10 @@ class AlertStore:
         self.con.execute("insert into audit_log values (?,?,?,?,?,?,?,?,?)",
                          [seq, at, actor, action, target_type, target_id, reason, prev, h])
 
+    def record(self, actor, action, target_type, target_id, reason) -> None:
+        """Ghi audit từ module khác (response). Append-only."""
+        self._audit(actor, action, target_type, target_id, reason)
+
     def verify_audit(self) -> List[str]:
         """Danh sách vấn đề (rỗng = chuỗi nguyên vẹn). Phát hiện sửa/xóa/chèn."""
         issues, prev, expect = [], _ZERO, 1
