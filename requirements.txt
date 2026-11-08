@@ -5,3 +5,6 @@ duckdb
 pytz        # duckdb cần để trả cột TIMESTAMPTZ
 PyYAML
 pywin32; sys_platform == "win32"
+fastapi
+uvicorn
+httpx      # TestClient của FastAPI
