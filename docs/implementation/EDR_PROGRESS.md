@@ -32,11 +32,11 @@ Chi tiết trạng thái từng task: [EDR_TASK_BACKLOG.md](EDR_TASK_BACKLOG.md)
 
 | Trạng thái | Số task |
 |---|---|
-| TODO | 99 |
+| TODO | 95 |
 | IN_PROGRESS | 1 (PH2-T05) |
 | BLOCKED | 2 (ML-T06, ML-T07) |
-| REVIEW | 1 (PH1-T02) |
-| DONE | 1 (PH1-T01) |
+| REVIEW | 0 |
+| DONE | 6 (PH1-T01, T02, T03, T08, T09, T11) |
 
 ## 4. Task đã hoàn thành
 
@@ -79,3 +79,4 @@ Chưa có bằng chứng triển khai. Khi có, ghi theo mẫu:
 |---|---|---|---|
 | 2026-11-08 | Kiểm toán + lập kế hoạch | Chạy test, kiểm tra chuỗi Bronze→Silver, DDL, rà soát issue/PR; tạo 8 tệp trong `docs/implementation/` | Chờ phê duyệt; không sửa mã nguồn |
 | 2026-11-08 | Bắt đầu PH1 | Người dùng duyệt D-01…D-14 theo đề xuất; cung cấp cấu hình VM; PH1-T01 DONE; PH1-T02 sửa `C-002` (REVIEW); viết script `verify_windows_env.py` (PH2-T05) | Chưa commit; chờ người dùng chạy script trên VM |
+| 2026-11-08 | PH1 (đợt 2) | PH1-T03 (test entropy dùng so sánh tương đối + giá trị biết trước, lý do ghi trong test), PH1-T08/T11 (`conftest.py`, `pytest.ini`, marker `windows`, `.gitignore`), PH1-T09 (`src/common/config.py`, `log.py`). `python -m pytest -q` → 46 pass (Linux) | Đã commit vào `claude_implement`; còn PH1-T04/05/06/07/10/12 cần quyết định liên nhóm |

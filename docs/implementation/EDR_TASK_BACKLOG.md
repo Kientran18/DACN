@@ -22,13 +22,13 @@
 - **Bước:** chạy hai lệnh pytest; ghi 2 lỗi đã biết; kiểm tra `git status`. **Skill:** `verification-before-completion`.
 - **DoD:** baseline có ngày giờ và kết quả khớp đầu ra thực tế.
 
-### PH1-T02 · Sửa mã lỗi `C-002` ở đường parse `[P0 · S · SW · C · REVIEW]`
+### PH1-T02 · Sửa mã lỗi `C-002` ở đường parse `[P0 · S · SW · C · DONE]`
 - **Mô tả:** `_parse_event_element` báo `Event XML is missing EventID or TimeCreated` không kèm mã; test `test_collector_errors_use_reason_codes` kỳ vọng `C-002` (bảng mã lỗi trong `docs/research/software/w5/01-collector-to-bronze-interface-contract-v1.md`). **Files:** `poc/sysmon-collector/sysmon_collector_poc.py`, `poc/sysmon-collector/test_bronze_contract.py`. **Phụ thuộc:** PH1-T01.
 - **Bước:** `systematic-debugging` xác nhận nguyên nhân; chạy test fail; sửa thông báo thành tiền tố `C-002` (không đổi logic); kiểm tra các nơi khác bắt thông điệp cũ (Grep).
 - **Test:** `python -m pytest -q poc/sysmon-collector/test_bronze_contract.py::test_collector_errors_use_reason_codes` rồi toàn bộ suite.
 - **DoD:** test pass, không test khác hồi quy. Chỉ đổi chuỗi thông báo lỗi; không đổi schema/contract.
 
-### PH1-T03 · Điều tra và sửa `test_06` (entropy) `[P0 · S · DA · C · TODO]`
+### PH1-T03 · Điều tra và sửa `test_06` (entropy) `[P0 · S · DA · C · DONE]`
 - **Mô tả:** test kỳ vọng entropy > 5.0, giá trị thực 4.7322. **Files:** `tests/test_validator_poc_w5.py`, `src/pipeline/validator_poc.py` (hàm `calculate_shannon_entropy`). **Phụ thuộc:** PH1-T01.
 - **Bước:** xác định nguyên nhân gốc (công thức sai hay kỳ vọng test không khả thi cho chuỗi ngắn); tính tay entropy; chọn sửa fixture hoặc ngưỡng; ghi lý do. **Cần Data review.**
 - **DoD:** test phản ánh hành vi đúng của entropy, có giải thích; không giảm ngưỡng chỉ để pass mà không có lập luận.
@@ -47,16 +47,16 @@
 ### PH1-T07 · Bổ sung fixture Event 14, 15 (synthetic có nhãn) `[P1 · M · SW · C · TODO]`
 - **Mô tả:** chưa có mẫu cho 14/15 nên chưa có bằng chứng validator. **Files:** `poc/sysmon-collector/configs/synthetic_events.xml` hoặc fixture mới trong `tests/fixtures/`, test mới. **DoD:** test chạy qua adapter+validator, ghi rõ synthetic; không bịa field ngoài tài liệu Sysmon.
 
-### PH1-T08 · Quyết định cách chia sẻ code giữa `poc/` và `src/` `[P0 · M · SW · U · TODO]`
+### PH1-T08 · Quyết định cách chia sẻ code giữa `poc/` và `src/` `[P0 · M · SW · U · DONE]`
 - **Mô tả:** các file Python import bằng tên module trần (`CLAUDE.md` mục 5). Phương án (a) shim đường dẫn + `conftest.py`/`pytest.ini` với `pythonpath`; (b) di chuyển thành package (phá liên kết tài liệu tới `poc/sysmon-collector/bronze-event.schema.json`). **Output:** ADR đề xuất + cài đặt phương án đã duyệt (khuyến nghị (a) cho MVP). **Files:** `conftest.py` (mới, gốc repo) hoặc `pytest.ini`. **DoD:** `python -m pytest` chạy từ gốc, import module mới `src/<module>/` được; không đổi vị trí schema.
 
-### PH1-T09 · Module cấu hình và logging dùng chung `[P0 · M · SW · C · TODO]`
+### PH1-T09 · Module cấu hình và logging dùng chung `[P0 · M · SW · C · DONE]`
 - **Mô tả:** chưa có logging/config trong code hiện tại. **Output:** `src/common/config.py` (tải `edr.yaml`/biến môi trường `EDR_HOME`, giá trị mặc định, kiểm tra hợp lệ), `src/common/log.py` (JSONL: `ts, level, component, run_id, event, reason_code`). **Phụ thuộc:** PH1-T08; quyết định D-05 (YAML). **Test:** `tests/common/`. **DoD:** đường dẫn dữ liệu cấu hình được; thiếu/không hợp lệ báo lỗi rõ; log không chứa command line thô.
 
 ### PH1-T10 · Thống nhất tên event type collector ↔ validator (Q-X3) `[P1 · M · DA/CY/SW · U · TODO]`
 - **Mô tả:** `REGISTRY_RENAME_KEY`/`FILE_STREAM_CREATE`/`NETWORK_ACCEPT` (collector) khác `REGISTRY_RENAME`/`FILE_STREAM_HASH` (validator). **Output:** bảng ánh xạ thống nhất được ba nhóm duyệt; test đối chiếu hai bảng. **DoD:** một nguồn sự thật; detection dùng đúng tên.
 
-### PH1-T11 · Hạ tầng test: marker và cấu hình `[P0 · S · SW · C · TODO]`
+### PH1-T11 · Hạ tầng test: marker và cấu hình `[P0 · S · SW · C · DONE]`
 - **Mô tả:** thêm marker `windows` (bỏ qua trên Linux), `integration`; script chạy toàn bộ suite một lệnh. **Files:** `pytest.ini`/`conftest.py`. **Phụ thuộc:** PH1-T08. **DoD:** `python -m pytest -q` chạy toàn bộ trên Linux, test `windows` được skip kèm lý do.
 
 ### PH1-T12 · Tạo fixture đã khử định danh `[P1 · M · CY/SW · C · TODO]`

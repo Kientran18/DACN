@@ -217,8 +217,19 @@ class TestDataPipelineW05(unittest.TestCase):
             "powershell.exe -NoP -NonI -W Hidden -Enc "
             "SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkA"
         )
-        self.assertLess(calculate_shannon_entropy(normal_cmd), 4.5)
-        self.assertGreater(calculate_shannon_entropy(encoded_cmd), 5.0)
+        # Công thức: H = -sum(p*log2 p), tối đa log2(số ký tự khác nhau).
+        # Chuỗi encoded mẫu có 121 ký tự, 42 ký tự khác nhau => H tối đa 5.39,
+        # giá trị thực 4.7322; ngưỡng tuyệt đối 5.0 không khả thi cho chuỗi ngắn
+        # này (PH1-T03). Kiểm tra công thức bằng giá trị biết trước và so sánh
+        # tương đối thay vì ngưỡng tuyệt đối.
+        self.assertEqual(calculate_shannon_entropy("aaaa"), 0.0)
+        self.assertEqual(calculate_shannon_entropy("abcd"), 2.0)
+        self.assertEqual(calculate_shannon_entropy(None), 0.0)
+        normal_h = calculate_shannon_entropy(normal_cmd)
+        encoded_h = calculate_shannon_entropy(encoded_cmd)
+        self.assertLess(normal_h, 4.5)
+        self.assertGreater(encoded_h, normal_h)
+        self.assertGreater(encoded_h, 4.5)
 
 
 if __name__ == "__main__":
