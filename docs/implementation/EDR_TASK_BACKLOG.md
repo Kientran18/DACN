@@ -233,7 +233,7 @@
 ### PH7-T06 · Audit hành động `[P0 · M · SW/CY · C · DONE]`
 - **Mô tả:** ghi trước/sau mỗi hành động (actor, lý do, mục tiêu, kết quả, con trỏ rollback) vào `audit_log`; dùng chung PH6-T06. **DoD:** mỗi hành động thật có bản ghi đối chiếu được với log hệ điều hành do người dùng quan sát.
 
-### PH7-T07 · Tiến trình `responder` `[P0 · M · SW · C · REVIEW]`
+### PH7-T07 · Tiến trình `responder` `[P0 · M · SW · C · DONE]`
 - **Mô tả:** tiến trình riêng (quyền tối thiểu), lấy hành động `APPROVED` từ API cục bộ bằng token, thực thi qua `Executor`, gửi kết quả. **Files:** `src/response/responder.py`. **Phụ thuộc:** PH8-T06. **DoD:** core không giữ quyền response.
 
 ### PH7-T08 · Auto-response có cổng (mặc định tắt) `[P1 · M · CY · C · DONE]`
@@ -249,31 +249,31 @@
 
 ## PH8 — Backend API
 
-### PH8-T01 · Khung ứng dụng API `[P0 · M · SW · C · TODO]`
+### PH8-T01 · Khung ứng dụng API `[P0 · M · SW · C · DONE]`
 - **Mô tả:** FastAPI + uvicorn (quyết định D-04), bind `127.0.0.1`, token Bearer cấu hình, logging, xử lý lỗi thống nhất (mã ổn định, không lộ stack/đường dẫn). **Files:** `src/api/app.py`, `auth.py`. **Phụ thuộc:** D-04, PH1-T09.
 
-### PH8-T02 · `/health`, `/endpoint` `[P0 · S · SW · C · TODO]`
+### PH8-T02 · `/health`, `/endpoint` `[P0 · S · SW · C · DONE]`
 - **Mô tả:** trạng thái agent (heartbeat), pipeline (lag, DLQ), engine, phiên bản rule; thông tin endpoint đơn (hostname hiển thị theo quyết định PH1-T04).
 
-### PH8-T03 · `/events` truy vấn `[P0 · M · SW/DA · C · TODO]`
+### PH8-T03 · `/events` truy vấn `[P0 · M · SW/DA · C · DONE]`
 - **Mô tả:** lọc thời gian/event type/`process_guid`/hash/path, phân trang có giới hạn, sắp xếp; tham số hóa. **Phụ thuộc:** PH3-T06.
 
-### PH8-T04 · `/detections`, `/alerts` `[P0 · M · SW/CY · C · TODO]`
+### PH8-T04 · `/detections`, `/alerts` `[P0 · M · SW/CY · C · DONE]`
 - **Mô tả:** danh sách/chi tiết, đổi trạng thái (kiểm tra máy trạng thái), ghi chú. **Phụ thuộc:** PH6-T03.
 
-### PH8-T05 · `/alerts/{id}/evidence` `[P0 · M · SW/CY · C · TODO]`
+### PH8-T05 · `/alerts/{id}/evidence` `[P0 · M · SW/CY · C · DONE]`
 - **Mô tả:** trả sự kiện nguồn, timeline, cây tiến trình; `raw_xml` chỉ cho vai trò được phép và có audit. **Phụ thuộc:** PH6-T04/T05.
 
-### PH8-T06 · `/response/actions` `[P0 · M · SW/CY · C · TODO]`
+### PH8-T06 · `/response/actions` `[P0 · M · SW/CY · C · DONE]`
 - **Mô tả:** tạo yêu cầu, duyệt/từ chối (vai trò approver), xem kết quả; responder dùng cùng API. **Phụ thuộc:** PH7-T02.
 
-### PH8-T07 · `/rules` (đọc, bật/tắt tối thiểu) `[P1 · M · CY/SW · C · TODO]`
+### PH8-T07 · `/rules` (đọc, bật/tắt tối thiểu) `[P1 · M · CY/SW · C · DONE]`
 - **Mô tả:** liệt kê rule + phiên bản + trạng thái; thay đổi rule trong production không nằm trong MVP (rule đổi qua tệp + kiểm tra). 
 
-### PH8-T08 · Kiểm thử API `[P0 · M · SW · C · TODO]`
+### PH8-T08 · Kiểm thử API `[P0 · M · SW · C · DONE]`
 - **Mô tả:** test xác thực, phân quyền, validate input (quá lớn/sai kiểu), lỗi, phân trang; dùng DuckDB fixture. **Files:** `tests/api/`. **DoD:** mọi endpoint có test dương và âm.
 
-### PH8-T09 · Xuất đặc tả OpenAPI `[P1 · S · SW · C · TODO]`
+### PH8-T09 · Xuất đặc tả OpenAPI `[P1 · S · SW · C · DONE]`
 - **Mô tả:** sinh `openapi.json` và tài liệu endpoint.
 
 ---

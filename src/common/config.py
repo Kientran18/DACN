@@ -14,7 +14,7 @@ class ConfigError(ValueError):
 
 
 _ALLOWED = {"home", "api", "response"}
-_ALLOWED_API = {"host", "port"}
+_ALLOWED_API = {"host", "port", "tokens_file"}
 _ALLOWED_RESP = {"mode"}
 
 
@@ -24,6 +24,7 @@ class Config:
     api_host: str = "127.0.0.1"
     api_port: int = 8765
     response_mode: str = "dry-run"
+    api_tokens_file: Optional[Path] = None
 
     @property
     def silver_db(self) -> Path:
@@ -32,6 +33,10 @@ class Config:
     @property
     def bronze_dir(self) -> Path:
         return self.home / "bronze"
+
+    @property
+    def tokens_path(self) -> Path:
+        return self.api_tokens_file or (self.home / "api_tokens.json")
 
     @property
     def log_dir(self) -> Path:
@@ -72,4 +77,6 @@ def load_config(path: Optional[Path]) -> Config:
     if mode != "dry-run":
         raise ConfigError("CFG-006 response.mode hiện chỉ hỗ trợ 'dry-run' (thực thi thật cần phê duyệt riêng)")
     home = Path(data["home"]) if data.get("home") else _default_home()
-    return Config(home=home, api_host=host, api_port=port, response_mode=mode)
+    tf = api.get("tokens_file")
+    return Config(home=home, api_host=host, api_port=port, response_mode=mode,
+                  api_tokens_file=Path(tf) if tf else None)
