@@ -7,7 +7,7 @@
 
 | Mục | Giá trị |
 |---|---|
-| Giai đoạn | **PH1 — Stabilization** (`IN_PROGRESS`); PH0 đã được người dùng chấp nhận theo đề xuất mặc định |
+| Giai đoạn | **PH1 (phần còn lại cần quyết định liên nhóm) + PH2 phần chạy được trên Linux — xong**; PH1 (`IN_PROGRESS`); PH0 đã được người dùng chấp nhận theo đề xuất mặc định |
 | Task đang làm | PH1-T02 (`REVIEW`, chưa commit), PH2-T05 (`IN_PROGRESS`, chờ người dùng chạy trên VM) |
 | Task kế tiếp | **PH1-T03** (test entropy, cần Data review), **PH1-T08** (chia sẻ code `poc/` ↔ `src/`, D-03(a) đã chọn), **PH1-T11** (marker `windows`), rồi PH1-T09 (config/log) |
 | Branch | Đang làm trên nhánh con `fix/c002-collector-reason-code` (tạo từ `claude_implement`, **chỉ local**). Nhánh tích hợp: **`claude_implement`** (tạo từ `main` ngày 2026-11-08; chứa kế hoạch và mọi hiện thực của Claude; chỉ đưa vào `main` ở bản cuối cùng theo quyết định của người dùng). `claude/great-lamport-7fps1l` đã hoàn tất (PR #43, #44, #45 đã merge) |
@@ -32,11 +32,11 @@ Chi tiết trạng thái từng task: [EDR_TASK_BACKLOG.md](EDR_TASK_BACKLOG.md)
 
 | Trạng thái | Số task |
 |---|---|
-| TODO | 95 |
+| TODO | 89 |
 | IN_PROGRESS | 1 (PH2-T05) |
 | BLOCKED | 2 (ML-T06, ML-T07) |
-| REVIEW | 0 |
-| DONE | 6 (PH1-T01, T02, T03, T08, T09, T11) |
+| REVIEW | 1 (PH2-T06) |
+| DONE | 11 (PH1-T01, T02, T03, T08, T09, T11; PH2-T01, T02, T03, T04, T07) |
 
 ## 4. Task đã hoàn thành
 
@@ -80,3 +80,4 @@ Chưa có bằng chứng triển khai. Khi có, ghi theo mẫu:
 | 2026-11-08 | Kiểm toán + lập kế hoạch | Chạy test, kiểm tra chuỗi Bronze→Silver, DDL, rà soát issue/PR; tạo 8 tệp trong `docs/implementation/` | Chờ phê duyệt; không sửa mã nguồn |
 | 2026-11-08 | Bắt đầu PH1 | Người dùng duyệt D-01…D-14 theo đề xuất; cung cấp cấu hình VM; PH1-T01 DONE; PH1-T02 sửa `C-002` (REVIEW); viết script `verify_windows_env.py` (PH2-T05) | Chưa commit; chờ người dùng chạy script trên VM |
 | 2026-11-08 | PH1 (đợt 2) | PH1-T03 (test entropy dùng so sánh tương đối + giá trị biết trước, lý do ghi trong test), PH1-T08/T11 (`conftest.py`, `pytest.ini`, marker `windows`, `.gitignore`), PH1-T09 (`src/common/config.py`, `log.py`). `python -m pytest -q` → 46 pass (Linux) | Đã commit vào `claude_implement`; còn PH1-T04/05/06/07/10/12 cần quyết định liên nhóm |
+| 2026-11-08 | PH2 (phần Linux) | `src/agent/`: sources (base/fake/file/eventlog), `bronze_writer` (segment+manifest+verify+recover), `checkpoint`, `runner`, `__main__`. `python -m pytest -q` → 66 pass (Linux). `EventLogSource` kiểm bằng API giả; Windows thật **UNKNOWN** tới PH2-T09. Mã lỗi theo W5-01 (C-001/002/005/006); mã nội bộ mới `R-*` (phục hồi), `A-001/002` (agent) là mở rộng của mình, cần Software duyệt; log lỗi collector ghi ở `bronze/errors/` thay vì `quarantine/collector` | Đã commit vào `claude_implement`; còn PH2-T05/T09 (Windows), T08, T10 |

@@ -66,26 +66,26 @@
 
 ## PH2 — Windows Endpoint Agent
 
-### PH2-T01 · Giao diện `EventSource` và nguồn giả `[P0 · S · SW · C · TODO]`
+### PH2-T01 · Giao diện `EventSource` và nguồn giả `[P0 · S · SW · C · DONE]`
 - **Mô tả:** Protocol `EventSource` (`iter_events(from_bookmark)` → XML + bookmark); `FileEventSource` (XML export) và `FakeEventSource` (kịch bản có điều khiển, gồm lỗi và dừng giữa chừng). **Files:** `src/agent/sources/base.py`, `file_source.py`, `fake_source.py`; test `tests/agent/`. **Phụ thuộc:** PH1-T08/T11. **DoD:** agent sau này chạy hoàn toàn trên Linux với nguồn giả.
 
-### PH2-T02 · Bronze segment writer `[P0 · L · SW · C · TODO]`
+### PH2-T02 · Bronze segment writer `[P0 · L · SW · C · DONE]`
 - **Mô tả:** ghi `.jsonl.part` (UTF-8, LF, một sự kiện một dòng), `flush`+`fsync`, xoay theo ngưỡng (số bản ghi/kích thước/thời gian cấu hình), seal bằng `os.replace` sang `.jsonl` + `.manifest.json` (`sha256`, `record_count`, `first/last record_id`, `schema_version`, `collector_version`). Dùng `bronze_contract.build_bronze_record` nguyên bản. **Files:** `src/agent/bronze_writer.py`; test. **Tham chiếu:** `docs/research/software/w5/01`, `04`; kiến trúc v2 mục 5.2. **Phụ thuộc:** PH2-T01.
 - **Test:** seal tạo manifest đúng hash; sửa 1 byte → verify phát hiện; không đọc `.part`; tên file hợp lệ trên Windows (đường dẫn ngắn). **DoD:** schema `bronze-event/1.0` không đổi; bản ghi giữ nguyên `raw_xml`/`event_data`.
 
-### PH2-T03 · Checkpoint/bookmark store `[P0 · M · SW · C · TODO]`
+### PH2-T03 · Checkpoint/bookmark store `[P0 · M · SW · C · DONE]`
 - **Mô tả:** lưu bookmark sau khi segment/lô đã bền (thứ tự: ghi → fsync → mới cập nhật bookmark → `os.replace` có retry-backoff cho `PermissionError`). **Files:** `src/agent/checkpoint.py`. **Test:** chết giữa các bước (fake) → đọc lại không mất, có thể trùng. **DoD:** theo giao thức at-least-once của tài liệu W5-04.
 
-### PH2-T04 · Phục hồi khi khởi động `[P0 · M · SW · C · TODO]`
+### PH2-T04 · Phục hồi khi khởi động `[P0 · M · SW · C · DONE]`
 - **Mô tả:** quét `.part` mồ côi, cắt dòng dở, seal hoặc quarantine; bookmark hỏng → bắt đầu từ bản ghi cũ nhất kèm sự kiện `COLLECTOR_INTERNAL` ghi khoảng hở. **Test:** bảng ma trận lỗi mục 3 của W5-04 (các dòng chạy được trên Linux). **DoD:** không mất bản ghi âm thầm; mỗi trường hợp có mã lý do.
 
 ### PH2-T05 · Spike: xác minh API `pywin32` trên VM `[P0 · S · SW · W · IN_PROGRESS]`
 - **Mô tả:** kiểm tra thực tế `EvtSubscribe`, `EvtCreateBookmark`, `EvtUpdateBookmark`, `EvtRender`, hành vi `ERROR_EVT_QUERY_RESULT_STALE`. **Output:** ghi chú kết quả (phiên bản Windows/Python/pywin32, đầu ra thật). Người dùng chạy script kiểm tra do Claude viết (`scripts/windows/verify_windows_env.py`, test `tests/test_verify_windows_env.py`; không đổi cấu hình, không in nội dung sự kiện). Script đã viết và test trên Linux; **chờ người dùng chạy trên VM**. **Rủi ro:** tên hàm khác dự kiến. **DoD:** danh sách hàm xác nhận/không xác nhận.
 
-### PH2-T06 · Nguồn Windows Event Log `[P0 · L · SW · C+W · TODO]`
+### PH2-T06 · Nguồn Windows Event Log `[P0 · L · SW · C+W · REVIEW]`
 - **Mô tả:** `EventLogSource` dùng `pywin32` (`EvtSubscribe` có bookmark hoặc `EvtNext` kéo theo lô, theo kết quả PH2-T05); phát XML thô. Lỗi quyền → `C-006`. Mọi gọi `win32evtlog` nằm sau lớp mỏng để test bằng đối tượng giả. **Files:** `src/agent/sources/eventlog.py`. **Phụ thuộc:** PH2-T01, PH2-T05. **Test:** Linux: lớp giả; Windows: PH2-T09. **DoD:** import không lỗi trên Linux; hành vi Windows ghi `UNKNOWN` tới khi PH2-T09 có bằng chứng.
 
-### PH2-T07 · Vòng chạy agent, tín hiệu dừng, health `[P0 · M · SW · C · TODO]`
+### PH2-T07 · Vòng chạy agent, tín hiệu dừng, health `[P0 · M · SW · C · DONE]`
 - **Mô tả:** `AgentRunner`: đọc lô → ghi Bronze → bookmark; backpressure (hàng đợi giới hạn); xử lý Ctrl+C/`stop` file; ghi `health.json` (heartbeat, `last_event_at`, `last_seal_at`, `queue_depth`, số lỗi theo mã). **Files:** `src/agent/runner.py`, `health.py`, `__main__.py`. **Test:** nguồn giả chạy 10.000 sự kiện, dừng giữa chừng, khởi động lại → không mất. **DoD:** CLI `python -m agent run --config edr.yaml`.
 
 ### PH2-T08 · Sysmon config cho các kịch bản MVP `[P0 · S · CY · U · TODO]`
