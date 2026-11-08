@@ -241,8 +241,12 @@ Nếu D-01 chọn làm MVP trong thời gian đồ án: đề xuất (a) giữ n
 | D-10 | Vị trí script lab và đổi `sysmon-config.xml` | `scripts/lab/`; đổi Sysmon qua PR | Như mô tả |
 | D-11 | EICAR/Defender | (a) bỏ EICAR; (b) tùy chọn, người dùng tự quản lý loại trừ thư mục lab trên VM; Claude không tắt/bỏ qua Defender | **(b) tùy chọn** |
 | D-12 | Phạm vi response thật | terminate + quarantine tiến trình/tệp có marker lab; auto-response tắt | Như mô tả |
-| D-13 | Môi trường Windows | VM, phiên bản Windows/Sysmon/Python, ai chạy các bước W | Người dùng xác nhận |
+| D-13 | Môi trường Windows | VM, phiên bản Windows/Sysmon/Python, ai chạy các bước W | Người dùng xác nhận (đã cung cấp cấu hình VM, xem bên dưới; còn thiếu phiên bản phần mềm) |
 | D-14 | Thời điểm bắt đầu nhánh ML | sau PH3 / sau MVP | Sau PH3, không chặn MVP |
+
+**Quyết định của người dùng (2026-11-08):** chấp nhận **toàn bộ đề xuất** của cột "Đề xuất" cho D-01…D-14 (D-01 chọn (b): tập con P0 làm PoC tùy chọn trước, mở rộng dần nếu còn thời gian; D-02 nhánh `claude_implement`; D-03 (a) shim `pythonpath`; D-04 FastAPI + trang tĩnh; D-05 YAML; D-07 thêm `hostname_norm` giữ `hostname` gốc; D-08 bảng tên thống nhất + health events; D-11 (b) EICAR tùy chọn, người dùng tự quản lý Defender; D-14 ML bắt đầu sau PH3). Các thay đổi chạm contract/DDL (D-06, D-07, D-08) vẫn phải đi qua review Data/Software/Cyber ở task tương ứng trước khi áp dụng; chưa có sign-off liên nhóm.
+
+**D-13 — môi trường Windows (người dùng cung cấp, ảnh cấu hình VirtualBox):** VM `Windows10`, Windows 10 64-bit, RAM **2048 MB**, 2 CPU, ổ SATA 50 GB (`Windows10.vdi`), card mạng NAT (Intel PRO/1000 MT), Guest Additions ISO đang gắn, không có thư mục chia sẻ, VBoxSVGA 256 MB. **Chưa rõ:** build Windows, phiên bản Sysmon/Python/pywin32, đã có snapshot "clean" chưa. **Lưu ý:** RAM 2 GB thấp hơn mức tối thiểu 4 GB trong `docs/research/software/w1/05-windows-lab-environment.md` (Sysmon + collector + core + dashboard); nên nâng lên 4 GB trước khi đo hiệu năng, và chụp snapshot "clean" trước khi chạy bất kỳ script nào.
 
 ## 11. Thứ tự GitHub Issues đề xuất
 

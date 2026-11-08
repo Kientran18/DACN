@@ -17,12 +17,12 @@
 
 ## PH1 — Stabilization & Technical Debt
 
-### PH1-T01 · Ghi baseline kiểm thử `[P0 · S · SW · C · TODO]`
+### PH1-T01 · Ghi baseline kiểm thử `[P0 · S · SW · C · DONE]`
 - **Mô tả:** chạy lại toàn bộ test, ghi kết quả (lệnh, thời điểm, pass/fail) làm baseline. **Input:** repo hiện tại. **Output:** mục "Baseline" trong `EDR_PROGRESS.md`. **Phụ thuộc:** không. **Issue:** —.
 - **Bước:** chạy hai lệnh pytest; ghi 2 lỗi đã biết; kiểm tra `git status`. **Skill:** `verification-before-completion`.
 - **DoD:** baseline có ngày giờ và kết quả khớp đầu ra thực tế.
 
-### PH1-T02 · Sửa mã lỗi `C-002` ở đường parse `[P0 · S · SW · C · TODO]`
+### PH1-T02 · Sửa mã lỗi `C-002` ở đường parse `[P0 · S · SW · C · REVIEW]`
 - **Mô tả:** `_parse_event_element` báo `Event XML is missing EventID or TimeCreated` không kèm mã; test `test_collector_errors_use_reason_codes` kỳ vọng `C-002` (bảng mã lỗi trong `docs/research/software/w5/01-collector-to-bronze-interface-contract-v1.md`). **Files:** `poc/sysmon-collector/sysmon_collector_poc.py`, `poc/sysmon-collector/test_bronze_contract.py`. **Phụ thuộc:** PH1-T01.
 - **Bước:** `systematic-debugging` xác nhận nguyên nhân; chạy test fail; sửa thông báo thành tiền tố `C-002` (không đổi logic); kiểm tra các nơi khác bắt thông điệp cũ (Grep).
 - **Test:** `python -m pytest -q poc/sysmon-collector/test_bronze_contract.py::test_collector_errors_use_reason_codes` rồi toàn bộ suite.
@@ -79,8 +79,8 @@
 ### PH2-T04 · Phục hồi khi khởi động `[P0 · M · SW · C · TODO]`
 - **Mô tả:** quét `.part` mồ côi, cắt dòng dở, seal hoặc quarantine; bookmark hỏng → bắt đầu từ bản ghi cũ nhất kèm sự kiện `COLLECTOR_INTERNAL` ghi khoảng hở. **Test:** bảng ma trận lỗi mục 3 của W5-04 (các dòng chạy được trên Linux). **DoD:** không mất bản ghi âm thầm; mỗi trường hợp có mã lý do.
 
-### PH2-T05 · Spike: xác minh API `pywin32` trên VM `[P0 · S · SW · W · TODO]`
-- **Mô tả:** kiểm tra thực tế `EvtSubscribe`, `EvtCreateBookmark`, `EvtUpdateBookmark`, `EvtRender`, hành vi `ERROR_EVT_QUERY_RESULT_STALE`. **Output:** ghi chú kết quả (phiên bản Windows/Python/pywin32, đầu ra thật). Người dùng chạy script kiểm tra do Claude viết (đọc-only, không đổi cấu hình). **Rủi ro:** tên hàm khác dự kiến. **DoD:** danh sách hàm xác nhận/không xác nhận.
+### PH2-T05 · Spike: xác minh API `pywin32` trên VM `[P0 · S · SW · W · IN_PROGRESS]`
+- **Mô tả:** kiểm tra thực tế `EvtSubscribe`, `EvtCreateBookmark`, `EvtUpdateBookmark`, `EvtRender`, hành vi `ERROR_EVT_QUERY_RESULT_STALE`. **Output:** ghi chú kết quả (phiên bản Windows/Python/pywin32, đầu ra thật). Người dùng chạy script kiểm tra do Claude viết (`scripts/windows/verify_windows_env.py`, test `tests/test_verify_windows_env.py`; không đổi cấu hình, không in nội dung sự kiện). Script đã viết và test trên Linux; **chờ người dùng chạy trên VM**. **Rủi ro:** tên hàm khác dự kiến. **DoD:** danh sách hàm xác nhận/không xác nhận.
 
 ### PH2-T06 · Nguồn Windows Event Log `[P0 · L · SW · C+W · TODO]`
 - **Mô tả:** `EventLogSource` dùng `pywin32` (`EvtSubscribe` có bookmark hoặc `EvtNext` kéo theo lô, theo kết quả PH2-T05); phát XML thô. Lỗi quyền → `C-006`. Mọi gọi `win32evtlog` nằm sau lớp mỏng để test bằng đối tượng giả. **Files:** `src/agent/sources/eventlog.py`. **Phụ thuộc:** PH2-T01, PH2-T05. **Test:** Linux: lớp giả; Windows: PH2-T09. **DoD:** import không lỗi trên Linux; hành vi Windows ghi `UNKNOWN` tới khi PH2-T09 có bằng chứng.

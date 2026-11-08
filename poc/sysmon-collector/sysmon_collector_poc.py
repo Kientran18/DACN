@@ -91,7 +91,7 @@ def _parse_event_element(ev: ET.Element) -> dict:
     security = system.find("e:Security", NS)
     event_id = _int(text("EventID"))
     if event_id is None or time_created is None:
-        raise ValueError("Event XML is missing EventID or TimeCreated")
+        raise ValueError("C-002 Event XML is missing EventID or TimeCreated")
 
     data = {}
     event_data = ev.find("e:EventData", NS)
