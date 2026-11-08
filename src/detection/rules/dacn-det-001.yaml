@@ -1,0 +1,31 @@
+rule_id: DACN-DET-001
+legacy_id: DET-001
+rule_version: 1
+name: PowerShell command line có dấu hiệu đáng ngờ
+description: >
+  Mục đích: đánh dấu tiến trình PowerShell có command line chứa dấu hiệu mã hóa/tải-chạy.
+  Telemetry cần: Sysmon Event 1 (Image, CommandLine, ProcessGuid). Thiếu command_line => INSUFFICIENT_TELEMETRY (không coi là lành tính).
+  Kỳ vọng: MATCH chỉ là ứng viên điều tra; một cờ đơn lẻ không chứng minh tấn công.
+type: single
+status: enabled
+severity: medium
+severity_reason: dấu hiệu command line đơn lẻ, chưa có bằng chứng thực thi độc hại; không đạt high nếu thiếu ngữ cảnh khác
+sysmon_event_ids: [1]
+required_fields: [image_path, command_line, process_guid]
+match:
+  all:
+    - {field: image_path, op: endswith_any, value: ["\\powershell.exe", "\\pwsh.exe"]}
+  any:
+    - {field: command_line, op: contains_any, value: [" -enc ", " -encodedcommand", " -e "]}
+    - {field: command_line, op: contains_any, value: ["downloadstring", "downloadfile", "frombase64string", "invoke-expression", "iex("]}
+exclude: []
+mitre_technique_ids: [T1059.001]
+mitre_basis: docs/research/cyber/w5/01 mục 2 (DET-001 ↔ T1059.001, trường ID1 Image/CommandLine)
+false_positives:
+  - Script quản trị hợp lệ dùng -EncodedCommand hoặc Invoke-Expression
+  - Công cụ triển khai phần mềm gọi PowerShell
+limitations:
+  - Chưa có PowerShell 4104 (ScriptBlock); chỉ dựa command line
+  - Chưa đo tỷ lệ false positive trên endpoint thật
+  - exclude rỗng có chủ ý - allowlist ngữ cảnh lành tính do đội Cyber quyết định
+validation_status: synthetic_only

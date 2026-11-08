@@ -135,34 +135,34 @@
 
 ## PH4 — Detection Engine
 
-### PH4-T01 · Schema rule và Rule Registry `[P0 · M · CY · C · TODO]`
+### PH4-T01 · Schema rule và Rule Registry `[P0 · M · CY · C · DONE]`
 - **Mô tả:** JSON Schema cho rule YAML (`rule_id` dạng `DACN-DET-xxx`, `legacy_id`, `rule_version`, `event_types`, `required_fields`, `conditions`, `correlation_keys`, `time_window`, `severity`, `mitre_technique_ids`, `status`, `response_policy: alert_only` mặc định); loader kiểm hợp lệ + version, từ chối rule sai. **Files:** `src/detection/schema.py`, `loader.py`, `rules/`. **Tham chiếu:** kiến trúc v2 mục 6.2; `docs/research/cyber/w5/01`. **Phụ thuộc:** PH1-T09; quyết định D-05 (YAML). **DoD:** rule hợp lệ nạp được, rule sai báo lỗi rõ.
 
-### PH4-T02 · Hợp đồng `DetectionResult` `[P0 · S · CY/DA · U · TODO]`
+### PH4-T02 · Hợp đồng `DetectionResult` `[P0 · S · CY/DA · U · REVIEW]`
 - **Mô tả:** dataclass và JSON Schema: `outcome` ∈ {MATCH, NO_MATCH, INSUFFICIENT_TELEMETRY, PENDING_LATE_EVENTS}, `matched_fields`, `missing_fields`, `coverage_status`, `contributing_event_ids[]`, tham chiếu raw, `severity` + lý do. **Cần** Cyber + Data duyệt (liên quan #38, #39). **DoD:** schema được duyệt; ví dụ JSON dương/âm/thiếu dữ liệu.
 
-### PH4-T03 · Bộ đánh giá (engine) `[P0 · L · CY/SW · C · TODO]`
+### PH4-T03 · Bộ đánh giá (engine) `[P0 · L · CY/SW · C · DONE]`
 - **Mô tả:** chạy rule trên Silver qua lớp truy vấn; đơn sự kiện (điều kiện trên cột Silver/`raw_data`), thiếu `required_fields` → `INSUFFICIENT_TELEMETRY`; thứ tự xử lý theo `record_id`/`timestamp`; watermark cho sự kiện muộn. **Files:** `src/detection/engine.py`, `evaluator.py`. **Phụ thuộc:** PH3-T06, PH4-T01, PH4-T02. **DoD:** replay không sinh kết quả trùng.
 
-### PH4-T04 · Rule `DACN-DET-001` PowerShell đáng ngờ `[P0 · M · CY · C · TODO]`
+### PH4-T04 · Rule `DACN-DET-001` PowerShell đáng ngờ `[P0 · M · CY · C · DONE]`
 - **Mô tả:** Event 1, `Image` PowerShell + `CommandLine` có dấu hiệu (ví dụ `-enc`/`-EncodedCommand`, `-ExecutionPolicy Bypass`, `DownloadString`); loại trừ ngữ cảnh lành tính nêu rõ (ví dụ parent tin cậy). Thiếu `CommandLine` → `INSUFFICIENT_TELEMETRY`. **Test:** dương (chuỗi mô phỏng vô hại), lành tính, thiếu dữ liệu; **mỗi rule ghi** mục đích, telemetry cần, điều kiện, false positive có thể, kỳ vọng. **MITRE:** chỉ gán T1059.001 khi có căn cứ (`dacn-detection-rules-mitre`). **DoD:** 3 nhóm fixture pass; nêu rõ chưa đo FP thật.
 
-### PH4-T05 · Rule `DACN-DET-003` Registry Run/RunOnce `[P0 · M · CY · C · TODO]`
+### PH4-T05 · Rule `DACN-DET-003` Registry Run/RunOnce `[P0 · M · CY · C · DONE]`
 - **Mô tả:** Event 13 trên `...\CurrentVersion\Run(Once)`, chuẩn hóa HKU/HKCU (SID); phân biệt khóa khác. Chưa có mẫu Run thật trong `references/samples/` → cần fixture synthetic có nhãn và xác minh trên VM (PH5). **DoD:** test dương/âm/thiếu; ghi "chưa xác minh trên endpoint thật" cho tới PH5-T04.
 
-### PH4-T06 · Rule tương quan `DACN-DET-010` drop→execute→delete `[P0 · L · CY/DA · C · TODO]`
+### PH4-T06 · Rule tương quan `DACN-DET-010` drop→execute→delete `[P0 · L · CY/DA · C · DONE]`
 - **Mô tả:** Event 11 (tạo file) → Event 1 (chạy `Image` đúng đường dẫn) → Event 26/23 (xóa) theo `(hostname, normalized_path)` trong cửa sổ cấu hình (`TBD` cho tới khi có dữ liệu có nhãn). Thiếu Event 26 → `PENDING_LATE_EVENTS`/partial, không `MATCH` đầy đủ. **Files:** `src/detection/correlator.py`. **Phụ thuộc:** PH4-T03. **DoD:** fixture đủ chuỗi / thiếu bước / trễ; chuẩn hóa đường dẫn (hoa/thường, `\Device\...`) có test.
 
-### PH4-T07 · IOC/hash matcher và allowlist `[P0 · M · CY · C · TODO]`
+### PH4-T07 · IOC/hash matcher và allowlist `[P0 · M · CY · C · DONE]`
 - **Mô tả:** kho IOC (tệp có phiên bản, nguồn, hết hạn) và allowlist cục bộ; so khớp `Hashes` SHA-256 của Event 1/29; không tự tải feed. Allowlist ưu tiên rõ ràng, không wildcard rộng. **Files:** `src/detection/ioc.py`, `ioc/` (dữ liệu IOC của đội). **Phụ thuộc:** PH4-T03. **DoD:** khớp hash tệp thử nghiệm do đội tạo; hash hợp lệ trong allowlist không bị gắn cờ; hash không đủ chứng minh độc hại (ghi trong lý do).
 
-### PH4-T08 · Khử trùng kết quả và replay-safe `[P0 · M · CY/DA · C · TODO]`
+### PH4-T08 · Khử trùng kết quả và replay-safe `[P0 · M · CY/DA · C · DONE]`
 - **Mô tả:** khóa `rule_id + rule_version + subject + window`; chạy lại không tạo kết quả trùng; thay đổi `rule_version` tạo bản đánh giá mới có ghi nhận. **DoD:** test chạy 2 lần cho cùng kết quả.
 
-### PH4-T09 · Harness kiểm thử rule `[P0 · M · CY · C · TODO]`
+### PH4-T09 · Harness kiểm thử rule `[P0 · M · CY · C · DONE]`
 - **Mô tả:** chạy thư mục fixture có nhãn `expected_outcome` cho mọi rule; báo cáo ma trận expected↔observed. **Files:** `tests/detection/`. **Skill:** `dacn-detection-validation`. **DoD:** một lệnh chạy toàn bộ rule test.
 
-### PH4-T10 · Giao diện ML detector `[P1 · M · DA · C · TODO]`
+### PH4-T10 · Giao diện ML detector `[P1 · M · DA · C · DONE]`
 - **Mô tả:** `MLDetector` Protocol (`score(features) -> AnomalyResult`), `NullDetector` mặc định, hợp đồng `AnomalyResult` + `feature_schema_version`; engine gọi detector tùy chọn qua cấu hình, kết quả chỉ làm tăng rủi ro và **không kích hoạt response**. **Files:** `src/detection/ml/interface.py`. **DoD:** tắt ML = hành vi không đổi; test với detector giả.
 
 ### PH4-T11 · Rule bổ sung `[P1 · L · CY · C · TODO]`

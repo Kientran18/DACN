@@ -1,0 +1,10 @@
+name: det003_cases
+synthetic: true
+rules: [DACN-DET-003]
+rows:
+  - {id: run, table: registry, target_object: 'HKU\S-1-5-21-1\Software\Microsoft\Windows\CurrentVersion\Run\Updater', details: 'C:\x\u.exe'}
+  - {id: runonce, table: registry, target_object: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce\Setup'}
+  - {id: other, table: registry, target_object: 'HKU\S-1-5-21-1\Software\Vendor\Settings\Theme'}
+  - {id: policies, table: registry, target_object: 'HKU\S-1-5-21-1\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\x'}
+expected:
+  DACN-DET-003: [MATCH, MATCH]

@@ -1,0 +1,13 @@
+rule_id: DACN-DET-101
+rule_version: 1
+name: Hash SHA-256 khớp kho IOC cục bộ
+description: >
+  Mục đích: so khớp file_sha256 của Event 1/11/29 với kho IOC cục bộ (không tự tải feed).
+  Hash khớp IOC là ứng viên; không đủ chứng minh độc hại. Hash trong allowlist không bị gắn cờ.
+type: ioc
+status: enabled
+severity: medium
+severity_reason: khớp IOC do đội cung cấp; mức độ tin cậy phụ thuộc nguồn IOC
+sysmon_event_ids: [1, 11, 29]
+required_fields: [file_sha256]
+validation_status: synthetic_only

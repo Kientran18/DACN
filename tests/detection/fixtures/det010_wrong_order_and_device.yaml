@@ -1,0 +1,11 @@
+name: det010_negative_cases
+synthetic: true
+rules: [DACN-DET-010]
+rows:
+  - {id: c1, table: file, sysmon_event_id: 11, file_path: 'C:\t\b.exe', timestamp: '2026-01-01T10:00:00+00:00'}
+  - {id: d1, table: file, sysmon_event_id: 26, file_path: 'C:\t\b.exe', timestamp: '2026-01-01T10:00:05+00:00'}
+  - {id: e1, table: process, sysmon_event_id: 1, image_path: 'C:\t\b.exe', timestamp: '2026-01-01T10:00:30+00:00'}
+  - {id: c2, table: file, sysmon_event_id: 11, file_path: '\Device\HarddiskVolume3\t\c.exe', timestamp: '2026-01-01T10:00:00+00:00'}
+  - {id: late, table: network, timestamp: '2026-01-01T12:00:00+00:00'}
+expected:
+  DACN-DET-010: [INSUFFICIENT_TELEMETRY, NO_MATCH]

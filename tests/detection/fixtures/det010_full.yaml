@@ -1,0 +1,9 @@
+name: det010_full_chain
+synthetic: true
+rules: [DACN-DET-010]
+rows:
+  - {id: c, table: file, sysmon_event_id: 11, file_path: 'C:\Users\Public\Drop.EXE', timestamp: '2026-01-01T10:00:00+00:00'}
+  - {id: e, table: process, sysmon_event_id: 1, image_path: '"c:/users/public/drop.exe"', timestamp: '2026-01-01T10:00:20+00:00'}
+  - {id: d, table: file, sysmon_event_id: 26, event_type: FILE_DELETE, operation: FILE_DELETE, file_path: 'C:\Users\Public\drop.exe', timestamp: '2026-01-01T10:01:00+00:00'}
+expected:
+  DACN-DET-010: [MATCH]

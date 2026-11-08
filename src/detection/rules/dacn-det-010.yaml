@@ -1,0 +1,24 @@
+rule_id: DACN-DET-010
+legacy_id: DET-010
+rule_version: 1
+name: Tạo tệp, chạy tệp rồi xóa tệp (drop-execute-delete)
+description: >
+  Mục đích: tìm chuỗi cùng host và cùng đường dẫn chuẩn hóa: Event 11 tạo tệp -> Event 1 chạy Image đó -> Event 23/26 xóa tệp.
+  Thiếu bước xóa trong cửa sổ đã đóng => NO_MATCH + coverage PARTIAL_CHAIN; cửa sổ chưa đóng => PENDING_LATE_EVENTS.
+type: correlation
+status: enabled
+severity: high
+severity_reason: chuỗi ba bước khớp cùng đường dẫn; vẫn có thể là cài đặt/dọn dẹp lành tính
+sysmon_event_ids: [11, 1, 23, 26]
+correlation_keys: [hostname, normalized_path]
+time_window_seconds: 300
+window_status: TBD_UNCALIBRATED
+mitre_technique_ids: [T1204.002, T1070.004]
+mitre_basis: docs/research/cyber/w5/01 mục 2 (T1204.002 và T1070.004 ↔ DET-010)
+false_positives:
+  - Trình cài đặt chạy rồi xóa tệp tạm
+limitations:
+  - time_window_seconds là giá trị tạm, chưa hiệu chỉnh bằng dữ liệu có nhãn
+  - Đường dẫn dạng \Device\HarddiskVolumeN không đổi được sang ổ đĩa; không khớp tự động
+  - Actor tạo/chạy/xóa không nhất thiết cùng process_guid
+validation_status: synthetic_only

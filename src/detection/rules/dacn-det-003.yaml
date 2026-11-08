@@ -1,0 +1,26 @@
+rule_id: DACN-DET-003
+legacy_id: DET-003
+rule_version: 1
+name: Ghi giá trị vào khóa Run/RunOnce
+description: >
+  Mục đích: phát hiện ghi giá trị registry vào ...\CurrentVersion\Run hoặc RunOnce (persistence candidate).
+  Telemetry cần: Sysmon Event 13 (TargetObject, Details). Chưa có mẫu Run thật trong references/samples;
+  chưa xác minh trên endpoint thật (chờ PH5-T04).
+type: single
+status: enabled
+severity: medium
+severity_reason: persistence candidate; phần mềm hợp lệ cũng ghi khóa này
+sysmon_event_ids: [13]
+required_fields: [target_object, process_guid]
+match:
+  all:
+    - {field: target_object, op: regex, value: '(?i)\\CurrentVersion\\Run(Once)?\\[^\\]+$'}
+exclude: []
+mitre_technique_ids: [T1547.001]
+mitre_basis: docs/research/cyber/w5/01 mục 2 (DET-003 ↔ T1547.001)
+false_positives:
+  - Trình cài đặt/cập nhật phần mềm hợp lệ đăng ký autostart
+limitations:
+  - Phụ thuộc cấu hình Sysmon có ghi Event 13 cho khóa Run
+  - Chưa phân biệt autostart hợp lệ; chưa xác minh trên VM
+validation_status: synthetic_only

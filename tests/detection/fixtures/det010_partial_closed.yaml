@@ -1,0 +1,9 @@
+name: det010_partial_closed_window
+synthetic: true
+rules: [DACN-DET-010]
+rows:
+  - {id: c, table: file, sysmon_event_id: 11, file_path: 'C:\t\a.exe', timestamp: '2026-01-01T10:00:00+00:00'}
+  - {id: e, table: process, sysmon_event_id: 1, image_path: 'C:\t\a.exe', timestamp: '2026-01-01T10:00:20+00:00'}
+  - {id: later, table: network, timestamp: '2026-01-01T11:00:00+00:00'}
+expected:
+  DACN-DET-010: [NO_MATCH]
