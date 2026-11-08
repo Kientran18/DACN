@@ -1,0 +1,7 @@
+# Phụ thuộc chạy và kiểm thử DACN (Linux/Windows). Phiên bản chưa ghim: ghim sau khi chốt trên VM.
+pytest
+jsonschema
+duckdb
+pytz        # duckdb cần để trả cột TIMESTAMPTZ
+PyYAML
+pywin32; sys_platform == "win32"

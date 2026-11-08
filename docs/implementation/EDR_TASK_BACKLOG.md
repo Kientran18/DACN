@@ -104,28 +104,28 @@
 
 ## PH3 — Data Pipeline & Storage
 
-### PH3-T01 · Segment reader có xác minh `[P0 · M · DA · C · TODO]`
+### PH3-T01 · Segment reader có xác minh `[P0 · M · DA · C · DONE]`
 - **Mô tả:** đọc segment đã seal, kiểm `sha256` và `record_count` theo manifest; sai lệch → quarantine segment (mã V-007), các segment khác tiếp tục. **Files:** `src/pipeline/segment_reader.py`. **Phụ thuộc:** PH2-T02. **DoD:** chỉ đọc segment sealed; test hỏng 1 byte.
 
-### PH3-T02 · Silver store bền vững `[P0 · L · DA · C · TODO]`
+### PH3-T02 · Silver store bền vững `[P0 · L · DA · C · DONE]`
 - **Mô tả:** DuckDB file (`silver/endpoint_silver.duckdb`), áp DDL `silver_gold_schema_and_views_v1_1.sql` (đã xác minh chạy được), một writer; `INSERT ... ON CONFLICT DO NOTHING` theo `event_id`; bảng ledger `_ingest_ledger` (segment, trạng thái, số bản ghi, hash, `run_id`). Cột hàng Silver do validator sinh khớp DDL (đã xác minh trên mẫu). **Files:** `src/pipeline/silver_store.py`. **Phụ thuộc:** PH1-T04 (hostname), PH3-T01. **Test:** nạp hai lần → không trùng; chết giữa transaction → hoàn tác. **DoD:** replay idempotent có test.
 
-### PH3-T03 · Persist Quarantine/DLQ `[P0 · M · DA · C · TODO]`
+### PH3-T03 · Persist Quarantine/DLQ `[P0 · M · DA · C · DONE]`
 - **Mô tả:** ghi DLQ vào bảng `silver_quarantine_dlq` và `quarantine/*.jsonl` (giữ nguyên payload); mã lỗi và retry policy theo `validation_quality_lineage_and_governance_v1.md` mục 3.2. **Phụ thuộc:** PH3-T02. **DoD:** không bản ghi nào bị bỏ âm thầm; tổng đọc = valid + dedup + quarantine.
 
 ### PH3-T04 · Cột lineage về Bronze `[P0 · M · DA/SW · U · TODO]`
 - **Mô tả:** thêm `bronze_segment_id`, `bronze_line_no`, `bronze_content_hash`, `mapper_version` vào Silver (đề xuất DDL v1.2, **cần phê duyệt**). Cho phép alert → Silver → Bronze → raw XML. **Phụ thuộc:** PH6-T01 (chung DDL v1.2). **DoD:** resolver trả được `raw_xml` từ một `event_id`.
 
-### PH3-T05 · Lệnh replay/rebuild Silver từ Bronze `[P0 · M · DA · C · TODO]`
+### PH3-T05 · Lệnh replay/rebuild Silver từ Bronze `[P0 · M · DA · C · DONE]`
 - **Mô tả:** `python -m pipeline replay --from-bronze` dựng lại Silver vào file mới (không sửa Bronze). **DoD:** kết quả replay trùng Silver gốc (so `event_id` và số hàng).
 
-### PH3-T06 · Lớp truy vấn `[P0 · L · DA · C · TODO]`
+### PH3-T06 · Lớp truy vấn `[P0 · L · DA · C · DONE]`
 - **Mô tả:** hàm truy vấn tham số hóa (không ghép chuỗi SQL): sự kiện theo thời gian/host/`process_guid`/hash/đường dẫn, cây tiến trình (`v_process_tree_lineage`), cửa sổ tương quan, phân trang. **Files:** `src/pipeline/query.py`. **Phụ thuộc:** PH3-T02. **DoD:** detection và API dùng chung; không JOIN theo PID (ADR 0002).
 
-### PH3-T07 · Ingest worker `[P0 · M · DA/SW · C · TODO]`
+### PH3-T07 · Ingest worker `[P0 · M · DA/SW · C · DONE]`
 - **Mô tả:** theo dõi thư mục Bronze, nạp segment mới theo thứ tự, ghi metrics (`segments_ingested`, `records_*`, `duplicates_ignored`, `lag_seconds`) vào `metrics.jsonl`, kích hoạt bước phát hiện sau mỗi batch. **Phụ thuộc:** PH3-T01..T03. **DoD:** chạy liên tục với agent giả; dừng sạch.
 
-### PH3-T08 · Chỉ số chất lượng dữ liệu `[P1 · M · DA · C · TODO]`
+### PH3-T08 · Chỉ số chất lượng dữ liệu `[P1 · M · DA · C · DONE]`
 - **Mô tả:** phát 6 chỉ số (completeness, validity, uniqueness, consistency, timeliness, quarantine ratio) từ dữ liệu thật của lần chạy; không đặt SLO "đạt" khi chưa đo (`dacn-data-pipeline-storage/references/data-quality-metrics.md`). **DoD:** bảng chỉ số kèm lệnh và dữ liệu nguồn.
 
 ### PH3-T09 · Retention (dry-run) `[P2 · M · DA · C · TODO]`

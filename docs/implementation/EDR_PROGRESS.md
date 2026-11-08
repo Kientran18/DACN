@@ -32,11 +32,11 @@ Chi tiết trạng thái từng task: [EDR_TASK_BACKLOG.md](EDR_TASK_BACKLOG.md)
 
 | Trạng thái | Số task |
 |---|---|
-| TODO | 89 |
+| TODO | 82 |
 | IN_PROGRESS | 1 (PH2-T05) |
 | BLOCKED | 2 (ML-T06, ML-T07) |
 | REVIEW | 1 (PH2-T06) |
-| DONE | 11 (PH1-T01, T02, T03, T08, T09, T11; PH2-T01, T02, T03, T04, T07) |
+| DONE | 18 (PH1-T01,T02,T03,T08,T09,T11; PH2-T01,T02,T03,T04,T07; PH3-T01,T02,T03,T05,T06,T07,T08) |
 
 ## 4. Task đã hoàn thành
 
@@ -81,3 +81,4 @@ Chưa có bằng chứng triển khai. Khi có, ghi theo mẫu:
 | 2026-11-08 | Bắt đầu PH1 | Người dùng duyệt D-01…D-14 theo đề xuất; cung cấp cấu hình VM; PH1-T01 DONE; PH1-T02 sửa `C-002` (REVIEW); viết script `verify_windows_env.py` (PH2-T05) | Chưa commit; chờ người dùng chạy script trên VM |
 | 2026-11-08 | PH1 (đợt 2) | PH1-T03 (test entropy dùng so sánh tương đối + giá trị biết trước, lý do ghi trong test), PH1-T08/T11 (`conftest.py`, `pytest.ini`, marker `windows`, `.gitignore`), PH1-T09 (`src/common/config.py`, `log.py`). `python -m pytest -q` → 46 pass (Linux) | Đã commit vào `claude_implement`; còn PH1-T04/05/06/07/10/12 cần quyết định liên nhóm |
 | 2026-11-08 | PH2 (phần Linux) | `src/agent/`: sources (base/fake/file/eventlog), `bronze_writer` (segment+manifest+verify+recover), `checkpoint`, `runner`, `__main__`. `python -m pytest -q` → 66 pass (Linux). `EventLogSource` kiểm bằng API giả; Windows thật **UNKNOWN** tới PH2-T09. Mã lỗi theo W5-01 (C-001/002/005/006); mã nội bộ mới `R-*` (phục hồi), `A-001/002` (agent) là mở rộng của mình, cần Software duyệt; log lỗi collector ghi ở `bronze/errors/` thay vì `quarantine/collector` | Đã commit vào `claude_implement`; còn PH2-T05/T09 (Windows), T08, T10 |
+| 2026-11-08 | PH3 | `src/pipeline/`: `segment_reader` (V-007), `silver_store` (DuckDB bền vững, ledger, transaction, ON CONFLICT DO NOTHING, DLQ lưu payload), `replay` (`python -m pipeline --from-bronze D --to NEW.duckdb`), `query` (tham số hóa, danh sách trắng), `worker` (metrics.jsonl, hook `on_batch` cho PH4), `quality`. Thêm `requirements.txt` (cần `pytz`). `python -m pytest -q` → 80 pass (Linux) | Đã commit. Chưa làm: PH3-T04 (cột lineage cần DDL v1.2 được duyệt), PH3-T09 (retention). Hostname vẫn theo validator hiện tại (PH1-T04 chưa quyết định); Event 4/16 vẫn vào DLQ (PH1-T06); chưa kiểm trên Windows/Bronze thật từ agent live |
