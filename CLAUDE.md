@@ -22,7 +22,7 @@ DACN là đồ án về bảo mật endpoint (EPP/EDR) cho **Windows 10/11**, tr
 - Thực hiện các hành động phản ứng có kiểm soát: Terminate Process, Quarantine File, Block Hash, Add Whitelist.
 - Cung cấp giao diện quản lý trực quan (Dashboard).
 
-Các chức năng AI/ML (anomaly detection, risk scoring) nằm trong kế hoạch, chưa được triển khai.
+Các chức năng AI/ML (anomaly detection, risk scoring) mới chỉ có giao diện (tắt mặc định, không có mô hình); chưa có mô hình nào được triển khai.
 
 Phạm vi Giai đoạn 1 (đồ án chuyên ngành, 12 tuần) được ghi tại `docs/scope/phase-1-scope.md` và `docs/decisions/week-1-decisions.md`. Giai đoạn 2 (luận văn) tập trung hiện thực, tích hợp và đánh giá.
 
@@ -122,9 +122,13 @@ Các file Python không phải là package. Chúng import lẫn nhau bằng tên
 - `test_canonical_bronze_contract.py` import `bronze_contract`, `bronze_to_silver_adapter` và `validator_poc` bằng tên trần.
 - `tests/test_validator_poc_w5.py` và `test_canonical_bronze_contract.py` tự chèn `src/pipeline` vào `sys.path`.
 
+Các package trong `src/` (`agent`, `pipeline`, `detection`, `alerts`, `response`, `api`, `core`, `common`) là package thật nhưng không cài đặt; chạy chúng bằng `PYTHONPATH=src` (test đã được `pytest.ini`/`conftest.py` cấu hình sẵn).
+
 Chạy test từ thư mục gốc repository bằng `python -m pytest` để rootdir của pytest đưa `poc/sysmon-collector` vào đường dẫn. Chạy script từ thư mục khác sẽ làm hỏng các import này.
 
 ## 6. Kiến trúc hiện tại: luồng dữ liệu
+
+> Mục này mô tả chuỗi PoC (collector → Bronze envelope → adapter → validator). Chuỗi chạy thật nằm trong `src/`: `agent` → Bronze sealed (JSONL + manifest) → `pipeline` (Silver DuckDB) → `detection` → `alerts` → `response`/`api`/`dashboard`, do `core` và `edr_ctl` điều phối. Xem `docs/implementation/EDR_TARGET_ARCHITECTURE.md`.
 
 Dữ liệu đi qua bốn bước. Mỗi bước giữ nguyên payload gốc của Sysmon và không tự tạo field không có trong nguồn.
 
@@ -145,7 +149,7 @@ Dữ liệu đi qua bốn bước. Mỗi bước giữ nguyên payload gốc c�
 
 `contract_check.py` là báo cáo độ phủ, không phải cổng kiểm soát. Nó đối chiếu từng field EventData với bảng `EXPECTED`, ghi nhận field đã có cột Silver (`in_silver`), chưa có (`missing_in_silver`), hoặc chưa có bảng đích (`no_target`).
 
-`src/pipeline/sql/silver_gold_schema_and_views_v1_1.sql` là DDL cho schema Silver/Gold. Không có code Python nào thực thi file này; `validator_poc.py` tự tạo bảng DuckDB trong bộ nhớ.
+`src/pipeline/sql/silver_gold_schema_and_views_v1_1.sql` là DDL đã duyệt cho schema Silver/Gold; `validator_poc.py` vẫn tự tạo bảng DuckDB trong bộ nhớ và không thực thi file này. Hệ thống chạy thật (`src/pipeline/silver_store.py`, DuckDB bền vững) dùng DDL v1.2 trong `src/pipeline/sql/silver_gold_schema_and_views_v1_2_proposal.sql`, đây là **đề xuất chưa được duyệt**; không sửa v1.1.
 
 ## 7. Lưu ý kỹ thuật
 
