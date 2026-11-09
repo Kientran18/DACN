@@ -8,7 +8,7 @@ from .backends.local import LocalBackend
 from .executor import Executor
 
 
-def make_executor(policy, actions, process_api=None) -> Executor:
+def make_executor(policy, actions, process_api=None, ioc_path=None) -> Executor:
     roots = list(policy.lab_dirs) + [policy.quarantine_dir]
     if process_api is None and policy.execute_allowed():
         if sys.platform != "win32":
@@ -21,4 +21,4 @@ def make_executor(policy, actions, process_api=None) -> Executor:
     if process_api is None:
         from .backends.local import FakeProcessApi
         process_api = FakeProcessApi({})     # dry_run: không dùng tới
-    return Executor(policy, actions, LocalBackend(process_api, roots, tol), DryRunBackend())
+    return Executor(policy, actions, LocalBackend(process_api, roots, tol), DryRunBackend(), ioc_path=ioc_path)

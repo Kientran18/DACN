@@ -29,7 +29,7 @@ def main(argv=None) -> int:
     http = httpx.Client(base_url=f"http://{cfg.api_host}:{cfg.api_port}", headers={"Authorization": f"Bearer {token}"}, timeout=10)
     remote = RemoteActions(http, spool_dir=cfg.home / "response" / "pending_results")
     policy = load_policy(a.policy)       # mặc định dry_run; execute cần cả hai khóa trong policy
-    ex = make_executor(policy, remote)
+    ex = make_executor(policy, remote, ioc_path=cfg.home / "ioc" / "ioc.yaml")
     stop_file = cfg.home / "run" / "responder.stop"
     r = Responder(remote.list_approved, ex, lambda aid, res: None)
     recovered = False

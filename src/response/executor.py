@@ -5,11 +5,14 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-from .policy import Policy, check_file_target, check_process_target, check_restore_target
+from .policy import (Policy, check_add_whitelist_target, check_file_target, check_process_target, check_restore_target,
+                     check_whitelist_target)
 
 _CHECK = {"QUARANTINE_FILE": lambda p, t, own: check_file_target(p, t),
           "RESTORE_FILE": lambda p, t, own: check_restore_target(p, t),
-          "TERMINATE_PROCESS": check_process_target}
+          "TERMINATE_PROCESS": check_process_target,
+          "ADD_WHITELIST": lambda p, t, own: check_add_whitelist_target(p, t),
+          "REMOVE_WHITELIST": lambda p, t, own: check_whitelist_target(p, t)}
 
 
 def precheck(policy: Policy, action_type: str, target: dict):
@@ -21,8 +24,9 @@ def precheck(policy: Policy, action_type: str, target: dict):
 
 
 class Executor:
-    def __init__(self, policy: Policy, actions, real_backend, dryrun_backend, own_pid: Optional[int] = None):
-        self.policy, self.actions = policy, actions
+    def __init__(self, policy: Policy, actions, real_backend, dryrun_backend, own_pid: Optional[int] = None,
+                 ioc_path=None):
+        self.policy, self.actions, self.ioc_path = policy, actions, ioc_path
         self.real, self.dry = real_backend, dryrun_backend
         self.own_pid = os.getpid() if own_pid is None else own_pid
 
@@ -46,7 +50,8 @@ class Executor:
         audit.record("executor", "RESPONSE_EXEC_BEGIN", "response_action", action_id, f"{typ} mode={mode} target={t}")
         backend = self.real if mode == "execute" else self.dry
         try:
-            out = backend.execute(typ, t, {"quarantine_dir": str(self.policy.quarantine_dir), "action_id": action_id})
+            out = backend.execute(typ, t, {"quarantine_dir": str(self.policy.quarantine_dir), "action_id": action_id,
+                                              "ioc_path": str(self.ioc_path) if self.ioc_path else None})
         except Exception as exc:     # lỗi backend: trạng thái rõ ràng, không lặp vô hạn
             return fail("X-BACKEND_ERROR", type(exc).__name__)
         if not out.get("ok"):
@@ -59,6 +64,11 @@ class Executor:
             rollback = {"possible": True, "action": "RESTORE_FILE",
                         "target": {"quarantined_to": out["quarantined_to"], "original_path": out["original_path"],
                                    "expected_sha256": out["sha256"]}}
+        elif typ == "ADD_WHITELIST":
+            rollback = {"possible": True, "action": "REMOVE_WHITELIST", "target": {"sha256": out["sha256"]}}
+        elif typ == "REMOVE_WHITELIST":
+            rollback = {"possible": True, "action": "ADD_WHITELIST",
+                        "target": {"sha256": out["sha256"], "reason": "khôi phục sau REMOVE_WHITELIST " + action_id}}
         elif typ == "TERMINATE_PROCESS":
             rollback = {"possible": False, "note": "tiến trình đã bị kết thúc không khôi phục được"}
         self.actions.finish(action_id, "DONE", result, rollback)

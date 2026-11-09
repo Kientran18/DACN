@@ -4,7 +4,7 @@ execute_unlocked: false    # khóa thứ hai: execute chỉ hoạt động khi c
 # true (mặc định an toàn) = người duyệt phải khác người yêu cầu (quy tắc hai người).
 # Demo MỘT người dùng phải đặt false. Lưu ý: auto_response tự yêu cầu và tự duyệt nên bị vô hiệu khi cờ này là true.
 require_distinct_approver: true
-allowed_actions: [TERMINATE_PROCESS, QUARANTINE_FILE, RESTORE_FILE]
+allowed_actions: [TERMINATE_PROCESS, QUARANTINE_FILE, RESTORE_FILE, ADD_WHITELIST, REMOVE_WHITELIST]
 lab_dirs:                  # mục tiêu thật CHỈ được nằm trong các thư mục này (marker trong tên KHÔNG đủ)
   - '%TEMP%\dacn_lab'
   - '%PUBLIC%\dacn_lab'

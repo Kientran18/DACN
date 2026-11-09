@@ -64,7 +64,8 @@ class LocalBackend:
         return any(is_within(p, r) for r in self.roots)
 
     def execute(self, action_type: str, target: dict, ctx: dict) -> dict:
-        fn = {"TERMINATE_PROCESS": self._terminate, "QUARANTINE_FILE": self._quarantine, "RESTORE_FILE": self._restore}[action_type]
+        fn = {"TERMINATE_PROCESS": self._terminate, "QUARANTINE_FILE": self._quarantine, "RESTORE_FILE": self._restore,
+              "ADD_WHITELIST": self._add_whitelist, "REMOVE_WHITELIST": self._remove_whitelist}[action_type]
         return fn(target, ctx)
 
     # -- tiến trình: xác minh lại danh tính NGAY TRƯỚC khi hành động ------------------------
@@ -113,3 +114,59 @@ class LocalBackend:
         shutil.move(str(q), str(orig))
         meta_p.unlink()
         return {"ok": True, "restored_to": str(orig), "sha256": meta["sha256"]}
+
+    # -- allowlist hash (ADD/REMOVE_WHITELIST): sửa tệp ioc.yaml nguyên tử; detection tự quét lại khi allowlist đổi -----------
+    @staticmethod
+    def _load_ioc(path: Path) -> dict:
+        import yaml
+        if not path.exists():
+            return {}
+        d = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        if not isinstance(d, dict):
+            raise ValueError("ioc.yaml phải là mapping")
+        return d
+
+    @staticmethod
+    def _store_ioc(path: Path, d: dict) -> None:
+        import yaml
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(yaml.safe_dump(d, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        os.replace(tmp, path)
+
+    def _add_whitelist(self, t: dict, ctx: dict) -> dict:
+        if not ctx.get("ioc_path"):
+            return {"ok": False, "code": "X-NO_IOC_PATH"}
+        path, sha = Path(ctx["ioc_path"]), t["sha256"].lower()
+        try:
+            d = self._load_ioc(path)
+        except Exception:
+            return {"ok": False, "code": "X-IOC_FILE_INVALID", "message": "ioc.yaml không đọc được; không ghi đè"}
+        if sha in {str(h.get("sha256", "")).lower() for h in d.get("ioc_hashes", []) if isinstance(h, dict)}:
+            return {"ok": False, "code": "X-IOC_CONFLICT", "message": "hash đang là IOC; gỡ IOC trước, không whitelist ngầm"}
+        allow = [str(a).lower() for a in d.get("allowlist_hashes", [])]
+        if sha in allow:
+            return {"ok": False, "code": "X-ALREADY_ALLOWLISTED"}
+        d["allowlist_hashes"] = allow + [sha]
+        meta = d.get("allowlist_meta") or {}
+        meta[sha] = {"reason": str(t.get("reason", ""))[:500], "action_id": ctx["action_id"],
+                     "added_at_utc": datetime.now(timezone.utc).isoformat()}
+        d["allowlist_meta"] = meta
+        self._store_ioc(path, d)
+        return {"ok": True, "sha256": sha, "ioc_path": str(path)}
+
+    def _remove_whitelist(self, t: dict, ctx: dict) -> dict:
+        if not ctx.get("ioc_path"):
+            return {"ok": False, "code": "X-NO_IOC_PATH"}
+        path, sha = Path(ctx["ioc_path"]), t["sha256"].lower()
+        try:
+            d = self._load_ioc(path)
+        except Exception:
+            return {"ok": False, "code": "X-IOC_FILE_INVALID", "message": "ioc.yaml không đọc được; không ghi đè"}
+        allow = [str(a).lower() for a in d.get("allowlist_hashes", [])]
+        if sha not in allow:
+            return {"ok": False, "code": "X-NOT_ALLOWLISTED"}
+        d["allowlist_hashes"] = [a for a in allow if a != sha]
+        (d.get("allowlist_meta") or {}).pop(sha, None)
+        self._store_ioc(path, d)
+        return {"ok": True, "sha256": sha, "ioc_path": str(path)}

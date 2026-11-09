@@ -16,7 +16,7 @@ class PolicyError(ValueError):
     pass
 
 
-ACTION_TYPES = {"TERMINATE_PROCESS", "QUARANTINE_FILE", "RESTORE_FILE"}
+ACTION_TYPES = {"TERMINATE_PROCESS", "QUARANTINE_FILE", "RESTORE_FILE", "ADD_WHITELIST", "REMOVE_WHITELIST"}
 _KEYS = {"mode", "execute_unlocked", "require_distinct_approver", "allowed_actions", "lab_dirs",
          "quarantine_dir", "protected_process_names", "protected_dirs", "auto_response"}
 PROTECTED_PIDS = {0, 4}
@@ -136,4 +136,25 @@ def check_restore_target(p: Policy, target: dict) -> Tuple[bool, Optional[str]]:
         return False, "P-NOT_IN_QUARANTINE"
     if _in_protected(p, orig) or not _in_lab(p, orig):
         return False, "P-NOT_LAB_TARGET"
+    return True, None
+
+
+_SHA256 = re.compile(r"^[0-9a-fA-F]{64}$")
+
+
+def check_whitelist_target(p: Policy, target: dict) -> Tuple[bool, Optional[str]]:
+    """ADD_WHITELIST/REMOVE_WHITELIST: đích là hash SHA-256 (không wildcard). ADD cần lý do (>= 5 ký tự) để có dấu vết.
+    Không xét thư mục lab vì hành động chỉ sửa danh sách cho phép cục bộ, nhưng làm giảm phát hiện nên luôn qua phê duyệt."""
+    sha = target.get("sha256")
+    if not isinstance(sha, str) or not _SHA256.match(sha) or set(sha.lower()) == {"0"}:
+        return False, "P-BAD_TARGET"
+    return True, None
+
+
+def check_add_whitelist_target(p: Policy, target: dict) -> Tuple[bool, Optional[str]]:
+    ok, code = check_whitelist_target(p, target)
+    if not ok:
+        return ok, code
+    if len(str(target.get("reason", "")).strip()) < 5:
+        return False, "P-REASON_REQUIRED"
     return True, None

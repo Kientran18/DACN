@@ -289,7 +289,7 @@ async function pageResponse() {
     box.append(h("div", { class: "card" }, h("span", { class: "badge mode-big " + (dry ? "ok" : "bad"), text: dry ? "DRY-RUN — hành động chỉ được mô phỏng, không thay đổi hệ thống" : "EXECUTE — hành động có thể thay đổi VM lab" }),
       h("p", { class: "muted", text: "Chế độ do policy trên máy quyết định, không đổi được từ giao diện. Mục tiêu bị từ chối nếu nằm ngoài thư mục lab hoặc thuộc danh sách bảo vệ." })));
     // yêu cầu
-    const type = h("select", {}, ["QUARANTINE_FILE", "TERMINATE_PROCESS", "RESTORE_FILE"].map((t) => h("option", { value: t, text: t })));
+    const type = h("select", {}, ["QUARANTINE_FILE", "TERMINATE_PROCESS", "RESTORE_FILE", "ADD_WHITELIST", "REMOVE_WHITELIST"].map((t) => h("option", { value: t, text: t })));
     const target = h("textarea", { "aria-label": "Mục tiêu (JSON)", placeholder: '{"path": "C:\\\\Users\\\\...\\\\AppData\\\\Local\\\\Temp\\\\dacn_lab\\\\DACN_LAB_x.exe"}' });
     const mode = h("select", {}, ["dry_run", "execute"].map((t) => h("option", { value: t, text: t })));
     const alertId = h("input", { value: f.alert || "", placeholder: "alert_id (tùy chọn)", maxLength: 64 });
@@ -305,7 +305,7 @@ async function pageResponse() {
       const reason = h("input", { placeholder: "Lý do (bắt buộc)", maxLength: 1000, "aria-label": "Lý do" });
       modal((kind === "approve" ? "Duyệt" : "Từ chối") + " hành động " + a.action_type,
         h("div", {}, h("p", { text: "Chế độ yêu cầu: " + a.requested_mode + " — chế độ hiệu lực: " + (dry ? "DRY-RUN" : "theo policy") }), h("p", { text: "Mục tiêu đầy đủ:" }),
-          h("pre", { text: JSON.stringify(a.target, null, 2) }), h("p", { text: "Hệ quả: tiến trình đã kết thúc không khôi phục được; tệp cách ly có thể restore." }), h("label", {}, "Lý do", reason)),
+          h("pre", { text: JSON.stringify(a.target, null, 2) }), h("p", { text: "Hệ quả: tiến trình đã kết thúc không khôi phục được; tệp cách ly có thể restore; ADD_WHITELIST làm hash đó không còn bị phát hiện (REMOVE_WHITELIST hoàn tác)." }), h("label", {}, "Lý do", reason)),
         [closeBtn, { label: kind === "approve" ? "Duyệt" : "Từ chối", kind: kind === "approve" ? "primary" : "danger", close: false, fn: async () => {
           if (!reason.value.trim()) { reason.focus(); return; }
           try { await api("/response/actions/" + a.action_id + "/" + kind, { method: "POST", body: { reason: reason.value } }); $("modal").close(); route(); }
