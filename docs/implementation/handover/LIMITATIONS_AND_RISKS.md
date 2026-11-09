@@ -9,7 +9,7 @@
 | L3 | Telemetry Sysmon không có file write/entropy; DET-004/007/008 bị chặn | Không phát hiện mã hóa tệp | Ngoài phạm vi MVP |
 | L4 | Agent user-space dựa Sysmon, không chống giả mạo; audit hash-chain chỉ *phát hiện* sửa đổi | Kẻ có quyền admin có thể vô hiệu hóa/sửa | Ghi nhận trong báo cáo; không tuyên bố tamper-resistant |
 | L5 | API chỉ loopback, không TLS; một kết nối DuckDB dùng chung bằng khóa toàn cục | Không dùng từ xa; thông lượng bị giới hạn | Đủ cho local-first |
-| L6 | Response thật chưa từng chạy; chưa có *Add whitelist*; block hash chỉ là phát hiện | Chưa đủ 4 hành động của mục tiêu ban đầu | Cần quyết định và VM |
+| L6 | Response thật chưa từng chạy; chưa có *Add whitelist*; block hash chỉ là phát hiện (mã chuyển sang `experimental/`, chưa nối vào hệ thống) | Chưa đủ 4 hành động của mục tiêu ban đầu | Cần quyết định và VM |
 | L7 | VM 2 GB RAM (dưới 4 GB khuyến nghị); chưa đo CPU/RAM/độ trễ | Rủi ro hiệu năng chưa lượng hóa | PH10-T05 và đo trên VM |
 | L8 | Retention/xóa dữ liệu thô tự động chưa làm (PH3-T09) | Bronze tăng không giới hạn | Làm sau, theo ADR 0003 |
 | L9 | Mốc dedup alert 600 s, severity, ngưỡng là giá trị tạm | Có thể gộp/tách alert chưa tối ưu | Hiệu chỉnh trên dữ liệu thật |

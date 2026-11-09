@@ -9,9 +9,9 @@
 
 ## 2. Kết quả
 
-| Hạng mục | Kết quả (2026-11-08) |
+| Hạng mục | Kết quả (2026-11-08; chạy lại 2026-11-09 sau `36ee751`) |
 |---|---|
-| Toàn bộ pytest | 201 pass, 0 fail (Linux) |
+| Toàn bộ pytest | 213 pass, 0 fail (Linux; 201 trước commit `36ee751`, thêm 12 test cho các mục sửa sau audit) |
 | Nghiệm thu AT-01…43 mức L | 25 PASS · 4 PARTIAL · 0 FAIL · 14 NOT RUN |
 | Hai lỗi baseline của PH1 | Đã sửa và chạy lại (`C-002`; entropy test dùng giá trị đã biết) |
 

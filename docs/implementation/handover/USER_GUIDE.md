@@ -6,7 +6,7 @@
 
 - Chỉ chạy trên VM lab có snapshot `clean`. Không tắt Windows Defender.
 - Response mặc định **`dry-run`**: chỉ ghi kế hoạch, không đổi hệ thống. `execute` cần **hai** khóa do bạn tự đặt trong `config/response-policy.yaml` (`mode: execute` và `execute_unlocked: true`) và chỉ nhắm tiến trình/tệp mang marker lab trong thư mục lab.
-- Auto-response tắt mặc định. Block hash chỉ là phát hiện, không chặn thực thi.
+- Auto-response tắt mặc định. Block hash chỉ là phát hiện, không chặn thực thi (mã auto-response và block-hash nằm ở `experimental/`, không nằm trong `src/response/`). Quy tắc hai người (`require_distinct_approver`) mặc định BẬT: demo một người dùng phải đặt `false` trong `config/response-policy.yaml`.
 - API chỉ lắng nghe loopback; token lưu dạng hash.
 
 ## 2. Khởi động và dừng

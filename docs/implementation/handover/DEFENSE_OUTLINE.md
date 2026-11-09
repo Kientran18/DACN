@@ -10,7 +10,7 @@
    - Response an toàn: dry-run, hai khóa, phê duyệt, xác minh danh tính, thư mục lab.
    - Dashboard không dùng CDN, dữ liệu chỉ vào DOM qua `textContent`, CSP chặt.
 4. **Demo** ([DEMO_RUNBOOK.md](../acceptance/DEMO_RUNBOOK.md)): SC-06 → SC-01 → SC-03 → SC-08 → SC-07. Nếu dùng dữ liệu lưu sẵn, nói rõ trên màn hình.
-5. **Kiểm thử:** 201 test, 43 AT; trình bày thẳng thắn PASS/PARTIAL/NOT RUN ([TEST_REPORT.md](TEST_REPORT.md)).
+5. **Kiểm thử:** 213 test, 43 AT; trình bày thẳng thắn PASS/PARTIAL/NOT RUN ([TEST_REPORT.md](TEST_REPORT.md)).
 6. **Bài học:** lỗi chỉ lộ khi chạy tiến trình thật hoặc nhìn ảnh chụp; giá trị của việc tách mức bằng chứng L và W.
 7. **Hạn chế và hướng phát triển** ([LIMITATIONS_AND_RISKS.md](LIMITATIONS_AND_RISKS.md)): Windows, hiệu chỉnh rule, ML, retention, dịch vụ Windows.
 8. **Câu hỏi dự kiến:** "Có phát hiện được malware thật không?" → chỉ khẳng định trên tập kịch bản đã chạy, chưa có tỷ lệ. "Có chống bị tắt không?" → không, user-space. "Vì sao không có TLS?" → loopback.

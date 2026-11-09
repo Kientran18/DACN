@@ -5,8 +5,8 @@
 
 ## Môi trường chạy
 
-- Thời điểm (UTC): 2026-11-08T13:24:32Z · thời lượng: 25.8 s
-- Commit: `00d5645` (cây làm việc có thay đổi chưa commit)
+- Thời điểm (UTC): 2026-11-09T09:55:18Z · thời lượng: 30.7 s
+- Commit: `36ee751`
 - Python 3.13.18 · Linux 6.18.44-fc-v310
 - Thư viện: pytest 9.2.0, duckdb 2.0.0, fastapi 0.162.2, uvicorn 0.54.0, httpx 0.28.1, pydantic 2.13.5, PyYAML 6.0.3, jsonschema 4.26.0
 - Mức bằng chứng: L (Linux, dữ liệu synthetic/giả lập); W (Windows) chưa chạy
