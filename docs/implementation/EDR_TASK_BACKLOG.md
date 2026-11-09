@@ -354,7 +354,7 @@
 ### PH12-T03 · Báo cáo kiểm thử `[P0 · M · SW/CY/DA · C · REVIEW]` — từ PH11.
 ### PH12-T04 · Tổng hợp hạn chế và rủi ro `[P0 · S · CY · C · REVIEW]`.
 ### PH12-T05 · Nội dung báo cáo/bảo vệ đồ án `[P1 · M · Cả nhóm · C · REVIEW]` — dùng `dacn-documentation-handover`.
-### PH12-T06 · Cập nhật `CLAUDE.md` mục 3, 4 theo trạng thái thực `[P1 · S · SW · U · TODO]` — chỉ khi người dùng cho phép.
+### PH12-T06 · Cập nhật `CLAUDE.md` mục 3, 4 theo trạng thái thực `[P1 · S · SW · U · REVIEW]` — chỉ khi người dùng cho phép.
 
 ---
 

@@ -32,32 +32,28 @@ Phân biệt rõ hai nhóm thông tin. **Không mô tả thành phần thuộc T
 
 ### 3.1. CURRENT STATE — đã triển khai và có bằng chứng
 
-Căn cứ: mã nguồn trong repository và kết quả test ngày **2026-11-08 (khoảng 08:51 UTC)**.
+Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết quả test ngày **2026-11-09** (Linux, Python 3.13). Chi tiết: `docs/implementation/` (`EDR_PROGRESS.md`, `EDR_TASK_BACKLOG.md`, `handover/TEST_REPORT.md`, `handover/LIMITATIONS_AND_RISKS.md`).
 
 | Thành phần | Vị trí | Mức độ kiểm chứng |
 |---|---|---|
-| Sysmon collector PoC (parse XML, normalize, file mode) | `poc/sysmon-collector/sysmon_collector_poc.py` | Chạy được ở file mode; test trên dữ liệu synthetic và mẫu lab |
-| Bronze contract `bronze-event/1.0` và JSON Schema | `poc/sysmon-collector/bronze_contract.py`, `bronze-event.schema.json` | Chỉ là **đề xuất**, chưa được các nhóm phê duyệt chéo |
-| Adapter Bronze → Silver (fail closed) | `poc/sysmon-collector/bronze_to_silver_adapter.py` | Có test, dữ liệu synthetic |
-| Validator W05 (dedup, routing, Quarantine DLQ) | `src/pipeline/validator_poc.py` | Có test; chạy demo trên mẫu lab |
-| Coverage report đối chiếu field | `poc/sysmon-collector/contract_check.py` | Chạy được trên `references/samples` |
-| DDL Silver/Gold | `src/pipeline/sql/silver_gold_schema_and_views_v1_1.sql` | Chỉ là DDL, **chưa có code nào thực thi** |
+| Sysmon collector PoC, Bronze contract, adapter, validator W05 | `poc/sysmon-collector/`, `src/pipeline/validator_poc.py` | Có test; dữ liệu synthetic và mẫu lab. Bronze contract vẫn là **đề xuất**, chưa phê duyệt chéo |
+| Agent (nguồn giả/tệp/Event Log, Bronze sealed + manifest, checkpoint, recover) | `src/agent/` | Có test trên Linux; nguồn Event Log thật **chưa chạy trên Windows** |
+| Pipeline (Silver DuckDB, dedup, quarantine/DLQ, replay, ledger) | `src/pipeline/` | Có test trên Linux; dùng DDL v1.2 là **đề xuất chưa duyệt** |
+| Detection Engine (DET-001/003/010/101, IOC, allowlist, correlation, 4 kết quả đánh giá) | `src/detection/`, `config/` | Có test với fixture; mọi rule `synthetic_only`, chưa hiệu chỉnh, không có số liệu TP/FP/FN |
+| Alert/Incident, audit hash-chain, truy vết alert→Silver→Bronze→raw_xml | `src/alerts/` | Có test trên Linux |
+| Response Engine (mặc định `dry_run`, hai khóa execute, duyệt, quarantine/restore) | `src/response/`, `config/response-policy.yaml` | Có test với backend giả; **chưa từng thực thi hành động thật**; chưa có Add whitelist. Auto-response và block-hash nằm ở `experimental/`, chưa nối vào hệ thống |
+| API FastAPI (loopback, 4 vai trò) và Dashboard tĩnh | `src/api/`, `src/dashboard/` | Có test (kể cả Playwright) trên Linux |
+| Core service và launcher | `src/core/`, `src/edr_ctl.py` | Chạy nhiều tiến trình thật trên Linux; chưa trên Windows |
+| Script lab (SC01–SC07) và kiểm tra môi trường Windows | `scripts/lab/`, `scripts/windows/` | Chỉ kiểm tra tĩnh; **chưa chạy trên Windows** |
+| Nghiệm thu | `tests/acceptance/at_catalog.yaml`, `scripts/acceptance/run_acceptance.py`, `docs/implementation/acceptance/` | 43 AT: 25 PASS, 4 PARTIAL, 0 FAIL, 14 NOT RUN (mức W chưa chạy) |
 
-**Chưa được chứng minh:**
-- Live mode đọc Windows Event Log (`--mode live`, `pywin32`): **chưa chạy trên Windows host thật**.
-- Collector chạy liên tục (service), bookmark, checkpoint, delivery guarantee.
-- Segment sealing, manifest, replay end-to-end.
-- Detection Engine, rule engine, alert store, Response Engine, Dashboard: **chưa tồn tại**.
-- Thiết kế Feature/Gold và mô hình AI: chưa có code.
+**Chưa được chứng minh / chưa có:**
+- Mọi thứ trên Windows thật: live Event Log, `WinProcessApi`, Sysmon config, script lab, hướng dẫn cài đặt, response `execute`.
+- Chất lượng phát hiện, hiệu năng (CPU/RAM/độ trễ) trên VM 2 GB.
+- Retention tự động, Windows service, Gold/Feature, mô hình ML (chỉ có giao diện, tắt mặc định).
+- Phê duyệt liên nhóm: DDL v1.2, schema `DetectionResult`, hostname D-07, tên event type (Q-X3), số hiệu DET-101, mã lỗi `R-*`/`A-*`, ADR 0004/0007.
 
-**Kết quả test tại thời điểm cập nhật (cần chạy lại trước khi tin cậy):**
-- `poc/sysmon-collector` (pytest): 25 pass / 1 fail.
-- `tests/` (pytest hoặc unittest): 5 pass / 1 fail.
-- Tổng: 30 pass / 2 fail.
-
-Hai lỗi đã được xác minh lại trong phiên này, không mặc định là lỗi cũ:
-- `tests/test_validator_poc_w5.py::TestDataPipelineW05::test_06_time_skew_warning_and_shannon_entropy`: kiểm tra entropy > 5.0 cho chuỗi dòng lệnh đã mã hóa, giá trị thực tế là 4.7322.
-- `poc/sysmon-collector/test_bronze_contract.py::test_collector_errors_use_reason_codes`: kỳ vọng thông báo chứa mã `C-002` khi thiếu `TimeCreated`, nhưng `sysmon_collector_poc._parse_event_element` trả về `Event XML is missing EventID or TimeCreated` không có mã lỗi.
+**Kết quả test (2026-11-09, Linux):** `python -m pytest -q` → 213 pass, 0 fail. Chưa có kết quả nào trên Windows. Chạy lại trước khi tin cậy.
 
 ### 3.2. TARGET ARCHITECTURE — kế hoạch, chưa được triển khai
 
@@ -88,35 +84,36 @@ Các ADR và tài liệu trạng thái chưa được chốt:
 
 ## 4. Lệnh thường dùng
 
-Repository không có build system, linter hay file dependency gốc. Các thư viện cài thủ công.
+Dependency nằm trong `requirements.txt`. `pytest.ini` và `conftest.py` ở thư mục gốc đã cấu hình đường dẫn; chạy mọi lệnh từ thư mục gốc repository.
 
 ```bash
-# Cài dependency kiểm thử (pytest/jsonschema cần cho poc/; duckdb là tùy chọn cho validator_poc.py)
-pip install pytest jsonschema duckdb
+pip install -r requirements.txt
 
-# Bộ kiểm thử collector PoC (kiểu pytest, 4 file)
-python -m pytest -q poc/sysmon-collector
+# Toàn bộ test (Linux)
+python -m pytest -q
+python -m pytest -q tests/detection          # một thư mục
+python -m pytest -q poc/sysmon-collector     # collector PoC
 
-# Bộ kiểm thử validator trong tests/ (class kiểu unittest; pytest cũng thu thập được)
-python -m pytest -q tests/
-python -m unittest tests.test_validator_poc_w5
+# Nghiệm thu: chạy pytest, sinh báo cáo trong docs/implementation/acceptance/
+python scripts/acceptance/run_acceptance.py
 
-# Chạy một test
-python -m pytest -q poc/sysmon-collector/test_bronze_contract.py::test_collector_errors_use_reason_codes
-python -m unittest tests.test_validator_poc_w5.TestDataPipelineW05.test_01_deterministic_uuidv5_matches_w3_real_samples
+# Chạy hệ thống (cần PYTHONPATH=src; ví dụ Linux, dữ liệu mẫu)
+PYTHONPATH=src python -m edr_ctl --config <edr.yaml> start
+PYTHONPATH=src python -m edr_ctl --config <edr.yaml> status
+PYTHONPATH=src python -m edr_ctl --config <edr.yaml> stop
+# Tạo token API: PYTHONPATH=src python -m api.auth --config <edr.yaml> --role analyst --actor <tên>
 
-# CLI collector (file mode chạy trên mọi hệ điều hành; live mode cần Windows + pywin32 + quyền Administrator)
+# Collector PoC ở file mode (mọi hệ điều hành)
 python poc/sysmon-collector/sysmon_collector_poc.py --mode file \
   --input references/samples/raw/raw_process_create_event1.xml --output /tmp/out.json
 
-# Báo cáo độ phủ field trên bộ mẫu
+# Báo cáo độ phủ field
 python poc/sysmon-collector/contract_check.py --samples references/samples --out coverage_report.md
-
-# Demo validator (đọc references/samples/*.json, in tóm tắt Silver/Quarantine)
-python src/pipeline/validator_poc.py
 ```
 
-Các lệnh trên đã được chạy lại ngày 2026-11-08 trên Linux. Chưa kiểm chứng trên Windows.
+Cấu hình mẫu: `config/edr.example.yaml`, `config/response-policy.yaml`. Hướng dẫn cài đặt Windows: `docs/implementation/EDR_INSTALL_GUIDE.md` (cú pháp `set PYTHONPATH` là của cmd; PowerShell dùng `$env:PYTHONPATH`). Live mode và `--live` cần Windows, `pywin32` và quyền Administrator; **chưa kiểm chứng trên Windows**.
+
+Các lệnh test đã chạy lại ngày 2026-11-09 trên Linux.
 
 ## 5. Mô hình import (đọc trước khi thêm module)
 
