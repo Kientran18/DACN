@@ -1,0 +1,16 @@
+name: det002_004_cases
+synthetic: true
+rules: [DACN-DET-002, DACN-DET-004, DACN-DET-007, DACN-DET-008]
+rows:
+  - {id: word_cmd, table: process, image_path: 'C:\Windows\System32\cmd.exe', parent_image: 'C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE', command_line: 'cmd.exe /c whoami'}
+  - {id: explorer_cmd, table: process, image_path: 'C:\Windows\System32\cmd.exe', parent_image: 'C:\Windows\explorer.exe', command_line: 'cmd.exe'}
+  - {id: word_calc, table: process, image_path: 'C:\Windows\System32\calc.exe', parent_image: 'C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE', command_line: 'calc.exe'}
+  - {id: noparent_cmd, table: process, image_path: 'C:\Windows\System32\cmd.exe', parent_image: null, command_line: 'cmd.exe'}
+  - {id: schtasks_create, table: process, image_path: 'C:\Windows\System32\schtasks.exe', parent_image: 'C:\Windows\explorer.exe', command_line: 'schtasks.exe /create /tn DACN_LAB_t /tr calc.exe /sc once /st 23:59'}
+  - {id: schtasks_query, table: process, image_path: 'C:\Windows\System32\schtasks.exe', parent_image: 'C:\Windows\explorer.exe', command_line: 'schtasks.exe /query'}
+  - {id: schtasks_nocmd, table: process, image_path: 'C:\Windows\System32\schtasks.exe', parent_image: 'C:\Windows\explorer.exe', command_line: null}
+expected:
+  DACN-DET-002: [INSUFFICIENT_TELEMETRY, MATCH]
+  DACN-DET-004: [INSUFFICIENT_TELEMETRY, MATCH]
+  DACN-DET-007: []
+  DACN-DET-008: []

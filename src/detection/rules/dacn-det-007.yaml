@@ -1,0 +1,12 @@
+rule_id: DACN-DET-007
+legacy_id: DET-007
+rule_version: 1
+name: Can thiệp công cụ giám sát (tamper) - BỊ CHẶN
+description: >
+  Cần heartbeat độc lập và audit trạng thái service để xác nhận can thiệp. Sysmon 5/4/16 một mình không chứng minh tamper.
+type: single
+status: blocked
+blocked_reason: thiếu nguồn heartbeat/service audit độc lập (docs/research/cyber/w5/01 mục 2, DET-007); Sysmon 5/4/16 không đủ kết luận
+severity: low
+sysmon_event_ids: [5]
+validation_status: synthetic_only

@@ -1,0 +1,13 @@
+rule_id: DACN-DET-008
+legacy_id: DET-008
+rule_version: 1
+name: Mã hóa dữ liệu hàng loạt (T1486) - BỊ CHẶN
+description: >
+  Cần telemetry ghi/đổi tên/entropy nội dung tệp. Sysmon 11/26 không phải giám sát ghi đầy đủ nên không đủ kết luận mã hóa;
+  chỉ có thể ghi nhận hoạt động tệp đáng ngờ.
+type: single
+status: blocked
+blocked_reason: thiếu nguồn file write/rename/entropy (docs/research/cyber/w5/01 mục 2, DET-008)
+severity: low
+sysmon_event_ids: [11]
+validation_status: synthetic_only

@@ -1,0 +1,26 @@
+rule_id: DACN-DET-004
+legacy_id: DET-004
+rule_version: 1
+name: Tạo scheduled task bằng schtasks (ứng viên thực thi)
+description: >
+  Mục đích: đánh dấu schtasks.exe với tham số /create. Đây là ứng viên "lệnh tạo task được chạy", KHÔNG xác nhận task đã được tạo
+  (chưa thu Security 4698/4702). Telemetry cần: Sysmon Event 1 (Image, CommandLine).
+type: single
+status: enabled
+severity: low
+severity_reason: chỉ thấy lệnh, chưa có audit xác nhận task được tạo; độ tin cậy thấp (theo tài liệu Cyber W5)
+sysmon_event_ids: [1]
+required_fields: [image_path, command_line, process_guid]
+match:
+  all:
+    - {field: image_path, op: endswith_any, value: ["\\schtasks.exe"]}
+    - {field: command_line, op: contains_any, value: [" /create"]}
+exclude: []
+mitre_technique_ids: [T1053.005]
+mitre_basis: docs/research/cyber/w5/01 mục 2 (DET-004 ↔ T1053.005, ID1 schtasks command; xác nhận cần Security 4698/4702)
+false_positives:
+  - Trình cài đặt/cập nhật phần mềm đăng ký task định kỳ
+limitations:
+  - Không xác nhận task thật sự được tạo (thiếu Security 4698/4702)
+  - Không bắt tạo task qua API hoặc COM
+validation_status: synthetic_only

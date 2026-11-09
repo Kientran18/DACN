@@ -1,0 +1,27 @@
+rule_id: DACN-DET-002
+legacy_id: DET-002
+rule_version: 1
+name: Shell/script host được khởi chạy bởi ứng dụng Office
+description: >
+  Mục đích: đánh dấu cmd/PowerShell/WScript/CScript/MSHTA có tiến trình cha là Word/Excel/PowerPoint/Outlook.
+  Telemetry cần: Sysmon Event 1 (Image, ParentImage, ProcessGuid). Thiếu parent_image => INSUFFICIENT_TELEMETRY
+  (collector khởi động muộn có thể mất tổ tiên; không coi là lành tính). Chỉ xét cha trực tiếp, chưa duyệt toàn bộ cây tổ tiên.
+type: single
+status: enabled
+severity: medium
+severity_reason: quan hệ cha-con bất thường là ứng viên điều tra; macro/tiện ích hợp lệ cũng gây ra
+sysmon_event_ids: [1]
+required_fields: [image_path, parent_image, process_guid]
+match:
+  all:
+    - {field: image_path, op: endswith_any, value: ["\\cmd.exe", "\\powershell.exe", "\\pwsh.exe", "\\wscript.exe", "\\cscript.exe", "\\mshta.exe"]}
+    - {field: parent_image, op: endswith_any, value: ["\\winword.exe", "\\excel.exe", "\\powerpnt.exe", "\\outlook.exe"]}
+exclude: []
+mitre_technique_ids: [T1059.003]
+mitre_basis: docs/research/cyber/w5/01 mục 2 (DET-002 ↔ T1059.003, ID1 Image/CommandLine/ParentProcessGuid + ancestor join)
+false_positives:
+  - Macro hoặc add-in công ty hợp lệ gọi cmd/PowerShell
+limitations:
+  - Chỉ cha trực tiếp (parent_image); chưa duyệt cây tổ tiên nhiều tầng (cờ PARTIAL_ANCESTRY chưa hiện thực)
+  - Chưa đo tỷ lệ false positive trên endpoint thật
+validation_status: synthetic_only
