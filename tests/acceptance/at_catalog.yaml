@@ -28,7 +28,7 @@ AT-03:
   level: W
   goal: Agent live nhận sự kiện mới và khớp wevtutil export
   pre: Windows 10 VM, Sysmon chạy, quyền đọc channel Sysmon/Operational
-  steps: ["python -m agent --live", "Sinh sự kiện (mở notepad)", "wevtutil qe ... /f:xml so với raw_xml trong Bronze"]
+  steps: ["$env:PYTHONPATH=...; python -m agent run --config C:\\dacn_edr\\edr.yaml --live --follow (hoặc edr_ctl start --live)", "Sinh sự kiện (mở notepad)", "wevtutil qe ... /f:xml so với raw_xml trong Bronze"]
   expected: raw_xml trong Bronze trùng EventRecordID/nội dung với wevtutil
   tests: []
   limits: Một VM, một phiên bản Sysmon
@@ -37,7 +37,7 @@ AT-04:
   level: W
   goal: Không có quyền đọc channel -> lỗi C-006 rõ ràng
   pre: Windows, chạy agent bằng tài khoản không có quyền
-  steps: ["Chạy agent --live bằng user thường", "Xem bronze/errors/collector_errors.jsonl"]
+  steps: ["Chạy python -m agent run --config C:\\dacn_edr\\edr.yaml --live bằng user thường", "Xem tệp collector_errors.jsonl trong thư mục errors của Bronze (đường dẫn thực tế do agent ghi, kiểm bằng dir)"]
   expected: Mã lỗi C-006, agent không crash âm thầm
   tests: []
   limits: Phần logic ánh xạ lỗi đã có test Linux (test_access_denied_maps_to_c006) nhưng đó không phải bằng chứng trên Windows
@@ -46,7 +46,7 @@ AT-05:
   level: W
   goal: Kill agent giữa chừng trên Windows -> phục hồi
   pre: Windows VM, agent live đang chạy
-  steps: ["taskkill /F agent", "Khởi động lại", "Kiểm tra recover và không mất sự kiện"]
+  steps: ["taskkill /F /PID <pid của tiến trình agent> (lấy PID từ edr_ctl status)", "Khởi động lại", "Kiểm tra recover và không mất sự kiện"]
   expected: recover_dir niêm phong .part, checkpoint tiếp tục
   tests: []
   limits: ""
@@ -226,7 +226,7 @@ AT-25:
   level: W
   goal: Terminate tiến trình thử nghiệm (marker lab) khi execute + audit
   pre: VM, người dùng bật execute_unlocked và mode execute
-  steps: ["Chạy tiến trình marker", "Duyệt terminate", "Kiểm tra Task Manager và audit"]
+  steps: ["Chạy tiến trình thử nghiệm nằm trong thư mục lab (%TEMP%\\dacn_lab; tên marker KHÔNG đủ)", "Yêu cầu và duyệt terminate (người duyệt khác người yêu cầu)", "Kiểm tra Task Manager và audit"]
   expected: Tiến trình bị kết thúc; audit trước/sau đủ
   tests: []
   limits: Chỉ tiến trình thử nghiệm
@@ -283,7 +283,6 @@ AT-31:
   steps: ["Token sai -> trạng thái lỗi", "Bộ lọc không có kết quả -> trạng thái rỗng"]
   expected: Có trạng thái lỗi (role=alert), rỗng và loading
   tests: [tests/dashboard/test_dashboard_ui.py::test_dashboard_ui_checks]
-  gaps: "Test UI hiện kiểm tra trạng thái lỗi và rỗng; trạng thái loading chưa có kiểm tra tự động riêng"
   limits: ""
 AT-32:
   req: R-07
@@ -293,7 +292,6 @@ AT-32:
   steps: ["Mở chi tiết alert"]
   expected: Hiển thị đường dẫn bằng chứng và trạng thái hành động response
   tests: [tests/dashboard/test_dashboard_ui.py::test_dashboard_ui_checks]
-  gaps: "Chưa kiểm tra tự động rằng màn chi tiết alert hiển thị kết quả response; cần xác nhận bằng ảnh chụp/ngắm thủ công"
   limits: ""
 AT-33:
   req: R-07
@@ -309,7 +307,7 @@ AT-34:
   level: W
   goal: edr_ctl start/status/stop khởi động/dừng sạch, không tiến trình mồ côi trên Windows
   pre: Windows VM
-  steps: ["edr_ctl start/status/stop", "Kiểm tra tasklist"]
+  steps: ["python -m edr_ctl start/status/stop --config C:\\dacn_edr\\edr.yaml (đã đặt $env:PYTHONPATH)", "Kiểm tra tasklist"]
   expected: Không còn tiến trình mồ côi
   tests: []
   limits: "Đã có test Linux (tests/test_edr_ctl.py, tests/e2e/test_edr_ctl_real_processes.py) - không thay cho Windows"
@@ -394,6 +392,5 @@ AT-43:
   pre: Repo
   steps: ["Chạy test ML interface"]
   expected: ML tắt mặc định, không kích hoạt response
-  tests: [tests/detection/test_rules_harness.py::test_ml_off_by_default_and_never_triggers_response]
-  gaps: "Chưa có test cho detector giả bật ML ngoài việc kiểm tra tắt mặc định"
+  tests: [tests/detection/test_rules_harness.py::test_ml_off_by_default_and_never_triggers_response, tests/detection/test_ml_loader.py::test_enabled_fake_detector_does_not_change_rule_results, tests/detection/test_ml_loader.py::test_load_ok_and_score_is_not_response_trigger]
   limits: Chưa có mô hình ML thật

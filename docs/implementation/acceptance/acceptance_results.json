@@ -1,17 +1,17 @@
 {
   "meta": {
-    "run_utc": "2026-11-09T09:55:18Z",
-    "duration_s": 30.7,
-    "commit": "36ee751",
-    "dirty": false,
+    "run_utc": "2026-11-09T10:32:42Z",
+    "duration_s": 37.8,
+    "commit": "6ea57a3",
+    "dirty": true,
     "python": "3.13.18",
     "os": "Linux 6.18.44-fc-v310",
     "evidence_level": "L (Linux, dữ liệu synthetic/giả lập); W (Windows) chưa chạy",
     "pytest_exit_code": 0,
     "counts": {
-      "PASS": 25,
+      "PASS": 28,
       "NOT RUN": 14,
-      "PARTIAL": 4
+      "PARTIAL": 1
     },
     "packages": {
       "pytest": "9.2.0",
@@ -94,7 +94,7 @@
       "goal": "Agent live nhận sự kiện mới và khớp wevtutil export",
       "pre": "Windows 10 VM, Sysmon chạy, quyền đọc channel Sysmon/Operational",
       "steps": [
-        "python -m agent --live",
+        "$env:PYTHONPATH=...; python -m agent run --config C:\\dacn_edr\\edr.yaml --live --follow (hoặc edr_ctl start --live)",
         "Sinh sự kiện (mở notepad)",
         "wevtutil qe ... /f:xml so với raw_xml trong Bronze"
       ],
@@ -112,8 +112,8 @@
       "goal": "Không có quyền đọc channel -> lỗi C-006 rõ ràng",
       "pre": "Windows, chạy agent bằng tài khoản không có quyền",
       "steps": [
-        "Chạy agent --live bằng user thường",
-        "Xem bronze/errors/collector_errors.jsonl"
+        "Chạy python -m agent run --config C:\\dacn_edr\\edr.yaml --live bằng user thường",
+        "Xem tệp collector_errors.jsonl trong thư mục errors của Bronze (đường dẫn thực tế do agent ghi, kiểm bằng dir)"
       ],
       "expected": "Mã lỗi C-006, agent không crash âm thầm",
       "limits": "Phần logic ánh xạ lỗi đã có test Linux (test_access_denied_maps_to_c006) nhưng đó không phải bằng chứng trên Windows",
@@ -129,7 +129,7 @@
       "goal": "Kill agent giữa chừng trên Windows -> phục hồi",
       "pre": "Windows VM, agent live đang chạy",
       "steps": [
-        "taskkill /F agent",
+        "taskkill /F /PID <pid của tiến trình agent> (lấy PID từ edr_ctl status)",
         "Khởi động lại",
         "Kiểm tra recover và không mất sự kiện"
       ],
@@ -704,8 +704,8 @@
       "goal": "Terminate tiến trình thử nghiệm (marker lab) khi execute + audit",
       "pre": "VM, người dùng bật execute_unlocked và mode execute",
       "steps": [
-        "Chạy tiến trình marker",
-        "Duyệt terminate",
+        "Chạy tiến trình thử nghiệm nằm trong thư mục lab (%TEMP%\\dacn_lab; tên marker KHÔNG đủ)",
+        "Yêu cầu và duyệt terminate (người duyệt khác người yêu cầu)",
         "Kiểm tra Task Manager và audit"
       ],
       "expected": "Tiến trình bị kết thúc; audit trước/sau đủ",
@@ -914,7 +914,7 @@
       ],
       "expected": "Có trạng thái lỗi (role=alert), rỗng và loading",
       "limits": "",
-      "gaps": "Test UI hiện kiểm tra trạng thái lỗi và rỗng; trạng thái loading chưa có kiểm tra tự động riêng",
+      "gaps": "",
       "tests": [
         {
           "node": "tests/dashboard/test_dashboard_ui.py::test_dashboard_ui_checks",
@@ -922,7 +922,7 @@
         }
       ],
       "actual": "1 test pytest đạt, 0 lỗi",
-      "status": "PARTIAL"
+      "status": "PASS"
     },
     {
       "id": "AT-32",
@@ -935,7 +935,7 @@
       ],
       "expected": "Hiển thị đường dẫn bằng chứng và trạng thái hành động response",
       "limits": "",
-      "gaps": "Chưa kiểm tra tự động rằng màn chi tiết alert hiển thị kết quả response; cần xác nhận bằng ảnh chụp/ngắm thủ công",
+      "gaps": "",
       "tests": [
         {
           "node": "tests/dashboard/test_dashboard_ui.py::test_dashboard_ui_checks",
@@ -943,7 +943,7 @@
         }
       ],
       "actual": "1 test pytest đạt, 0 lỗi",
-      "status": "PARTIAL"
+      "status": "PASS"
     },
     {
       "id": "AT-33",
@@ -969,7 +969,7 @@
       "goal": "edr_ctl start/status/stop khởi động/dừng sạch, không tiến trình mồ côi trên Windows",
       "pre": "Windows VM",
       "steps": [
-        "edr_ctl start/status/stop",
+        "python -m edr_ctl start/status/stop --config C:\\dacn_edr\\edr.yaml (đã đặt $env:PYTHONPATH)",
         "Kiểm tra tasklist"
       ],
       "expected": "Không còn tiến trình mồ côi",
@@ -1253,15 +1253,23 @@
       ],
       "expected": "ML tắt mặc định, không kích hoạt response",
       "limits": "Chưa có mô hình ML thật",
-      "gaps": "Chưa có test cho detector giả bật ML ngoài việc kiểm tra tắt mặc định",
+      "gaps": "",
       "tests": [
         {
           "node": "tests/detection/test_rules_harness.py::test_ml_off_by_default_and_never_triggers_response",
           "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_ml_loader.py::test_enabled_fake_detector_does_not_change_rule_results",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_ml_loader.py::test_load_ok_and_score_is_not_response_trigger",
+          "outcome": "passed"
         }
       ],
-      "actual": "1 test pytest đạt, 0 lỗi",
-      "status": "PARTIAL"
+      "actual": "3 test pytest đạt, 0 lỗi",
+      "status": "PASS"
     }
   ]
 }

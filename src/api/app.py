@@ -374,11 +374,17 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
 
     @app.get("/response/actions", tags=["response"])
     def list_actions(status: Optional[Literal["REQUESTED", "APPROVED", "REJECTED", "EXECUTING", "DONE", "FAILED"]] = None,
-                     limit: int = Q(50, ge=1, le=200), _: dict = Depends(need("read", "responder"))):
+                     alert_id: Optional[str] = Q(None, max_length=64), limit: int = Q(50, ge=1, le=200),
+                     _: dict = Depends(need("read", "responder"))):
+        conds, params = [], []
+        if status:
+            conds.append("status=?"); params.append(status)
+        if alert_id:
+            conds.append("alert_id=?"); params.append(alert_id)
         with lock:
             ids = [r[0] for r in con.execute(
-                "select action_id from response_actions" + (" where status=?" if status else "") +
-                " order by requested_at_utc desc limit ?", ([status] if status else []) + [limit]).fetchall()]
+                "select action_id from response_actions" + (" where " + " and ".join(conds) if conds else "") +
+                " order by requested_at_utc desc limit ?", params + [limit]).fetchall()]
             return {"items": [actions.get(i) for i in ids]}
 
     @app.get("/response/actions/{action_id}", tags=["response"])

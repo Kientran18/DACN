@@ -30,9 +30,17 @@ const out = {};
   out.timezone_labelled_utc = (await page.textContent("body")).includes("UTC");
   await page.screenshot({ path: shotDir + "/overview.png" });
 
+  // loading: làm chậm API để thấy trạng thái "Đang tải…"
+  await page.route("**/events*", async (r) => { await new Promise((s) => setTimeout(s, 1200)); await r.continue(); });
+  await page.goto(base + "/ui/#/events?kind=process");
+  await page.waitForSelector(".state");
+  out.loading_state_shown = (await page.textContent(".state")).includes("Đang tải");
+  await page.waitForSelector("table tbody tr");
+  await page.unroute("**/events*");
+
   // events: rỗng + có dữ liệu
   await page.goto(base + "/ui/#/events?kind=process&hostname=KHONG-TON-TAI");
-  await page.waitForSelector(".state");
+  await page.waitForFunction(() => { const s = document.querySelector(".state"); return s && !s.textContent.includes("Đang tải"); });
   out.events_empty_state = (await page.textContent(".state")).includes("Không có sự kiện");
   await page.goto(base + "/ui/#/events?kind=process");
   await page.waitForSelector("table tbody tr");
@@ -54,6 +62,8 @@ const out = {};
   out.no_injected_img = (await page.locator("img[src='x']").count()) === 0;
   out.no_object_object_text = !(await page.textContent("body")).includes("[object");
   out.evidence_status_shown = (await page.textContent("body")).includes("Trạng thái:");
+  await page.waitForSelector("#alert-response table tbody tr");
+  out.alert_detail_shows_response_action = (await page.textContent("#alert-response")).includes("QUARANTINE_FILE");
   await page.screenshot({ path: shotDir + "/alert_detail.png", fullPage: true });
 
   // raw xml: cần xác nhận

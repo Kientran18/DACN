@@ -8,7 +8,7 @@
 
 - Preconditions: Windows 10 VM, Sysmon chạy, quyền đọc channel Sysmon/Operational
 - Steps:
-  1. python -m agent --live
+  1. $env:PYTHONPATH=...; python -m agent run --config C:\dacn_edr\edr.yaml --live --follow (hoặc edr_ctl start --live)
   2. Sinh sự kiện (mở notepad)
   3. wevtutil qe ... /f:xml so với raw_xml trong Bronze
 - Expected: raw_xml trong Bronze trùng EventRecordID/nội dung với wevtutil
@@ -21,8 +21,8 @@
 
 - Preconditions: Windows, chạy agent bằng tài khoản không có quyền
 - Steps:
-  1. Chạy agent --live bằng user thường
-  2. Xem bronze/errors/collector_errors.jsonl
+  1. Chạy python -m agent run --config C:\dacn_edr\edr.yaml --live bằng user thường
+  2. Xem tệp collector_errors.jsonl trong thư mục errors của Bronze (đường dẫn thực tế do agent ghi, kiểm bằng dir)
 - Expected: Mã lỗi C-006, agent không crash âm thầm
 - Actual: _(điền)_
 - Status: PASS / FAIL / NOT RUN _(chọn)_
@@ -33,7 +33,7 @@
 
 - Preconditions: Windows VM, agent live đang chạy
 - Steps:
-  1. taskkill /F agent
+  1. taskkill /F /PID <pid của tiến trình agent> (lấy PID từ edr_ctl status)
   2. Khởi động lại
   3. Kiểm tra recover và không mất sự kiện
 - Expected: recover_dir niêm phong .part, checkpoint tiếp tục
@@ -58,8 +58,8 @@
 
 - Preconditions: VM, người dùng bật execute_unlocked và mode execute
 - Steps:
-  1. Chạy tiến trình marker
-  2. Duyệt terminate
+  1. Chạy tiến trình thử nghiệm nằm trong thư mục lab (%TEMP%\dacn_lab; tên marker KHÔNG đủ)
+  2. Yêu cầu và duyệt terminate (người duyệt khác người yêu cầu)
   3. Kiểm tra Task Manager và audit
 - Expected: Tiến trình bị kết thúc; audit trước/sau đủ
 - Actual: _(điền)_
@@ -96,7 +96,7 @@
 
 - Preconditions: Windows VM
 - Steps:
-  1. edr_ctl start/status/stop
+  1. python -m edr_ctl start/status/stop --config C:\dacn_edr\edr.yaml (đã đặt $env:PYTHONPATH)
   2. Kiểm tra tasklist
 - Expected: Không còn tiến trình mồ côi
 - Actual: _(điền)_

@@ -40,6 +40,10 @@ def evaluate_single(rule: dict, row: dict) -> DetectionResult:
                 dedup_key=make_dedup_key(rid, ver, row["event_id"]))
     missing = [f for f in rule.get("required_fields", []) if row.get(f) in (None, "")]
     if missing:
+        # Điều kiện `all` trên trường ĐÃ CÓ mà không khớp thì chắc chắn không match: không cần trường thiếu để kết luận.
+        for c in (rule.get("match") or {}).get("all", []):
+            if row.get(c["field"]) not in (None, "") and not cond_match(c, row)[0]:
+                return DetectionResult(outcome="NO_MATCH", **base)
         return DetectionResult(outcome="INSUFFICIENT_TELEMETRY", missing_fields=missing,
                                coverage_status="MISSING_REQUIRED_FIELDS",
                                severity_reason="thiếu trường bắt buộc; không kết luận lành tính", **base)

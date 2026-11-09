@@ -11,8 +11,8 @@
 
 | Hạng mục | Kết quả (2026-11-08; chạy lại 2026-11-09 sau `36ee751`) |
 |---|---|
-| Toàn bộ pytest | 213 pass, 0 fail (Linux; 201 trước commit `36ee751`, thêm 12 test cho các mục sửa sau audit) |
-| Nghiệm thu AT-01…43 mức L | 25 PASS · 4 PARTIAL · 0 FAIL · 14 NOT RUN |
+| Toàn bộ pytest | 233 pass, 0 fail (Linux, 2026-11-09; 201 → 213 sau `36ee751` → 233 sau đợt hoàn thiện phần mềm) |
+| Nghiệm thu AT-01…43 mức L | 28 PASS · 1 PARTIAL · 0 FAIL · 14 NOT RUN |
 | Hai lỗi baseline của PH1 | Đã sửa và chạy lại (`C-002`; entropy test dùng giá trị đã biết) |
 
 PARTIAL: AT-31 (thiếu kiểm tra loading), AT-32 (thiếu kiểm tra kết quả response trên màn chi tiết), AT-41 (mới kiểm liên kết nội bộ), AT-43 (chưa có detector giả). NOT RUN: các AT mức W (AT-03/04/05/16/25/26/33/34…40).

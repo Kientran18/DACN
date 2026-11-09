@@ -59,7 +59,7 @@ def test_match_becomes_alert_with_rule_version_and_mitre(tmp_path):
 
 
 def test_insufficient_telemetry_is_coverage_gap_not_alert(tmp_path):
-    rows = [{"id": "p", "table": "process", "image_path": "C:\\a\\powershell.exe", "command_line": None}]
+    rows = [{"id": "p", "table": "process", "image_path": "C:\\a\\powershell.exe", "command_line": None, "parent_image": "C:\\Windows\\explorer.exe"}]
     st, store, rules, results = alerts_for(tmp_path, rows)
     out = build_from_results(store, rules, results, st.con)
     assert out["alerts"] == [] and len(out["gaps"]) == 1

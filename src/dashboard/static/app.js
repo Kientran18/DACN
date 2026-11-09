@@ -274,6 +274,13 @@ async function pageAlertDetail(id) {
     box.append(h("h2", { text: "Incident" }), h("div", { class: "actions" }, title, h("button", { type: "button", text: "Tạo incident và gán alert này", disabled: !can("alert_write"), onclick: async () => {
       try { const r = await api("/incidents", { method: "POST", body: { title: title.value } }); await api("/incidents/" + r.incident_id + "/alerts", { method: "POST", body: { alert_id: id } });
         out.textContent = "Đã tạo incident " + r.incident_id; } catch (e) { out.textContent = "Lỗi: " + e.message; } } })), out);
+    // hành động response đã yêu cầu cho alert này
+    box.append(h("h2", { text: "Hành động response của alert này" }));
+    const respBox = h("div", { id: "alert-response" }); box.append(respBox);
+    load(respBox, () => api("/response/actions?alert_id=" + encodeURIComponent(id) + "&limit=50"), (r) => {
+      respBox.append(r.items.length ? table([{ key: "action_type", label: "Loại" }, { key: "status", label: "Trạng thái" }, { key: "requested_mode", label: "Chế độ yêu cầu" },
+        { label: "Kết quả", render: (x) => x.result ? (x.result.mode || "") + (x.result.code ? " — " + x.result.code : "") : "—" }], r.items) : empty("Chưa có hành động response nào cho alert này."));
+    });
     box.append(h("div", { class: "actions" }, h("a", { href: "#/response?alert=" + id, text: "Yêu cầu hành động response cho alert này →" })));
   });
 }

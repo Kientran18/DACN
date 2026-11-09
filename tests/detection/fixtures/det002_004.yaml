@@ -9,6 +9,7 @@ rows:
   - {id: schtasks_create, table: process, image_path: 'C:\Windows\System32\schtasks.exe', parent_image: 'C:\Windows\explorer.exe', command_line: 'schtasks.exe /create /tn DACN_LAB_t /tr calc.exe /sc once /st 23:59'}
   - {id: schtasks_query, table: process, image_path: 'C:\Windows\System32\schtasks.exe', parent_image: 'C:\Windows\explorer.exe', command_line: 'schtasks.exe /query'}
   - {id: schtasks_nocmd, table: process, image_path: 'C:\Windows\System32\schtasks.exe', parent_image: 'C:\Windows\explorer.exe', command_line: null}
+  - {id: calc_nocmd_noparent, table: process, image_path: 'C:\Windows\System32\calc.exe', parent_image: null, command_line: null}
 expected:
   DACN-DET-002: [INSUFFICIENT_TELEMETRY, MATCH]
   DACN-DET-004: [INSUFFICIENT_TELEMETRY, MATCH]

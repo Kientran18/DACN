@@ -44,7 +44,7 @@
 - **Mô tả:** hiện vào DLQ với `ERR_UNSUPPORTED_EVENT_ID`, gây nhiễu chỉ số quarantine. **Output:** quyết định + cài đặt: nhánh "collector health events" riêng hoặc đếm/bỏ qua có ghi nhận. **Files:** `src/pipeline/validator_poc.py`, test mới. **Phụ thuộc:** PH1-T01; hợp đồng event-specific nullability (W5-CY-03).
 - **DoD:** Event 4/16 không còn làm tăng quarantine ratio; không gán `process_guid` giả.
 
-### PH1-T07 · Bổ sung fixture Event 14, 15 (synthetic có nhãn) `[P1 · M · SW · C · TODO]`
+### PH1-T07 · Bổ sung fixture Event 14, 15 (synthetic có nhãn) `[P1 · M · SW · C · REVIEW]`
 - **Mô tả:** chưa có mẫu cho 14/15 nên chưa có bằng chứng validator. **Files:** `poc/sysmon-collector/configs/synthetic_events.xml` hoặc fixture mới trong `tests/fixtures/`, test mới. **DoD:** test chạy qua adapter+validator, ghi rõ synthetic; không bịa field ngoài tài liệu Sysmon.
 
 ### PH1-T08 · Quyết định cách chia sẻ code giữa `poc/` và `src/` `[P0 · M · SW · U · DONE]`
@@ -59,7 +59,7 @@
 ### PH1-T11 · Hạ tầng test: marker và cấu hình `[P0 · S · SW · C · DONE]`
 - **Mô tả:** thêm marker `windows` (bỏ qua trên Linux), `integration`; script chạy toàn bộ suite một lệnh. **Files:** `pytest.ini`/`conftest.py`. **Phụ thuộc:** PH1-T08. **DoD:** `python -m pytest -q` chạy toàn bộ trên Linux, test `windows` được skip kèm lý do.
 
-### PH1-T12 · Tạo fixture đã khử định danh `[P1 · M · CY/SW · C · TODO]`
+### PH1-T12 · Tạo fixture đã khử định danh `[P1 · M · CY/SW · C · REVIEW]`
 - **Mô tả:** mẫu `references/samples/` chưa khử định danh (`sanitized:false`). **Output:** bộ fixture đã thay tên máy/người dùng/SID bằng giá trị giả nhất quán (giữ nguyên cấu trúc, `ProcessGuid` liên kết, mối quan hệ cha-con) dùng cho test công khai và demo; script khử định danh có kiểm tra không còn chuỗi định danh gốc. Không ghi đè mẫu gốc. **DoD:** test dùng fixture mới cho kết quả tương đương; báo cáo không in giá trị gốc.
 
 ---
@@ -94,7 +94,7 @@
 ### PH2-T09 · Kiểm chứng agent trên Windows VM `[P0 · L · SW · W · TODO]`
 - **Mô tả:** người dùng chạy: cài Sysmon (config của repo), chạy agent live, tạo hoạt động vô hại (`run-poc-activities.ps1` sau khi đọc), so sánh Bronze với `wevtutil` export; kill agent giữa chừng và khởi động lại; kiểm tra quyền (có/không Administrator). **Skill:** `dacn-windows-integration-test`. **Output:** báo cáo có lệnh, phiên bản, đầu ra thật. **DoD:** mỗi ca PASS/FAIL/NOT RUN với bằng chứng; live mode chỉ được nâng lên `VERIFIED` ở đây.
 
-### PH2-T10 · Hướng dẫn cài đặt và chạy Agent `[P0 · M · SW · C · TODO]`
+### PH2-T10 · Hướng dẫn cài đặt và chạy Agent `[P0 · M · SW · C · REVIEW]`
 - **Mô tả:** `docs/implementation/` hoặc `docs/guides/` (vị trí do người dùng chọn): tiền điều kiện, các bước, cách dừng/gỡ, quyền. **DoD:** người dùng làm theo được trên VM sạch (xác nhận ở PH2-T09).
 
 ### PH2-T11 · Dịch vụ Windows (tùy chọn) `[P2 · L · SW · W · TODO]`
@@ -128,7 +128,7 @@
 ### PH3-T08 · Chỉ số chất lượng dữ liệu `[P1 · M · DA · C · DONE]`
 - **Mô tả:** phát 6 chỉ số (completeness, validity, uniqueness, consistency, timeliness, quarantine ratio) từ dữ liệu thật của lần chạy; không đặt SLO "đạt" khi chưa đo (`dacn-data-pipeline-storage/references/data-quality-metrics.md`). **DoD:** bảng chỉ số kèm lệnh và dữ liệu nguồn.
 
-### PH3-T09 · Retention (dry-run) `[P2 · M · DA · C · TODO]`
+### PH3-T09 · Retention (dry-run) `[P2 · M · DA · C · REVIEW]`
 - **Mô tả:** chính sách theo tầng, `RAW_EXPIRED`, evidence hold; chạy dry-run, không xóa. **DoD:** báo cáo những gì sẽ bị dọn; ngưỡng do người dùng quyết định.
 
 ---
@@ -165,8 +165,9 @@
 ### PH4-T10 · Giao diện ML detector `[P1 · M · DA · C · DONE]`
 - **Mô tả:** `MLDetector` Protocol (`score(features) -> AnomalyResult`), `NullDetector` mặc định, hợp đồng `AnomalyResult` + `feature_schema_version`; engine gọi detector tùy chọn qua cấu hình, kết quả chỉ làm tăng rủi ro và **không kích hoạt response**. **Files:** `src/detection/ml/interface.py`. **DoD:** tắt ML = hành vi không đổi; test với detector giả.
 
-### PH4-T11 · Rule bổ sung `[P1 · L · CY · C · TODO]`
+### PH4-T11 · Rule bổ sung `[P1 · L · CY · C · IN_PROGRESS]`
 - **Mô tả:** chọn theo telemetry thật: DET-002 (cmd/ancestry), DET-004 (schtasks candidate), DET-005/006 (chuỗi tải/mạng). Mỗi rule theo mẫu ở PH4-T04. Rule bị chặn do thiếu telemetry (DET-007, DET-008) ghi `blocked`. **DoD:** không thêm rule không có fixture.
+- **Tiến độ (2026-11-09):** đã thêm DET-002, DET-004 (`synthetic_only`) và DET-007/008 `blocked` kèm fixture. **Chưa làm:** DET-005/006 (chuỗi tải/mạng, cần correlation mới và quyết định Cyber), DET-009.
 
 ---
 
@@ -362,7 +363,7 @@
 
 ### ML-T01 · Đặc tả đặc trưng (feature contract) `[P1 · M · DA · C · TODO]` — dựa trên `gold_process_features`; mỗi đặc trưng có nguồn, đơn vị, nullable, `source_event_ids`. Output: `docs/implementation/AI_TRAINING_GUIDE.md` mục đặc trưng + `src/detection/ml/features.py`.
 ### ML-T02 · Trích xuất đặc trưng từ Silver `[P1 · L · DA · C · TODO]` — cửa sổ thời gian, không rò rỉ nhãn; test trên fixture.
-### ML-T03 · Nạp mô hình và suy luận `[P1 · M · DA · C · TODO]` — `ModelLoader` kiểm `feature_schema_version`, phiên bản, hash artifact; từ chối model sai schema.
+### ML-T03 · Nạp mô hình và suy luận `[P1 · M · DA · C · REVIEW]` — `ModelLoader` kiểm `feature_schema_version`, phiên bản, hash artifact; từ chối model sai schema.
 ### ML-T04 · Mã huấn luyện và đánh giá (khung) `[P2 · L · DA · C · TODO]` — preprocessing, chia train/val/test theo host/run/thời gian, metrics precision/recall/F1/FPR; **chưa chạy huấn luyện**.
 ### ML-T05 · Huấn luyện bởi người dùng `[P2 · XL · DA · U · TODO]` — theo `AI_TRAINING_GUIDE.md`; người dùng cung cấp artifact + báo cáo metrics.
 ### ML-T06 · Tích hợp mô hình đã huấn luyện `[P2 · M · DA · C · BLOCKED]` — chờ ML-T05; chỉ tích hợp khi người dùng yêu cầu.

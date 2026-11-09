@@ -60,6 +60,10 @@ def server(tmp_path_factory):
     rules = load_rules()
     store = AlertStore(st.con)
     build_from_results(store, rules, DetectionEngine(st.con, rules=rules).run(), st.con)
+    from response.actions import ActionStore
+    acts = ActionStore(st.con, store)
+    for a in store.list():
+        acts.request("QUARANTINE_FILE", {"path": "x"}, requested_by="user-viewer", requested_mode="dry_run", alert_id=a["alert_id"])
     toks = {"approver": "tok-approver-ui-0123456789", "viewer": "tok-viewer-ui-0123456789"}
     tokens = TokenStore({hash_token(t): {"role": r, "actor": f"user-{r}"} for r, t in toks.items()})
     pol = Policy(mode="dry_run", execute_unlocked=False, allowed_actions={"QUARANTINE_FILE"}, protected_process_names=set(),

@@ -36,7 +36,7 @@ def ctx(tmp_path):
     st = SilverStore(tmp_path / "s.duckdb")
     st.ingest_dir(bdir, "t")
     for t, _, row in harness.build_rows({"name": "api", "rows": [
-            {"id": "p", "table": "process", "image_path": "C:\\a\\powershell.exe", "command_line": "powershell.exe -enc AAAAAAAA",
+            {"id": "p", "table": "process", "image_path": "C:\\a\\powershell.exe", "command_line": "powershell.exe -enc AAAAAAAA", "parent_image": "C:\\Windows\\explorer.exe",
              "timestamp": "2026-01-01T10:00:00+00:00", "record_id": 900}]}):
         st._insert(t, row)
     rules = load_rules()

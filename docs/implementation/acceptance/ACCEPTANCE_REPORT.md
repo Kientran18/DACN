@@ -5,8 +5,8 @@
 
 ## Môi trường chạy
 
-- Thời điểm (UTC): 2026-11-09T09:55:18Z · thời lượng: 30.7 s
-- Commit: `36ee751`
+- Thời điểm (UTC): 2026-11-09T10:32:42Z · thời lượng: 37.8 s
+- Commit: `6ea57a3` (cây làm việc có thay đổi chưa commit)
 - Python 3.13.18 · Linux 6.18.44-fc-v310
 - Thư viện: pytest 9.2.0, duckdb 2.0.0, fastapi 0.162.2, uvicorn 0.54.0, httpx 0.28.1, pydantic 2.13.5, PyYAML 6.0.3, jsonschema 4.26.0
 - Mức bằng chứng: L (Linux, dữ liệu synthetic/giả lập); W (Windows) chưa chạy
@@ -15,8 +15,8 @@
 
 | Trạng thái | Số AT |
 |---|---|
-| PASS | 25 |
-| PARTIAL | 4 |
+| PASS | 28 |
+| PARTIAL | 1 |
 | FAIL | 0 |
 | NOT RUN | 14 |
 
@@ -54,7 +54,7 @@ PARTIAL = test đạt nhưng catalog ghi rõ phần Expected chưa được ph�
 
 - **Mục tiêu:** Agent live nhận sự kiện mới và khớp wevtutil export
 - **Preconditions:** Windows 10 VM, Sysmon chạy, quyền đọc channel Sysmon/Operational
-- **Steps:** 1. python -m agent --live; 2. Sinh sự kiện (mở notepad); 3. wevtutil qe ... /f:xml so với raw_xml trong Bronze
+- **Steps:** 1. $env:PYTHONPATH=...; python -m agent run --config C:\dacn_edr\edr.yaml --live --follow (hoặc edr_ctl start --live); 2. Sinh sự kiện (mở notepad); 3. wevtutil qe ... /f:xml so với raw_xml trong Bronze
 - **Expected:** raw_xml trong Bronze trùng EventRecordID/nội dung với wevtutil
 - **Actual:** Cần Windows 10 VM thật; Claude không chạy được.
 - **Known limitations:** Một VM, một phiên bản Sysmon
@@ -63,7 +63,7 @@ PARTIAL = test đạt nhưng catalog ghi rõ phần Expected chưa được ph�
 
 - **Mục tiêu:** Không có quyền đọc channel -> lỗi C-006 rõ ràng
 - **Preconditions:** Windows, chạy agent bằng tài khoản không có quyền
-- **Steps:** 1. Chạy agent --live bằng user thường; 2. Xem bronze/errors/collector_errors.jsonl
+- **Steps:** 1. Chạy python -m agent run --config C:\dacn_edr\edr.yaml --live bằng user thường; 2. Xem tệp collector_errors.jsonl trong thư mục errors của Bronze (đường dẫn thực tế do agent ghi, kiểm bằng dir)
 - **Expected:** Mã lỗi C-006, agent không crash âm thầm
 - **Actual:** Cần Windows 10 VM thật; Claude không chạy được.
 - **Known limitations:** Phần logic ánh xạ lỗi đã có test Linux (test_access_denied_maps_to_c006) nhưng đó không phải bằng chứng trên Windows
@@ -72,7 +72,7 @@ PARTIAL = test đạt nhưng catalog ghi rõ phần Expected chưa được ph�
 
 - **Mục tiêu:** Kill agent giữa chừng trên Windows -> phục hồi
 - **Preconditions:** Windows VM, agent live đang chạy
-- **Steps:** 1. taskkill /F agent; 2. Khởi động lại; 3. Kiểm tra recover và không mất sự kiện
+- **Steps:** 1. taskkill /F /PID <pid của tiến trình agent> (lấy PID từ edr_ctl status); 2. Khởi động lại; 3. Kiểm tra recover và không mất sự kiện
 - **Expected:** recover_dir niêm phong .part, checkpoint tiếp tục
 - **Actual:** Cần Windows 10 VM thật; Claude không chạy được.
 
@@ -318,7 +318,7 @@ PARTIAL = test đạt nhưng catalog ghi rõ phần Expected chưa được ph�
 
 - **Mục tiêu:** Terminate tiến trình thử nghiệm (marker lab) khi execute + audit
 - **Preconditions:** VM, người dùng bật execute_unlocked và mode execute
-- **Steps:** 1. Chạy tiến trình marker; 2. Duyệt terminate; 3. Kiểm tra Task Manager và audit
+- **Steps:** 1. Chạy tiến trình thử nghiệm nằm trong thư mục lab (%TEMP%\dacn_lab; tên marker KHÔNG đủ); 2. Yêu cầu và duyệt terminate (người duyệt khác người yêu cầu); 3. Kiểm tra Task Manager và audit
 - **Expected:** Tiến trình bị kết thúc; audit trước/sau đủ
 - **Actual:** Cần Windows 10 VM thật; Claude không chạy được.
 - **Known limitations:** Chỉ tiến trình thử nghiệm
@@ -395,7 +395,7 @@ PARTIAL = test đạt nhưng catalog ghi rõ phần Expected chưa được ph�
   - `tests/api/test_api.py::test_me_stats_and_data_label` → passed
 - **Known limitations:** Fixture gắn nhãn DỮ LIỆU MẪU; một trình duyệt (Chromium)
 
-### AT-31 · R-07 · mức L · **PARTIAL**
+### AT-31 · R-07 · mức L · **PASS**
 
 - **Mục tiêu:** Trạng thái loading/lỗi/rỗng
 - **Preconditions:** như AT-30
@@ -404,9 +404,8 @@ PARTIAL = test đạt nhưng catalog ghi rõ phần Expected chưa được ph�
 - **Actual:** 1 test pytest đạt, 0 lỗi
 - **Evidence (pytest node):**
   - `tests/dashboard/test_dashboard_ui.py::test_dashboard_ui_checks` → passed
-- **Chưa phủ:** Test UI hiện kiểm tra trạng thái lỗi và rỗng; trạng thái loading chưa có kiểm tra tự động riêng
 
-### AT-32 · R-07 · mức L · **PARTIAL**
+### AT-32 · R-07 · mức L · **PASS**
 
 - **Mục tiêu:** Chi tiết alert hiển thị nguồn bằng chứng + kết quả response
 - **Preconditions:** như AT-30
@@ -415,7 +414,6 @@ PARTIAL = test đạt nhưng catalog ghi rõ phần Expected chưa được ph�
 - **Actual:** 1 test pytest đạt, 0 lỗi
 - **Evidence (pytest node):**
   - `tests/dashboard/test_dashboard_ui.py::test_dashboard_ui_checks` → passed
-- **Chưa phủ:** Chưa kiểm tra tự động rằng màn chi tiết alert hiển thị kết quả response; cần xác nhận bằng ảnh chụp/ngắm thủ công
 
 ### AT-33 · R-07 · mức W · **NOT RUN**
 
@@ -429,7 +427,7 @@ PARTIAL = test đạt nhưng catalog ghi rõ phần Expected chưa được ph�
 
 - **Mục tiêu:** edr_ctl start/status/stop khởi động/dừng sạch, không tiến trình mồ côi trên Windows
 - **Preconditions:** Windows VM
-- **Steps:** 1. edr_ctl start/status/stop; 2. Kiểm tra tasklist
+- **Steps:** 1. python -m edr_ctl start/status/stop --config C:\dacn_edr\edr.yaml (đã đặt $env:PYTHONPATH); 2. Kiểm tra tasklist
 - **Expected:** Không còn tiến trình mồ côi
 - **Actual:** Cần Windows 10 VM thật; Claude không chạy được.
 - **Known limitations:** Đã có test Linux (tests/test_edr_ctl.py, tests/e2e/test_edr_ctl_real_processes.py) - không thay cho Windows
@@ -535,14 +533,15 @@ PARTIAL = test đạt nhưng catalog ghi rõ phần Expected chưa được ph�
   - `tests/pipeline/test_query_replay.py::test_replay_rebuilds_same_event_ids` → passed
 - **Known limitations:** Phụ thuộc quyết định hostname (D-07); hợp đồng chưa được phê duyệt chéo
 
-### AT-43 · R-12 · mức L · **PARTIAL**
+### AT-43 · R-12 · mức L · **PASS**
 
 - **Mục tiêu:** Tắt ML = hành vi không đổi; detector giả hoạt động
 - **Preconditions:** Repo
 - **Steps:** 1. Chạy test ML interface
 - **Expected:** ML tắt mặc định, không kích hoạt response
-- **Actual:** 1 test pytest đạt, 0 lỗi
+- **Actual:** 3 test pytest đạt, 0 lỗi
 - **Evidence (pytest node):**
   - `tests/detection/test_rules_harness.py::test_ml_off_by_default_and_never_triggers_response` → passed
-- **Chưa phủ:** Chưa có test cho detector giả bật ML ngoài việc kiểm tra tắt mặc định
+  - `tests/detection/test_ml_loader.py::test_enabled_fake_detector_does_not_change_rule_results` → passed
+  - `tests/detection/test_ml_loader.py::test_load_ok_and_score_is_not_response_trigger` → passed
 - **Known limitations:** Chưa có mô hình ML thật

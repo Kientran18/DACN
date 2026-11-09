@@ -49,7 +49,7 @@ Mở `http://127.0.0.1:<cổng>/ui`, dán token. Token tạo bằng `python -m a
 4. Quarantine giữ tệp cùng sha256, không xóa vĩnh viễn; restore không ghi đè và kiểm hash.
 5. Mọi bước trước/sau thực thi nằm trong audit; kiểm tra tính toàn vẹn chuỗi audit qua `/response/audit`.
 
-**Chưa có:** hành động *Add whitelist* (đã hỏi, chưa có quyết định).
+**Allowlist:** `ADD_WHITELIST`/`REMOVE_WHITELIST` (theo SHA-256) đi qua cùng quy trình yêu cầu → duyệt → thực thi như các hành động khác; thao tác này làm hash đó không còn bị phát hiện nên cần lý do (≥ 5 ký tự) và có thể hoàn tác bằng `REMOVE_WHITELIST`. Chưa chạy trên Windows.
 
 ## 6. Sự cố thường gặp
 

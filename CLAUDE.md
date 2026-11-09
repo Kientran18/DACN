@@ -39,21 +39,21 @@ Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết qu�
 | Sysmon collector PoC, Bronze contract, adapter, validator W05 | `poc/sysmon-collector/`, `src/pipeline/validator_poc.py` | Có test; dữ liệu synthetic và mẫu lab. Bronze contract vẫn là **đề xuất**, chưa phê duyệt chéo |
 | Agent (nguồn giả/tệp/Event Log, Bronze sealed + manifest, checkpoint, recover) | `src/agent/` | Có test trên Linux; nguồn Event Log thật **chưa chạy trên Windows** |
 | Pipeline (Silver DuckDB, dedup, quarantine/DLQ, replay, ledger) | `src/pipeline/` | Có test trên Linux; dùng DDL v1.2 là **đề xuất chưa duyệt** |
-| Detection Engine (DET-001/003/010/101, IOC, allowlist, correlation, 4 kết quả đánh giá) | `src/detection/`, `config/` | Có test với fixture; mọi rule `synthetic_only`, chưa hiệu chỉnh, không có số liệu TP/FP/FN |
+| Detection Engine (DET-001/002/003/004/010/101 bật; DET-007/008 blocked; IOC, allowlist, correlation, 4 kết quả đánh giá) | `src/detection/`, `config/` | Có test với fixture; mọi rule `synthetic_only`, chưa hiệu chỉnh, không có số liệu TP/FP/FN |
 | Alert/Incident, audit hash-chain, truy vết alert→Silver→Bronze→raw_xml | `src/alerts/` | Có test trên Linux |
-| Response Engine (mặc định `dry_run`, hai khóa execute, duyệt, quarantine/restore) | `src/response/`, `config/response-policy.yaml` | Có test với backend giả; **chưa từng thực thi hành động thật**; chưa có Add whitelist. Auto-response và block-hash nằm ở `experimental/`, chưa nối vào hệ thống |
+| Response Engine (mặc định `dry_run`, hai khóa execute, duyệt, quarantine/restore) | `src/response/`, `config/response-policy.yaml` | Có test với backend giả; **chưa từng thực thi hành động thật**; có ADD/REMOVE_WHITELIST (chưa chạy thật). Auto-response và block-hash nằm ở `experimental/`, chưa nối vào hệ thống |
 | API FastAPI (loopback, 4 vai trò) và Dashboard tĩnh | `src/api/`, `src/dashboard/` | Có test (kể cả Playwright) trên Linux |
 | Core service và launcher | `src/core/`, `src/edr_ctl.py` | Chạy nhiều tiến trình thật trên Linux; chưa trên Windows |
 | Script lab (SC01–SC07) và kiểm tra môi trường Windows | `scripts/lab/`, `scripts/windows/` | Chỉ kiểm tra tĩnh; **chưa chạy trên Windows** |
-| Nghiệm thu | `tests/acceptance/at_catalog.yaml`, `scripts/acceptance/run_acceptance.py`, `docs/implementation/acceptance/` | 43 AT: 25 PASS, 4 PARTIAL, 0 FAIL, 14 NOT RUN (mức W chưa chạy) |
+| Nghiệm thu | `tests/acceptance/at_catalog.yaml`, `scripts/acceptance/run_acceptance.py`, `docs/implementation/acceptance/` | 43 AT: 28 PASS, 1 PARTIAL, 0 FAIL, 14 NOT RUN (mức W chưa chạy) |
 
 **Chưa được chứng minh / chưa có:**
 - Mọi thứ trên Windows thật: live Event Log, `WinProcessApi`, Sysmon config, script lab, hướng dẫn cài đặt, response `execute`.
 - Chất lượng phát hiện, hiệu năng (CPU/RAM/độ trễ) trên VM 2 GB.
-- Retention tự động, Windows service, Gold/Feature, mô hình ML (chỉ có giao diện, tắt mặc định).
+- Retention xóa thật (mới có dry-run), Windows service, Gold/Feature, mô hình ML (chỉ có giao diện, tắt mặc định).
 - Phê duyệt liên nhóm: DDL v1.2, schema `DetectionResult`, hostname D-07, tên event type (Q-X3), số hiệu DET-101, mã lỗi `R-*`/`A-*`, ADR 0004/0007.
 
-**Kết quả test (2026-11-09, Linux):** `python -m pytest -q` → 213 pass, 0 fail. Chưa có kết quả nào trên Windows. Chạy lại trước khi tin cậy.
+**Kết quả test (2026-11-09, Linux):** `python -m pytest -q` → 233 pass, 0 fail. Chưa có kết quả nào trên Windows. Chạy lại trước khi tin cậy.
 
 ### 3.2. TARGET ARCHITECTURE — kế hoạch, chưa được triển khai
 
