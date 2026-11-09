@@ -1,10 +1,11 @@
-"""Auto-response có cổng (PH7-T08). MẶC ĐỊNH TẮT. Cần: enabled, mode execute + unlocked, rule và action được liệt kê,
+"""THỬ NGHIỆM, CHƯA NỐI VÀO HỆ THỐNG (chỉ tests/ gọi; nằm ngoài src/ có chủ ý). Auto-response có cổng (PH7-T08). MẶC ĐỊNH TẮT.
+Tự yêu cầu và tự duyệt nên vô hiệu khi require_distinct_approver=true (mặc định). Cần: enabled, mode execute + unlocked, rule và action được liệt kê,
 bằng chứng đầy đủ (coverage FULL), và không bắt buộc người duyệt khác người yêu cầu."""
 from __future__ import annotations
 
 from typing import Optional
 
-from .policy import Policy
+from response.policy import Policy
 
 AUTO = "policy:auto"
 

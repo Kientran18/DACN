@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent
-for _p in (ROOT, ROOT / "src", ROOT / "src" / "pipeline", ROOT / "poc" / "sysmon-collector"):
+for _p in (ROOT, ROOT / "src", ROOT / "src" / "pipeline", ROOT / "experimental", ROOT / "poc" / "sysmon-collector"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 

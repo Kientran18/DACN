@@ -1,4 +1,4 @@
-"""Block hash MỨC ỨNG DỤNG (PH7-T09): thêm hash vào kho IOC cục bộ để lần phát hiện sau gắn cờ.
+"""THỬ NGHIỆM, CHƯA NỐI VÀO HỆ THỐNG (chỉ tests/ gọi; nằm ngoài src/ có chủ ý). Block hash MỨC ỨNG DỤNG (PH7-T09): thêm hash vào kho IOC cục bộ để lần phát hiện sau gắn cờ.
 Đây là detection, KHÔNG phải prevention: không ngăn thực thi ở mức hệ điều hành."""
 from __future__ import annotations
 

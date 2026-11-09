@@ -19,6 +19,7 @@ from alerts.store import TRANSITIONS, AlertStore, InvalidTransition
 from alerts.timeline import process_tree, timeline
 from pipeline.query import Query
 from response.actions import ActionError, ActionStore
+from response.executor import precheck
 from response.policy import ACTION_TYPES
 
 from .auth import ROLES, TokenStore
@@ -93,7 +94,7 @@ CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'se
 
 def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy, bronze_dir: Path,
                health_path: Optional[Path] = None, data_label: str = "UNSPECIFIED",
-               lock: Optional[threading.RLock] = None) -> FastAPI:
+               lock: Optional[threading.RLock] = None, core_status=None, agent_poll_s: float = 2.0) -> FastAPI:
     """data_label: 'SAMPLE' = dữ liệu mẫu/synthetic (UI hiện biểu ngữ nổi bật); 'UNSPECIFIED' = chưa xác nhận nguồn."""
     if data_label not in ("SAMPLE", "UNSPECIFIED"):
         raise ValueError("data_label không hợp lệ")
@@ -130,6 +131,8 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
         cl_ = request.headers.get("content-length")
         if cl_ and cl_.isdigit() and int(cl_) > MAX_BODY:
             return _err(413, "E-TOO_LARGE", "nội dung yêu cầu quá lớn")
+        if request.method in ("POST", "PUT", "PATCH") and not (cl_ and cl_.isdigit()):
+            return _err(411, "E-LENGTH_REQUIRED", "cần Content-Length (không nhận chunked không giới hạn)")
         resp = await call_next(request)
         resp.headers["X-Content-Type-Options"] = "nosniff"
         resp.headers["Cache-Control"] = "no-store"
@@ -186,10 +189,15 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
         agent: Dict[str, Any] = {"status": "UNKNOWN", "note": "không có health.json của agent"}
         try:
             agent = {"status": "REPORTED", **json.loads(health_path.read_text(encoding="utf-8"))}
-        except (OSError, ValueError):
+            # agent chết thì health.json giữ nguyên "running": chỉ tuổi heartbeat mới lộ ra
+            age = (datetime.now(timezone.utc) - datetime.fromisoformat(agent["heartbeat"])).total_seconds()
+            agent["heartbeat_age_s"] = age
+            if agent.get("state") != "stopped" and age > 3 * agent_poll_s:
+                agent["status"] = "STALE"
+        except (OSError, ValueError, KeyError, TypeError):
             pass
         lag = (datetime.now(timezone.utc) - led[3]).total_seconds() if led[3] else None
-        return {"data_label": data_label, "agent": agent,
+        return {"data_label": data_label, "agent": agent, "core": core_status() if core_status else None,
                 "pipeline": {"segments_ingested": led[0], "records_read": int(led[2]), "records_quarantined": int(led[1]),
                              "dlq_rows": dlq, "last_ingest_utc": led[3], "seconds_since_last_ingest": lag},
                 "engine": {"rules_loaded": len(rules), "rules_enabled": sum(r["status"] == "enabled" for r in rules.values()),
@@ -356,6 +364,9 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
     # -- response ----------------------------------------------------------------------------------------
     @app.post("/response/actions", tags=["response"])
     def request_action(body: ActionIn, who: dict = Depends(need("request_action"))):
+        ok, code = precheck(policy, body.action_type, body.target)
+        if not ok:
+            raise ApiError(422, "E-POLICY", f"mục tiêu bị policy từ chối: {code}")
         with lock:
             aid = actions.request(body.action_type, body.target, requested_by=who["actor"],
                                   requested_mode=body.requested_mode, alert_id=body.alert_id)

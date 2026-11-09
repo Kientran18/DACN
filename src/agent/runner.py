@@ -34,6 +34,9 @@ class AgentRunner:
     def request_stop(self) -> None:
         self.stop_requested = True
 
+    def mark_stopped(self) -> None:
+        self._health("stopped")
+
     def _should_stop(self) -> bool:
         return self.stop_requested or bool(self.stop_file and self.stop_file.exists())
 
@@ -55,7 +58,8 @@ class AgentRunner:
             f.write(json.dumps({"ts": _now(), "code": code, "message": msg, "raw_xml": xml},
                                ensure_ascii=False) + "\n")
 
-    def run(self) -> None:
+    def run(self, final: bool = True) -> None:
+        """final=False: một lượt poll trong chế độ --follow; chỉ ghi 'idle', 'stopped' do lời gọi cuối cùng ghi."""
         for item in recover_dir(self.writer.dir):
             self.errors[item["reason"]] += 1
         bookmark, reason = self.cp.load()
@@ -86,7 +90,7 @@ class AgentRunner:
             if pending_bm is not None and in_batch:
                 self._commit(pending_bm)
             self.writer.seal()
-            self._health("stopped")
+            self._health("stopped" if final else "idle")
 
     def _commit(self, bookmark: str) -> None:
         self.writer.flush()      # bản ghi bền trước

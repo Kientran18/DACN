@@ -12,6 +12,14 @@ _CHECK = {"QUARANTINE_FILE": lambda p, t, own: check_file_target(p, t),
           "TERMINATE_PROCESS": check_process_target}
 
 
+def precheck(policy: Policy, action_type: str, target: dict):
+    """(ok, mã lý do) dùng khi nhận yêu cầu, để người duyệt không duyệt hành động chắc chắn bị chặn.
+    Executor vẫn kiểm lại lúc chạy (policy/đích có thể đổi). own_pid=-1: API không biết PID của responder."""
+    if action_type not in policy.allowed_actions:
+        return False, "P-ACTION_NOT_ALLOWED"
+    return _CHECK[action_type](policy, target, -1)
+
+
 class Executor:
     def __init__(self, policy: Policy, actions, real_backend, dryrun_backend, own_pid: Optional[int] = None):
         self.policy, self.actions = policy, actions

@@ -27,13 +27,18 @@ def main(argv=None) -> int:
     if not token:
         raise SystemExit("Thiếu EDR_RESPONDER_TOKEN (token vai trò responder)")
     http = httpx.Client(base_url=f"http://{cfg.api_host}:{cfg.api_port}", headers={"Authorization": f"Bearer {token}"}, timeout=10)
-    remote = RemoteActions(http)
+    remote = RemoteActions(http, spool_dir=cfg.home / "response" / "pending_results")
     policy = load_policy(a.policy)       # mặc định dry_run; execute cần cả hai khóa trong policy
     ex = make_executor(policy, remote)
     stop_file = cfg.home / "run" / "responder.stop"
     r = Responder(remote.list_approved, ex, lambda aid, res: None)
+    recovered = False
     while not stop_file.exists():
         try:
+            remote.flush_spool()                    # kết quả thật chưa gửi được lần trước
+            if not recovered:
+                remote.recover_executing()          # EXECUTING mồ côi do lần chạy trước chết giữa chừng
+                recovered = True
             r.run_once()
         except httpx.HTTPError:
             pass      # core chưa sẵn sàng: thử lại vòng sau

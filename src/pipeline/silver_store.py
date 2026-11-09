@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
+from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List
@@ -33,6 +34,11 @@ CREATE TABLE IF NOT EXISTS _ingest_ledger (
     run_id VARCHAR, ingested_at_utc TIMESTAMPTZ
 )"""
 
+# Cột hay lọc/tra cứu theo giá trị. `timestamp` không lập index: DuckDB đã có zonemap theo khối và dữ liệu vào gần như theo thời gian.
+INDEXES = [f"CREATE INDEX IF NOT EXISTS ix_{t}_guid ON {t}(process_guid)" for t in TABLES.values()] + [
+    "CREATE INDEX IF NOT EXISTS ix_lineage_hash ON silver_event_lineage(bronze_content_hash)",
+    "CREATE INDEX IF NOT EXISTS ix_alerts_group ON alerts(group_key)"]
+
 
 class SilverStore:
     def __init__(self, path):
@@ -42,6 +48,8 @@ class SilverStore:
         self.con.execute(DDL.read_text(encoding="utf-8"))
         self.con.execute(DDL_V12.read_text(encoding="utf-8"))
         self.con.execute(LEDGER_DDL)
+        for ix in INDEXES:
+            self.con.execute(ix)
         self._cols = {t: [r[0] for r in self.con.execute(
             "select column_name from information_schema.columns where table_name=? order by ordinal_position",
             [t]).fetchall()] for t in list(TABLES.values()) + ["silver_quarantine_dlq"]}
@@ -65,13 +73,12 @@ class SilverStore:
         if unknown:
             raise ValueError(f"cột không có trong DDL {table}: {sorted(unknown)}")
         cols = list(row)
-        before = self.con.execute(f"select count(*) from {table}").fetchone()[0]
-        self.con.execute(
+        inserted = self.con.execute(
             f"insert into {table} ({','.join(cols)}) values ({','.join('?' * len(cols))}) "
             f"on conflict do nothing",
             [json.dumps(v, ensure_ascii=False, default=str) if isinstance(v, (dict, list)) else v
-             for v in row.values()])
-        return self.con.execute(f"select count(*) from {table}").fetchone()[0] - before
+             for v in row.values()]).fetchone()[0]     # INSERT trả số hàng thật sự thêm (0 nếu trùng)
+        return inserted
 
     def _dlq(self, code: str, stage: str, reason: str, ref: str, payload) -> None:
         self.con.execute(
@@ -125,6 +132,9 @@ class SilverStore:
                         "insert into silver_event_lineage values (?,?,?,?,?,?) on conflict do nothing",
                         [rec["event_id"], seg.name, line_no,
                          hashlib.sha256(rec["raw_xml"].encode("utf-8")).hexdigest(), MAPPER_VERSION, run_id])
+                if not n and self._collision(rec, flat, ref, seg.name, run_id):
+                    res["quarantined"] += 1
+                    continue
                 res["inserted" if n else "duplicates"] += 1
             self._write_ledger(seg.name, sha, "INGESTED", res, run_id)
             self.con.execute("commit")
@@ -133,6 +143,34 @@ class SilverStore:
             raise
         return res
 
-    def ingest_dir(self, directory: Path, run_id: str) -> List[Dict]:
+    def _collision(self, rec: dict, flat: dict, ref: str, seg_name: str, run_id: str) -> bool:
+        """Cùng event_id nhưng raw_xml khác bản đã nạp = va chạm định danh (ví dụ EventRecordID tái dùng sau khi xóa log),
+        KHÔNG phải bản sao. Không đổi cách tính event_id: ghi DLQ + coverage gap để bằng chứng mới không mất âm thầm.
+        Trả True nếu là va chạm MỚI. Phát lại cùng dữ liệu thì không tạo thêm dòng."""
+        h = hashlib.sha256(rec["raw_xml"].encode("utf-8")).hexdigest()
+        old = self.con.execute("select bronze_content_hash from silver_event_lineage where event_id=?", [rec["event_id"]]).fetchone()
+        if old is None or old[0] == h:
+            return False
+        key = f"ingest-collision|{rec['event_id']}|{h}"
+        new = self.con.execute(
+            "insert into coverage_gaps values (?,?,?,?,?,?,?,?,?) on conflict do nothing",
+            [str(uuid.uuid5(uuid.NAMESPACE_URL, key)), key, "INGEST-EVENT-ID", 0, flat.get("hostname"), [rec["event_id"]],
+             json.dumps(["unique_event_id"]), "EVENT_ID_COLLISION", datetime.now(timezone.utc)]).fetchone()[0]
+        if new:
+            self._dlq("ERR_EVENT_ID_COLLISION", "INGEST_COLLISION",
+                      "cùng event_id nhưng raw_xml khác bản đã nạp (nghi EventRecordID tái dùng sau khi xóa log)", ref, rec)
+        return bool(new)
+
+    def ingest_dir(self, directory: Path, run_id: str, lock=None) -> List[Dict]:
+        """lock (tùy chọn): giữ theo từng segment để tiến trình khác dùng chung kết nối xen vào được."""
         from .segment_reader import list_sealed
-        return [{"segment": s.name, **self.ingest_segment(s, run_id)} for s in list_sealed(directory)]
+        out = []
+        # Segment đã niêm phong là bất biến: bỏ qua theo tên trong ledger, không băm lại cả lịch sử mỗi vòng.
+        with lock or nullcontext():
+            done = {r[0] for r in self.con.execute("select segment from _ingest_ledger where status='INGESTED'").fetchall()}
+        for s in list_sealed(directory):
+            if s.name in done:
+                continue
+            with lock or nullcontext():
+                out.append({"segment": s.name, **self.ingest_segment(s, run_id)})
+        return out

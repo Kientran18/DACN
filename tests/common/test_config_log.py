@@ -10,7 +10,6 @@ def test_defaults_use_edr_home(tmp_path, monkeypatch):
     assert cfg.home == tmp_path
     assert cfg.silver_db == tmp_path / "silver" / "endpoint_silver.duckdb"
     assert cfg.api_host == "127.0.0.1"
-    assert cfg.response_mode == "dry-run"
 
 
 def test_yaml_overrides(tmp_path):

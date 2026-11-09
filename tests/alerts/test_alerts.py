@@ -172,3 +172,22 @@ def test_timeline_orders_and_reports_skew_and_tree_flags_partial_ancestry(tmp_pa
     tree = process_tree(st.con, "aaaaaaaa-0000-0000-0000-000000000002")
     assert [n["process_guid"][-1] for n in tree["ancestors"]] == ["1"]
     assert tree["coverage_status"] == "PARTIAL_ANCESTRY"
+
+
+def test_state_change_and_audit_are_one_transaction(tmp_path, monkeypatch):
+    st, store, rules, results = alerts_for(tmp_path)
+    aid = build_from_results(store, rules, results, st.con)["alerts"][0]
+    n_audit = st.con.execute("select count(*) from audit_log").fetchone()[0]
+    real = store._audit
+
+    def crash(*a, **k):
+        raise RuntimeError("crash giữa lúc ghi audit")
+    monkeypatch.setattr(store, "_audit", crash)
+    with pytest.raises(RuntimeError):
+        store.transition(aid, "TRIAGED", actor="u", note="n")
+    monkeypatch.setattr(store, "_audit", real)
+    assert store.get(aid)["status"] == "NEW"                                           # trạng thái không đổi
+    assert len(store.history(aid)) == 1                                                 # không có dòng lịch sử mồ côi
+    assert st.con.execute("select count(*) from audit_log").fetchone()[0] == n_audit   # và audit không lệch
+    store.transition(aid, "TRIAGED", actor="u", note="n")                               # store vẫn dùng được sau rollback
+    assert store.verify_audit() == []

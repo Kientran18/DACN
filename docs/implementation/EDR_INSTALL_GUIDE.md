@@ -44,6 +44,8 @@ copy config\edr.example.yaml C:\dacn_edr\edr.yaml
 python -m api.auth --config C:\dacn_edr\edr.yaml --role analyst --actor <tên>     # token hiện MỘT LẦN, lưu lại
 python -m api.auth --config C:\dacn_edr\edr.yaml --role approver --actor <tên>
 ```
+Quy tắc hai người đang **bật** (`require_distinct_approver: true`): `--actor` của analyst và approver phải **khác nhau**. Demo một người dùng thì đặt `false` trong `config\response-policy.yaml`.
+
 `config\response-policy.yaml` mặc định **dry_run**; **không đổi** trừ khi bạn chủ động chạy PH7-T10. Policy dùng biến `%TEMP%`, `%PUBLIC%`, `%SystemRoot%`, `%ProgramFiles%`, `%ProgramFiles(x86)%` (có sẵn trên Windows).
 
 ## 6. Chạy

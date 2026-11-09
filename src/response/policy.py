@@ -1,4 +1,6 @@
-"""Response policy và cổng bảo vệ (PH7-T01). Mặc định dry_run; execute cần HAI khóa; fail closed."""
+"""Response policy và cổng bảo vệ (PH7-T01). Mặc định dry_run; execute cần HAI khóa; fail closed.
+Đây là NƠI DUY NHẤT quyết định chế độ response (mode + execute_unlocked); cấu hình edr.yaml không có khóa response.
+Mục tiêu thật chỉ được nằm trong lab_dirs: tên/marker không đủ."""
 from __future__ import annotations
 
 import os
@@ -15,7 +17,7 @@ class PolicyError(ValueError):
 
 
 ACTION_TYPES = {"TERMINATE_PROCESS", "QUARANTINE_FILE", "RESTORE_FILE"}
-_KEYS = {"mode", "execute_unlocked", "require_distinct_approver", "allowed_actions", "lab_marker_prefix", "lab_dirs",
+_KEYS = {"mode", "execute_unlocked", "require_distinct_approver", "allowed_actions", "lab_dirs",
          "quarantine_dir", "protected_process_names", "protected_dirs", "auto_response"}
 PROTECTED_PIDS = {0, 4}
 
@@ -28,9 +30,8 @@ class Policy:
     protected_process_names: Set[str]
     protected_dirs: List[Path]
     lab_dirs: List[Path]
-    lab_marker_prefix: str
     quarantine_dir: Path
-    require_distinct_approver: bool = False
+    require_distinct_approver: bool = True      # quy tắc hai người bật mặc định; demo một người dùng phải tắt
     auto_response: Dict = field(default_factory=lambda: {"enabled": False, "rules": [], "allowed_actions": []})
 
     def execute_allowed(self) -> bool:
@@ -84,9 +85,8 @@ def load_policy(path: Path, env: Optional[Dict[str, str]] = None) -> Policy:
         protected_process_names={n.lower() for n in d.get("protected_process_names", [])},
         protected_dirs=[Path(_expand(x, env)) for x in d.get("protected_dirs", [])],
         lab_dirs=[Path(_expand(x, env)) for x in d["lab_dirs"]],
-        lab_marker_prefix=d.get("lab_marker_prefix", "DACN_LAB_"),
         quarantine_dir=Path(_expand(d["quarantine_dir"], env)),
-        require_distinct_approver=d.get("require_distinct_approver", False), auto_response=ar)
+        require_distinct_approver=d.get("require_distinct_approver", True), auto_response=ar)
 
 
 def _in_lab(p: Policy, path) -> bool:

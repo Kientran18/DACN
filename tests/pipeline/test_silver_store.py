@@ -98,3 +98,24 @@ def test_failure_mid_transaction_rolls_back(tmp_path, monkeypatch):
     assert sum(counts(st).values()) == 0
     monkeypatch.setattr(st, "_write_ledger", orig)
     assert st.ingest_segment(seg, run_id="r2")["status"] == "INGESTED"
+
+
+def test_same_event_id_with_different_raw_is_collision_not_silent_duplicate(tmp_path):
+    xmls = list(bc.iter_raw_xml_from_file(SYN))
+    st = SilverStore(tmp_path / "s.duckdb")
+    st.ingest_segment(make_seg(tmp_path / "a", xmls), "r1")
+    before = counts(st)
+    # (1) cùng nội dung ở segment khác (đọc lại do at-least-once): bản sao thật, không báo va chạm
+    r = st.ingest_segment(make_seg(tmp_path / "b", xmls), "r2")
+    assert r["duplicates"] == len(xmls) and r["quarantined"] == 0 and counts(st) == before
+    # (2) cùng Computer|Channel|EventRecordID nhưng raw_xml khác (ví dụ sau khi xóa log): DLQ + coverage gap
+    forged = [x.replace("</Event>", "<!--log-reset--></Event>") for x in xmls[:1]]
+    r = st.ingest_segment(make_seg(tmp_path / "c", forged), "r3")
+    assert r["quarantined"] == 1 and r["duplicates"] == 0
+    assert st.con.execute("select error_code from silver_quarantine_dlq order by quarantined_at_utc desc limit 1").fetchone()[0] == "ERR_EVENT_ID_COLLISION"
+    assert st.con.execute("select coverage_status from coverage_gaps").fetchall() == [("EVENT_ID_COLLISION",)]
+    assert counts(st)["silver_process_events"] == before["silver_process_events"]      # bản Silver cũ không bị ghi đè
+    # (3) phát lại đúng dữ liệu va chạm: không tạo thêm dòng DLQ/gap
+    st.ingest_segment(make_seg(tmp_path / "d", forged), "r4")
+    assert st.con.execute("select count(*) from coverage_gaps").fetchone()[0] == 1
+    assert counts(st)["silver_quarantine_dlq"] == before["silver_quarantine_dlq"] + 1

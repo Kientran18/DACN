@@ -1,9 +1,11 @@
 """Alert store, dedup, máy trạng thái, incident, audit (PH6-T03/T06). Dùng chung kết nối DuckDB (một writer)."""
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import uuid
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
@@ -36,9 +38,37 @@ def _need(**kw):
             raise ValueError(f"thiếu {k}")
 
 
+def _atomic(fn):
+    """Thay đổi dữ liệu + dòng audit tương ứng phải cùng một transaction: crash giữa chừng không để lệch."""
+    @functools.wraps(fn)
+    def wrapper(self, *a, **k):
+        with self.tx():
+            return fn(self, *a, **k)
+    return wrapper
+
+
 class AlertStore:
     def __init__(self, con):
         self.con = con
+        self._in_tx = False
+
+    @contextmanager
+    def tx(self):
+        """begin/commit, rollback khi lỗi; lồng nhau thì dùng transaction ngoài cùng (DuckDB không có nested).
+        Người gọi phải giữ khóa dùng chung kết nối (như API/core đang làm)."""
+        if self._in_tx:
+            yield
+            return
+        self.con.execute("begin")
+        self._in_tx = True
+        try:
+            yield
+            self.con.execute("commit")
+        except BaseException:
+            self.con.execute("rollback")
+            raise
+        finally:
+            self._in_tx = False
 
     # -- audit (append-only, chuỗi băm) ---------------------------------------
     def _audit(self, actor, action, target_type, target_id, reason) -> None:
@@ -71,6 +101,7 @@ class AlertStore:
         return issues
 
     # -- alert -----------------------------------------------------------------
+    @_atomic
     def insert_alert(self, **f) -> str:
         aid = str(uuid.uuid5(uuid.NAMESPACE_URL, "dacn-alert|" + f["detection_dedup_key"]))
         now = _now()
@@ -97,6 +128,7 @@ class AlertStore:
     def exists_dedup(self, key: str) -> bool:
         return bool(self.con.execute("select 1 from alerts where detection_dedup_key=?", [key]).fetchone())
 
+    @_atomic
     def bump(self, alert_id: str, last_seen, event_ids) -> None:
         self.con.execute(
             "update alerts set occurrence_count = occurrence_count + 1, last_seen_utc = greatest(last_seen_utc, ?),"
@@ -119,6 +151,7 @@ class AlertStore:
         cols = [c[0] for c in cur.description]
         return [dict(zip(cols, r)) for r in cur.fetchall()]
 
+    @_atomic
     def transition(self, alert_id: str, to_status: str, *, actor: str, note: str) -> None:
         _need(actor=actor, note=note)
         a = self.get(alert_id)
@@ -139,6 +172,7 @@ class AlertStore:
         return sorted(rows, key=lambda r: (r["at_utc"], order.index(r["to_status"])))
 
     # -- coverage gap ------------------------------------------------------------
+    @_atomic
     def add_gap(self, **f) -> str:
         gid = str(uuid.uuid5(uuid.NAMESPACE_URL, "dacn-gap|" + f["detection_dedup_key"]))
         self.con.execute("insert into coverage_gaps values (?,?,?,?,?,?,?,?,?) on conflict do nothing",
@@ -147,6 +181,7 @@ class AlertStore:
         return gid
 
     # -- incident ----------------------------------------------------------------
+    @_atomic
     def create_incident(self, title: str, *, actor: str) -> str:
         _need(title=title, actor=actor)
         iid = str(uuid.uuid4())
@@ -154,6 +189,7 @@ class AlertStore:
         self._audit(actor, "INCIDENT_CREATE", "incident", iid, title)
         return iid
 
+    @_atomic
     def link_alert(self, incident_id: str, alert_id: str, *, actor: str) -> None:
         _need(actor=actor)
         if self.get(alert_id) is None:
@@ -162,6 +198,7 @@ class AlertStore:
                          [incident_id, alert_id, _now(), actor])
         self._audit(actor, "INCIDENT_LINK_ALERT", "incident", incident_id, alert_id)
 
+    @_atomic
     def add_note(self, incident_id: str, note: str, *, actor: str) -> str:
         _need(note=note, actor=actor)
         nid = str(uuid.uuid4())

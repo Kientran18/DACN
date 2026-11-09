@@ -9,14 +9,15 @@ from pathlib import Path
 
 
 class IngestWorker:
-    def __init__(self, bronze_dir: Path, store, metrics_path: Path, on_batch=None):
+    def __init__(self, bronze_dir: Path, store, metrics_path: Path, on_batch=None, lock=None):
         self.dir, self.store, self.metrics_path = Path(bronze_dir), store, Path(metrics_path)
         self.on_batch = on_batch  # hook cho bước phát hiện sau mỗi batch (PH4)
+        self.lock = lock
         self.stop = False
 
     def run_once(self) -> dict:
         t0 = time.monotonic()
-        results = [r for r in self.store.ingest_dir(self.dir, "worker-" + uuid.uuid4().hex[:8])
+        results = [r for r in self.store.ingest_dir(self.dir, "worker-" + uuid.uuid4().hex[:8], self.lock)
                    if r["status"] != "SKIPPED_ALREADY_INGESTED"]
         m = {"ts": datetime.now(timezone.utc).isoformat(),
              "segments_ingested": sum(r["status"] == "INGESTED" for r in results),

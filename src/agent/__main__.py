@@ -35,12 +35,14 @@ def main(argv=None) -> int:
     runner = AgentRunner(src, BronzeWriter(cfg.bronze_dir), Checkpoint(cfg.home / "agent" / "checkpoint.json"),
                          cfg.home / "agent" / "health.json", mode=mode, stop_file=cfg.home / "run" / "agent.stop")
     signal.signal(signal.SIGINT, lambda *_: runner.request_stop())
-    runner.run()
+    runner.run(final=not a.follow)
     while a.follow and not runner._should_stop():
         time.sleep(a.poll_seconds)
         if runner._should_stop():
             break
-        runner.run()
+        runner.run(final=False)
+    if a.follow:
+        runner.mark_stopped()      # chỉ ghi "stopped" khi thoát thật
     return 0
 
 

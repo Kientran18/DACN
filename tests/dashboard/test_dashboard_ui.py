@@ -63,7 +63,7 @@ def server(tmp_path_factory):
     toks = {"approver": "tok-approver-ui-0123456789", "viewer": "tok-viewer-ui-0123456789"}
     tokens = TokenStore({hash_token(t): {"role": r, "actor": f"user-{r}"} for r, t in toks.items()})
     pol = Policy(mode="dry_run", execute_unlocked=False, allowed_actions={"QUARANTINE_FILE"}, protected_process_names=set(),
-                 protected_dirs=[], lab_dirs=[tmp / "lab"], lab_marker_prefix="DACN_LAB_", quarantine_dir=tmp / "lab" / "q")
+                 protected_dirs=[], lab_dirs=[tmp / "lab"], quarantine_dir=tmp / "lab" / "q")
     app = create_app(Config(home=tmp), tokens, store=st, rules=rules, policy=pol, bronze_dir=bdir, data_label="SAMPLE")
     s = socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
     srv = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))

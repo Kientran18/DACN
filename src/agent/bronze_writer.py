@@ -79,32 +79,42 @@ class BronzeWriter:
 
 
 def _finalize(part: Path, n: int, first, last) -> Path:
+    """Manifest TRƯỚC (tệp tạm -> fsync -> os.replace), đổi tên `.part` -> `.jsonl` SAU CÙNG.
+    Nhờ đó reader không bao giờ thấy segment thiếu manifest hoặc manifest ghi dở; crash giữa chừng
+    chỉ để lại `.part` mà recover_dir xử lý được."""
     seg = part.with_suffix("")  # bỏ '.part' → .jsonl
-    os.replace(part, seg)
-    manifest = {"segment": seg.name, "sha256": _sha256(seg), "record_count": n,
+    manifest = {"segment": seg.name, "sha256": _sha256(part), "record_count": n,
                 "first_record_id": first, "last_record_id": last,
                 "schema_version": bc.SCHEMA_VERSION, "collector_version": bc.COLLECTOR_VERSION,
                 "sealed_at": datetime.now(timezone.utc).isoformat()}
     mp = seg.with_suffix(".manifest.json")
-    with mp.open("w", encoding="utf-8", newline="\n") as f:
+    tmp = mp.with_name(mp.name + ".tmp")
+    with tmp.open("w", encoding="utf-8", newline="\n") as f:
         json.dump(manifest, f, indent=2)
         f.flush()
         os.fsync(f.fileno())
+    os.replace(tmp, mp)
+    os.replace(part, seg)
     return seg
 
 
 def verify_segment(seg: Path) -> List[str]:
-    """Danh sách lỗi (rỗng = hợp lệ)."""
+    """Danh sách lỗi (rỗng = hợp lệ). Manifest hỏng/ghi dở là lỗi V-MANIFEST_UNREADABLE, không ném ngoại lệ."""
     seg = Path(seg)
     mp = seg.with_suffix(".manifest.json")
     if not mp.exists():
         return ["V-MANIFEST_MISSING"]
-    m = json.loads(mp.read_text(encoding="utf-8"))
+    try:
+        m = json.loads(mp.read_text(encoding="utf-8"))
+        want_sha, want_n = m["sha256"], m["record_count"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return ["V-MANIFEST_UNREADABLE"]
     errs = []
-    if _sha256(seg) != m["sha256"]:
+    if _sha256(seg) != want_sha:
         errs.append("V-HASH_MISMATCH")
-    if sum(1 for _ in seg.open("rb")) != m["record_count"]:
-        errs.append("V-COUNT_MISMATCH")
+    with seg.open("rb") as f:
+        if sum(1 for _ in f) != want_n:
+            errs.append("V-COUNT_MISMATCH")
     return errs
 
 

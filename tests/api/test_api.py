@@ -46,7 +46,7 @@ def ctx(tmp_path):
     cfg = Config(home=tmp_path)
     tokens = TokenStore({hash_token(t): {"role": r, "actor": f"user-{r}"} for r, t in TOK.items()})
     policy = Policy(mode="dry_run", execute_unlocked=False, allowed_actions={"TERMINATE_PROCESS", "QUARANTINE_FILE", "RESTORE_FILE"},
-                    protected_process_names=set(), protected_dirs=[], lab_dirs=[tmp_path / "lab"], lab_marker_prefix="DACN_LAB_",
+                    protected_process_names=set(), protected_dirs=[], lab_dirs=[tmp_path / "lab"],
                     quarantine_dir=tmp_path / "lab" / "q")
     app = create_app(cfg, tokens, store=st, rules=rules, policy=policy, bronze_dir=bdir)
     return {"app": app, "alert_id": out["alerts"][0], "st": st, "tmp": tmp_path}
@@ -201,7 +201,7 @@ def test_response_request_approve_and_role_separation(ctx):
 
 
 def test_reject_needs_reason(ctx):
-    aid = cl(ctx, "analyst").post("/response/actions", json={"action_type": "QUARANTINE_FILE", "target": {"path": "x"}, "requested_mode": "dry_run"}).json()["action_id"]
+    aid = cl(ctx, "analyst").post("/response/actions", json={"action_type": "QUARANTINE_FILE", "target": {"path": str(ctx["tmp"] / "lab" / "x")}, "requested_mode": "dry_run"}).json()["action_id"]
     assert cl(ctx, "approver").post(f"/response/actions/{aid}/reject", json={"reason": ""}).status_code == 422
     assert cl(ctx, "approver").post(f"/response/actions/{aid}/reject", json={"reason": "thiếu bằng chứng"}).json()["status"] == "REJECTED"
 
@@ -220,7 +220,7 @@ def test_responder_claim_result_flow_with_remote_executor(ctx):
     http = cl(ctx, "responder")
     remote = RemoteActions(http)
     pol = Policy(mode="dry_run", execute_unlocked=False, allowed_actions={"QUARANTINE_FILE"}, protected_process_names=set(),
-                 protected_dirs=[], lab_dirs=[tmp / "lab"], lab_marker_prefix="DACN_LAB_", quarantine_dir=tmp / "lab" / "q")
+                 protected_dirs=[], lab_dirs=[tmp / "lab"], quarantine_dir=tmp / "lab" / "q")
     ex = Executor(pol, remote, LocalBackend(FakeProcessApi({}), [tmp / "lab"]), DryRunBackend(), own_pid=1)
     done = []
     n = Responder(remote.list_approved, ex, lambda a, r: done.append(r["status"])).run_once()
@@ -231,7 +231,7 @@ def test_responder_claim_result_flow_with_remote_executor(ctx):
 
 
 def test_responder_cannot_claim_unapproved_or_forge_audit(ctx):
-    aid = cl(ctx, "analyst").post("/response/actions", json={"action_type": "QUARANTINE_FILE", "target": {"path": "x"}, "requested_mode": "dry_run"}).json()["action_id"]
+    aid = cl(ctx, "analyst").post("/response/actions", json={"action_type": "QUARANTINE_FILE", "target": {"path": str(ctx["tmp"] / "lab" / "x")}, "requested_mode": "dry_run"}).json()["action_id"]
     r = cl(ctx, "responder")
     assert r.post(f"/response/actions/{aid}/claim").status_code == 409
     assert r.post("/response/audit", json={"action": "RESPONSE_APPROVE", "target_id": aid, "reason": "giả mạo"}).status_code == 422
@@ -279,3 +279,91 @@ def test_ui_is_served_with_strict_csp_and_no_cache(ctx):
     assert r.status_code == 200 and "script-src 'self'" in r.headers["content-security-policy"]
     assert r.headers["x-content-type-options"] == "nosniff" and r.headers["cache-control"] == "no-store"
     assert "<script src=\"app.js\"" in r.text and "http://" not in r.text and "https://" not in r.text
+
+
+def _write_agent_health(ctx, age_s, state="running"):
+    from datetime import datetime, timedelta, timezone
+    p = ctx["tmp"] / "agent" / "health.json"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    hb = (datetime.now(timezone.utc) - timedelta(seconds=age_s)).isoformat()
+    p.write_text(json.dumps({"state": state, "heartbeat": hb}))
+
+
+def test_health_flags_dead_agent_as_stale(ctx):
+    _write_agent_health(ctx, 1)
+    assert cl(ctx, "viewer").get("/health").json()["agent"]["status"] == "REPORTED"
+    _write_agent_health(ctx, 600)           # agent bị kill: health.json vẫn ghi "running"
+    a = cl(ctx, "viewer").get("/health").json()["agent"]
+    assert a["status"] == "STALE" and a["heartbeat_age_s"] >= 600
+    _write_agent_health(ctx, 600, state="stopped")     # dừng sạch thì không phải STALE
+    assert cl(ctx, "viewer").get("/health").json()["agent"]["status"] == "REPORTED"
+
+
+def test_responder_does_not_leave_action_stuck_when_finish_fails(ctx):
+    import httpx
+    from response.backends.dryrun import DryRunBackend
+    from response.backends.local import LocalBackend, FakeProcessApi
+    from response.executor import Executor
+    from response.remote import RemoteActions
+
+    class Flaky:                       # API "rơi" đúng lúc báo kết quả
+        def __init__(self, inner): self.inner, self.fail = inner, True
+        def get(self, *a, **k): return self.inner.get(*a, **k)
+        def post(self, url, **k):
+            if self.fail and url.endswith("/result"):
+                raise httpx.ConnectError("api down")
+            return self.inner.post(url, **k)
+
+    tmp = ctx["tmp"]; (tmp / "lab").mkdir(exist_ok=True)
+    def approved():
+        aid = cl(ctx, "analyst").post("/response/actions", json={"action_type": "QUARANTINE_FILE",
+                                      "target": {"path": str(tmp / "lab" / "a.bin")}, "requested_mode": "dry_run"}).json()["action_id"]
+        cl(ctx, "approver").post(f"/response/actions/{aid}/approve", json={"reason": "ok"})
+        return aid
+    status = lambda aid: cl(ctx, "viewer").get(f"/response/actions/{aid}").json()["status"]
+
+    # (1) finish thất bại: kết quả thật được giữ ở spool rồi gửi lại, hành động không kẹt EXECUTING
+    aid, http = approved(), Flaky(cl(ctx, "responder"))
+    remote = RemoteActions(http, spool_dir=tmp / "spool", retries=2, backoff=0)
+    pol = Policy(mode="dry_run", execute_unlocked=False, allowed_actions={"QUARANTINE_FILE"}, protected_process_names=set(),
+                 protected_dirs=[], lab_dirs=[tmp / "lab"], quarantine_dir=tmp / "lab" / "q")
+    ex = Executor(pol, remote, LocalBackend(FakeProcessApi({}), [tmp / "lab"]), DryRunBackend(), own_pid=1)
+    with pytest.raises(httpx.HTTPError):
+        ex.run(aid)
+    assert status(aid) == "EXECUTING" and json.loads((tmp / "spool" / f"{aid}.json").read_text())["status"] == "DONE"
+    http.fail = False
+    assert remote.flush_spool() == 1 and status(aid) == "DONE" and not list((tmp / "spool").glob("*.json"))
+
+    # (2) responder chết sau khi claim (không có spool): khởi động lại thì đánh dấu FAILED để kiểm tra thủ công
+    orphan = approved()
+    assert cl(ctx, "responder").post(f"/response/actions/{orphan}/claim").status_code == 200
+    assert remote.recover_executing() == [orphan]
+    a = cl(ctx, "viewer").get(f"/response/actions/{orphan}").json()
+    assert a["status"] == "FAILED" and a["result"]["code"] == "X-UNKNOWN_OUTCOME"
+
+
+def test_request_is_checked_against_policy_before_approval(ctx):
+    bad = {"action_type": "QUARANTINE_FILE", "target": {"path": str(ctx["tmp"] / "outside.bin")}, "requested_mode": "dry_run"}
+    r = cl(ctx, "analyst").post("/response/actions", json=bad)
+    assert r.status_code == 422 and r.json()["error"]["code"] == "E-POLICY" and "P-NOT_LAB_TARGET" in r.json()["error"]["message"]
+    assert cl(ctx, "viewer").get("/response/actions").json()["items"] == []        # không vào hàng đợi
+
+
+def test_body_without_content_length_is_rejected(ctx):
+    def chunks():
+        yield b'{"title": "x"}'
+    r = cl(ctx, "analyst").post("/incidents", content=chunks())                  # Transfer-Encoding: chunked
+    assert r.status_code == 411 and r.json()["error"]["code"] == "E-LENGTH_REQUIRED"
+
+
+def test_token_file_changes_apply_without_restart(tmp_path):
+    from api.auth import TokenStore, create_token
+    f = tmp_path / "t.json"
+    create_token(f, "analyst", "a")
+    ts = TokenStore.load(f)
+    t2 = create_token(f, "viewer", "v")                    # token mới sau khi core đã chạy
+    assert ts.lookup(t2)["actor"] == "v"
+    f.write_text(json.dumps({h: e for h, e in json.loads(f.read_text()).items() if e["actor"] != "v"}))
+    assert ts.lookup(t2) is None                           # thu hồi bằng cách xóa dòng
+    f.write_text("{bad")                                   # tệp ghi dở: giữ danh sách cũ, không sập
+    assert ts.lookup(t2) is None and any(e["actor"] == "a" for e in ts.entries.values())

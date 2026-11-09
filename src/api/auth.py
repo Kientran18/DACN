@@ -22,22 +22,41 @@ def hash_token(token: str) -> str:
 
 
 class TokenStore:
-    def __init__(self, entries: Dict[str, dict]):
+    def __init__(self, entries: Dict[str, dict], path: Optional[Path] = None):
         for h, e in entries.items():
             if e.get("role") not in ROLES or not e.get("actor"):
                 raise ValueError("token entry không hợp lệ")
         self.entries = entries
+        self.path, self._mtime = path, self._stamp(path)
+
+    @staticmethod
+    def _stamp(path):
+        try:
+            return Path(path).stat().st_mtime_ns if path else None
+        except OSError:
+            return None
 
     @classmethod
     def load(cls, path: Path) -> "TokenStore":
         p = Path(path)
-        if not p.exists():
-            return cls({})
-        return cls(json.loads(p.read_text(encoding="utf-8")))
+        return cls(json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}, p)
+
+    def _refresh(self) -> None:
+        """Tệp token đổi (token mới, hoặc thu hồi bằng cách xóa dòng) thì có hiệu lực ngay, không cần khởi động lại.
+        Tệp hỏng/ghi dở: giữ danh sách cũ."""
+        m = self._stamp(self.path)
+        if m == self._mtime:
+            return
+        try:
+            fresh = TokenStore(json.loads(Path(self.path).read_text(encoding="utf-8")) if m else {})
+        except (OSError, ValueError):
+            return
+        self.entries, self._mtime = fresh.entries, m
 
     def lookup(self, token: Optional[str]) -> Optional[dict]:
         if not token:
             return None
+        self._refresh()
         h, found = hash_token(token), None
         for known, entry in self.entries.items():      # duyệt hết, so sánh thời gian hằng
             if hmac.compare_digest(known, h):

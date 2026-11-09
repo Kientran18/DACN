@@ -1,4 +1,5 @@
-"""Tải cấu hình EDR (PH1-T09). Mặc định an toàn: bind 127.0.0.1, response dry-run."""
+"""Tải cấu hình EDR (PH1-T09). Mặc định an toàn: bind 127.0.0.1.
+Chế độ response KHÔNG nằm ở đây: chỉ config/response-policy.yaml (mode + execute_unlocked) quyết định."""
 from __future__ import annotations
 
 import os
@@ -13,9 +14,8 @@ class ConfigError(ValueError):
     pass
 
 
-_ALLOWED = {"home", "api", "response"}
+_ALLOWED = {"home", "api"}
 _ALLOWED_API = {"host", "port", "tokens_file"}
-_ALLOWED_RESP = {"mode"}
 
 
 @dataclass(frozen=True)
@@ -23,7 +23,6 @@ class Config:
     home: Path
     api_host: str = "127.0.0.1"
     api_port: int = 8765
-    response_mode: str = "dry-run"
     api_tokens_file: Optional[Path] = None
 
     @property
@@ -59,7 +58,7 @@ def load_config(path: Optional[Path]) -> Config:
             raise ConfigError("CFG-002 YAML không hợp lệ") from exc
     if not isinstance(data, dict):
         raise ConfigError("CFG-002 cấu hình phải là mapping")
-    for key, allowed in ((None, _ALLOWED), ("api", _ALLOWED_API), ("response", _ALLOWED_RESP)):
+    for key, allowed in ((None, _ALLOWED), ("api", _ALLOWED_API)):
         section = data if key is None else (data.get(key) or {})
         if not isinstance(section, dict):
             raise ConfigError(f"CFG-003 mục '{key}' phải là mapping")
@@ -69,14 +68,11 @@ def load_config(path: Optional[Path]) -> Config:
     api = data.get("api") or {}
     host = api.get("host", "127.0.0.1")
     port = api.get("port", 8765)
-    mode = (data.get("response") or {}).get("mode", "dry-run")
     if host not in ("127.0.0.1", "localhost", "::1"):
         raise ConfigError("CFG-004 api.host chỉ được là loopback (local-first)")
     if not isinstance(port, int) or isinstance(port, bool) or not 1 <= port <= 65535:
         raise ConfigError("CFG-005 api.port phải nằm trong 1..65535")
-    if mode != "dry-run":
-        raise ConfigError("CFG-006 response.mode hiện chỉ hỗ trợ 'dry-run' (thực thi thật cần phê duyệt riêng)")
     home = Path(data["home"]) if data.get("home") else _default_home()
     tf = api.get("tokens_file")
-    return Config(home=home, api_host=host, api_port=port, response_mode=mode,
+    return Config(home=home, api_host=host, api_port=port,
                   api_tokens_file=Path(tf) if tf else None)

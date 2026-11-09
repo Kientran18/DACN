@@ -1,10 +1,11 @@
 # Chính sách Response (PH7-T01). MẶC ĐỊNH AN TOÀN: dry_run. Đổi sang execute là quyết định của người dùng, chỉ trên VM lab.
 mode: dry_run              # dry_run | execute
 execute_unlocked: false    # khóa thứ hai: execute chỉ hoạt động khi cả mode=execute VÀ execute_unlocked=true
-require_distinct_approver: false   # true = người duyệt phải khác người yêu cầu
+# true (mặc định an toàn) = người duyệt phải khác người yêu cầu (quy tắc hai người).
+# Demo MỘT người dùng phải đặt false. Lưu ý: auto_response tự yêu cầu và tự duyệt nên bị vô hiệu khi cờ này là true.
+require_distinct_approver: true
 allowed_actions: [TERMINATE_PROCESS, QUARANTINE_FILE, RESTORE_FILE]
-lab_marker_prefix: DACN_LAB_
-lab_dirs:                  # mục tiêu thật CHỈ được nằm trong các thư mục này (hoặc mang marker lab)
+lab_dirs:                  # mục tiêu thật CHỈ được nằm trong các thư mục này (marker trong tên KHÔNG đủ)
   - '%TEMP%\dacn_lab'
   - '%PUBLIC%\dacn_lab'
 quarantine_dir: '%TEMP%\dacn_lab\quarantine'

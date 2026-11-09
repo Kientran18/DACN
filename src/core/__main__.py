@@ -34,7 +34,7 @@ def main(argv=None) -> int:
     lock = threading.RLock()
     svc = CoreService(store, cfg.bronze_dir, cfg.home / "metrics.jsonl", rules, cfg.home / "ioc" / "ioc.yaml", lock)
     app = create_app(cfg, tokens, store=store, rules=rules, policy=load_policy(a.policy), bronze_dir=cfg.bronze_dir,
-                     data_label="SAMPLE" if a.sample_data else "UNSPECIFIED", lock=lock)
+                     data_label="SAMPLE" if a.sample_data else "UNSPECIFIED", lock=lock, core_status=svc.status)
     server = uvicorn.Server(uvicorn.Config(app, host=cfg.api_host, port=cfg.api_port, log_level="warning"))
     stop_file = cfg.home / "run" / "core.stop"
 

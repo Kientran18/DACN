@@ -48,7 +48,7 @@ def alert_keys(st):
 
 def api_client(st, svc, home):
     pol = Policy(mode="dry_run", execute_unlocked=False, allowed_actions=set(), protected_process_names=set(), protected_dirs=[],
-                 lab_dirs=[home / "lab"], lab_marker_prefix="DACN_LAB_", quarantine_dir=home / "lab" / "q")
+                 lab_dirs=[home / "lab"], quarantine_dir=home / "lab" / "q")
     app = create_app(Config(home=home), TokenStore({hash_token(TOK): {"role": "analyst", "actor": "e2e"}}), store=st, rules=svc.rules,
                      policy=pol, bronze_dir=home / "bronze", data_label="SAMPLE", lock=svc.lock)
     c = TestClient(app); c.headers["Authorization"] = f"Bearer {TOK}"

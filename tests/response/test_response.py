@@ -20,7 +20,7 @@ POLICY_YAML = Path(__file__).resolve().parents[2] / "config" / "response-policy.
 def mk_policy(tmp_path, **kw):
     base = dict(mode="dry_run", execute_unlocked=False, allowed_actions={"TERMINATE_PROCESS", "QUARANTINE_FILE", "RESTORE_FILE"},
                 protected_process_names={"lsass.exe", "explorer.exe", "system"}, protected_dirs=[tmp_path / "Windows"],
-                lab_dirs=[tmp_path / "lab"], lab_marker_prefix="DACN_LAB_", quarantine_dir=tmp_path / "lab" / "quarantine",
+                lab_dirs=[tmp_path / "lab"], quarantine_dir=tmp_path / "lab" / "quarantine",
                 require_distinct_approver=False, auto_response={"enabled": False, "rules": [], "allowed_actions": []})
     base.update(kw)
     return Policy(**base)
@@ -272,7 +272,7 @@ def test_every_execution_is_audited_before_and_after_with_intact_chain(env):
 
 # ---- auto response (T08) và block hash (T09) --------------------------------------------------
 def test_auto_response_off_by_default(env):
-    from response.auto import AutoResponder
+    from auto_response import AutoResponder
     st, actions, tmp = env
     ar = AutoResponder(mk_policy(tmp), actions)
     assert ar.propose({"alert_id": "a", "rule_id": "DACN-DET-010", "coverage_status": "FULL"},
@@ -280,7 +280,7 @@ def test_auto_response_off_by_default(env):
 
 
 def test_auto_response_requires_every_gate(env):
-    from response.auto import AutoResponder
+    from auto_response import AutoResponder
     st, actions, tmp = env
     on = dict(enabled=True, rules=["DACN-DET-010"], allowed_actions=["QUARANTINE_FILE"])
     alert = {"alert_id": "a", "rule_id": "DACN-DET-010", "coverage_status": "FULL"}
@@ -296,7 +296,7 @@ def test_auto_response_requires_every_gate(env):
 
 
 def test_block_hash_is_detection_only_and_flagged_later(tmp_path):
-    from response.blockhash import block_hash
+    from blockhash import block_hash
     from detection.ioc import IocStore
     f = tmp_path / "ioc.yaml"
     sha = "e" * 64
