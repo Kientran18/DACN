@@ -5,6 +5,7 @@
 - **Đề xuất:** Nâng cấp kiến trúc tổng thể DACN dựa trên nghiên cứu EDR/XDR, thích ứng phạm vi một Windows endpoint.
 - **Tài liệu kiến trúc:** [Local EDR v2](../architecture/local-edr-reference-architecture-v2.md)
 - **Sơ đồ:** [EDR v2 diagrams](../../diagrams/edr-v2-architecture.md)
+- **Kế hoạch 12 tuần được ưu tiên khi xác định lịch W6–W12:** [12-week plan aligned with EDR v2](../plan/ke-hoach-12-tuan-dacn-edr-v2-w6-w12.md). ADR này không thay đổi trọng tâm W7 Static và W8 AI.
 - **Kế thừa:** ADR 0001 (identity), 0002 (process GUID), 0003 (raw preservation), 0004 (tool roles), 0005 (local medallion), 0006 (schema reconciliation).
 - **Nguồn tham khảo:** [Richardmsbr EDR/XDR Architecture and Operations](https://github.com/Richardmsbr/cybersecurity-architecture/blob/main/defensive-security/edr-xdr.md).
 
