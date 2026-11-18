@@ -866,11 +866,11 @@ def run_duckdb_verification(engine: SilverValidatorEngine) -> None:
 def main() -> None:
     engine = SilverValidatorEngine()
 
-    # Tự động tìm 4 file JSON mẫu thật nếu có trong thư mục hiện tại hoặc references/samples
+    # Tự động tìm 4 file JSON mẫu thật trong thư mục hiện tại hoặc references/samples/json (chạy từ thư mục gốc repo)
     sample_files = ["process.json", "file.json", "registry.json", "network.json"]
 
     for fname in sample_files:
-        for candidate in [Path(fname), Path("references/samples") / fname]:
+        for candidate in [Path(fname), Path("references/samples/json") / fname]:
             if candidate.exists():
                 records = json.loads(candidate.read_text(encoding="utf-8-sig"))
                 for rec in records:
