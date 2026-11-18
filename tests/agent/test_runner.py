@@ -69,3 +69,22 @@ def test_corrupt_checkpoint_reported(tmp_path):
     mk(tmp_path, FakeEventSource(XMLS)).run()
     h = json.loads((tmp_path / "health.json").read_text())
     assert h["errors_by_code"]["C-005"] == 1 and len(ids(tmp_path)) == 4
+
+
+def test_health_last_seal_at_is_the_real_seal_time(tmp_path):
+    """B6 (audit): last_seal_at là thời điểm seal segment gần nhất (khớp sealed_at của manifest), không phải giờ ghi health."""
+    import time
+    r = mk(tmp_path, FakeEventSource(XMLS))
+    r.run(final=False)
+    last = sorted((tmp_path / "b").glob("*.jsonl"))[-1]
+    sealed_at = json.loads(last.with_suffix(".manifest.json").read_text())["sealed_at"]
+    assert json.loads((tmp_path / "health.json").read_text())["last_seal_at"] == sealed_at
+    time.sleep(0.01)
+    r.run(final=False)            # không có sự kiện mới -> không seal gì -> giá trị giữ nguyên
+    assert json.loads((tmp_path / "health.json").read_text())["last_seal_at"] == sealed_at
+
+
+def test_health_last_seal_at_none_before_any_seal(tmp_path):
+    r = mk(tmp_path, FakeEventSource([]))
+    r.run()
+    assert json.loads((tmp_path / "health.json").read_text())["last_seal_at"] is None
