@@ -3,8 +3,8 @@
 Local EDR W05 PoC: Bronze-to-Silver Validation, Deterministic Deduplication,
 Quarantine DLQ, DuckDB Storage, and Feature/Lineage Verification.
 
-Chạy kiểm chứng trực tiếp trên bộ mẫu thật W03 (process.json, file.json,
-registry.json, network.json, poc_run_20261018_021142.json) và bộ mẫu lỗi có nhãn.
+Chạy kiểm chứng trực tiếp trên bộ mẫu thật W03 trong references/samples/json (process.json, file.json,
+registry.json, network.json) và bộ mẫu lỗi có nhãn. Chạy từ thư mục gốc repository.
 """
 
 from __future__ import annotations

@@ -119,7 +119,7 @@ Mỗi phase liệt kê: mục tiêu, phạm vi, điều kiện tiên quyết (Pr
 ## PH7 — Response Engine `[P0]` (chỉ kiểm soát, dry-run mặc định)
 - **Mục tiêu:** hành động phòng thủ có kiểm soát: terminate và quarantine **tiến trình/tệp thử nghiệm** khi được phép, audit, hoàn tác.
 - **Pre:** PH6-T01..T03, D-12. **Dep:** PH6, PH8-T06 (responder).
-- **File:** `src/response/**`, `config/response-policy.example.yaml`.
+- **File:** `src/response/**`, `config/response-policy.yaml`.
 - **Task:** T01 → T02 → T03 → T06 → (T04 ∥ T05) → T07 → **T10 (Windows, người dùng)**; T08, T09 (P1).
 - **Skill:** `dacn-response-safety`, `dacn-security-review`, `dacn-security-threat-modeling`.
 - **Bắt buộc:** dry-run mặc định; chỉ endpoint lab; allowlist bảo vệ tiến trình/tệp hệ thống; kiểm quyền và xác thực; không tắt Defender; auto-response tắt cho tới khi người dùng phê duyệt kịch bản cụ thể; log chứng minh hành động; tách bạch detection / prevention / response.

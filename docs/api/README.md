@@ -20,13 +20,15 @@ Mọi yêu cầu (trừ `GET /livez`) cần `Authorization: Bearer <token>`.
 `actor` luôn lấy từ token, không nhận từ nội dung yêu cầu.
 
 ## Endpoint chính
-`/health` `/endpoint` `/events` `/detections` `/alerts` `/alerts/{id}` `/alerts/{id}/history` `/alerts/{id}/transition` `/alerts/{id}/evidence` `/alerts/{id}/timeline` `/alerts/{id}/process-tree` `/coverage-gaps` `/incidents` `/rules` `/response/actions` (+ `approve`, `reject`, `claim`, `result`) `/response/audit`.
+`/livez` (công khai) `/me` `/stats` `/health` `/endpoint` `/events` `/detections` `/alerts` `/alerts/{id}` `/alerts/{id}/history` `/alerts/{id}/transition` `/alerts/{id}/evidence` `/alerts/{id}/timeline` `/alerts/{id}/process-tree` `/coverage-gaps` `/incidents` (+ `/incidents/{id}/alerts`, `/incidents/{id}/notes`) `/rules` `/rules/{id}` `/response/actions` (+ `approve`, `reject`, `claim`, `result`) `/response/audit`.
+
+`POST /response/actions` nhận `action_type` ∈ `TERMINATE_PROCESS`, `QUARANTINE_FILE`, `RESTORE_FILE`, `ADD_WHITELIST`, `REMOVE_WHITELIST` (khớp `ACTION_TYPES` của policy); policy vẫn kiểm mục tiêu ngay khi yêu cầu (`422 E-POLICY`).
 
 ## Lỗi
-Mọi lỗi: `{"error": {"code": "E-...", "message": "..."}}` (401 `E-UNAUTHENTICATED`, 403 `E-FORBIDDEN`, 404 `E-NOT_FOUND`, 409 `E-INVALID_TRANSITION`/`E-INVALID_STATE`, 413 `E-TOO_LARGE`, 422 `E-VALIDATION`, 500 `E-INTERNAL`). Không lộ stack hay đường dẫn.
+Mọi lỗi: `{"error": {"code": "E-...", "message": "..."}}` (401 `E-UNAUTHENTICATED`, 403 `E-FORBIDDEN`, 404 `E-NOT_FOUND`, 409 `E-INVALID_TRANSITION`/`E-INVALID_STATE`, 411 `E-LENGTH_REQUIRED` (POST/PUT/PATCH thiếu `Content-Length`), 413 `E-TOO_LARGE`, 422 `E-VALIDATION`/`E-POLICY`, 500 `E-INTERNAL`). Không lộ stack hay đường dẫn.
 
 ## Giới hạn đã biết
 - Một khóa toàn cục quanh kết nối DuckDB; chưa đo tải. Giới hạn nội dung 64 KB dựa trên `Content-Length`.
 - `/rules` chỉ đọc (đổi rule qua tệp YAML + kiểm tra, ngoài phạm vi MVP).
-- Chưa có HTTPS (loopback), chưa có hết hạn/thu hồi token, chưa giới hạn tần suất.
+- Chưa có HTTPS (loopback), chưa có hết hạn token, chưa giới hạn tần suất. Thu hồi token: xóa dòng tương ứng trong tệp token; API nạp lại khi tệp đổi (không cần khởi động lại).
 - Audit chỉ phát hiện sửa (chuỗi băm); API không có endpoint sửa/xóa audit.

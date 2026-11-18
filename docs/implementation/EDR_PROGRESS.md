@@ -1,16 +1,16 @@
 # EDR — Tiến độ (cập nhật sau mỗi phiên làm việc)
 
 > Tệp này là nguồn trạng thái duy nhất giữa các phiên Claude Code. **Không dựa vào lịch sử hội thoại.** Chỉ ghi `DONE` khi có bằng chứng liên kết ở mục "Bằng chứng nghiệm thu".
-> Cập nhật lần cuối: 2026-11-09 (ghi nhận commit `36ee751`). Dòng cũ: 2026-11-08 ~10:40 UTC (người dùng đã duyệt đề xuất mặc định D-01…D-14; bắt đầu PH1; **thay đổi mã chưa commit**).
+> Cập nhật lần cuối: 2026-11-18 (audit code/tài liệu, xem dòng cuối mục 9). Trước đó: 2026-11-09 (ghi nhận commit `36ee751`). Dòng cũ: 2026-11-08 ~10:40 UTC (người dùng đã duyệt đề xuất mặc định D-01…D-14; bắt đầu PH1; **thay đổi mã chưa commit**).
 
 ## 1. Giai đoạn hiện tại
 
 | Mục | Giá trị |
 |---|---|
-| Giai đoạn | **PH1 (phần còn lại cần quyết định liên nhóm) + PH2 phần chạy được trên Linux — xong**; PH1 (`IN_PROGRESS`); PH0 đã được người dùng chấp nhận theo đề xuất mặc định |
-| Task đang làm | PH1-T02 (`REVIEW`, chưa commit), PH2-T05 (`IN_PROGRESS`, chờ người dùng chạy trên VM) |
-| Task kế tiếp | **PH1-T03** (test entropy, cần Data review), **PH1-T08** (chia sẻ code `poc/` ↔ `src/`, D-03(a) đã chọn), **PH1-T11** (marker `windows`), rồi PH1-T09 (config/log) |
-| Branch | Đang làm trên nhánh con `fix/c002-collector-reason-code` (tạo từ `claude_implement`, **chỉ local**). Nhánh tích hợp: **`claude_implement`** (tạo từ `main` ngày 2026-11-08; chứa kế hoạch và mọi hiện thực của Claude; chỉ đưa vào `main` ở bản cuối cùng theo quyết định của người dùng). `claude/great-lamport-7fps1l` đã hoàn tất (PR #43, #44, #45 đã merge) |
+| Giai đoạn | Phần chạy được trên Linux của PH1–PH12 đã làm (xem mục 9); ML PE tĩnh EMBER2024 ở trạng thái nháp (`docs/implementation/ML_EMBER2024_MODELS.md`). Các task mức Windows và task cần quyết định liên nhóm vẫn mở |
+| Task đang làm | Không có task mã đang dở. Chờ người dùng chạy trên Windows VM (PH2-T05/T09, PH5-T04, PH7-T10, PH10-T04, PH11-T02) |
+| Task kế tiếp | Theo lựa chọn của người dùng; xem mục 7 và `handover/ML_SESSION_HANDOVER.md` mục 6 |
+| Branch | Làm trực tiếp trên nhánh tích hợp **`claude_implement`** (tạo từ `main` ngày 2026-11-08; chứa kế hoạch và mọi hiện thực của Claude; chỉ đưa vào `main` ở bản cuối cùng theo quyết định của người dùng). `claude/great-lamport-7fps1l` đã hoàn tất (PR #43, #44, #45 đã merge) |
 | PR liên quan | Không có PR nào cho `claude_implement` (đẩy trực tiếp theo chỉ định của người dùng). PR #36 (kế hoạch 12 tuần v2) vẫn mở, chưa merge |
 | Issue liên quan mở | #26, #27, #28, #29 (W05), #38, #39, #40 (W06–W07) |
 

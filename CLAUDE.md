@@ -124,7 +124,7 @@ Các file Python không phải là package. Chúng import lẫn nhau bằng tên
 - `test_canonical_bronze_contract.py` import `bronze_contract`, `bronze_to_silver_adapter` và `validator_poc` bằng tên trần.
 - `tests/test_validator_poc_w5.py` và `test_canonical_bronze_contract.py` tự chèn `src/pipeline` vào `sys.path`.
 
-Các package trong `src/` (`agent`, `pipeline`, `detection`, `alerts`, `response`, `api`, `core`, `common`) là package thật nhưng không cài đặt; chạy chúng bằng `PYTHONPATH=src` (test đã được `pytest.ini`/`conftest.py` cấu hình sẵn).
+Các package trong `src/` (`agent`, `pipeline`, `detection`, `alerts`, `response`, `api`, `core`, `common`) là package thật nhưng không cài đặt. `api.auth`, `edr_ctl` và `detection.ml.static_scorer` chạy được với `PYTHONPATH=src`; `agent`, `pipeline`, `core`, `api`, `response` còn import `bronze_contract`, `validator_poc`… nên cần `PYTHONPATH` gồm `src`, `src/pipeline` và `poc/sysmon-collector` (như `EDR_INSTALL_GUIDE.md` mục 2; `edr_ctl start` tự đặt cho tiến trình con). Test đã được `pytest.ini`/`conftest.py` cấu hình sẵn.
 
 Chạy test từ thư mục gốc repository bằng `python -m pytest` để rootdir của pytest đưa `poc/sysmon-collector` vào đường dẫn. Chạy script từ thư mục khác sẽ làm hỏng các import này.
 

@@ -1,7 +1,7 @@
 """Silver store bền vững trên DuckDB (PH3-T02/T03). Một writer; nạp theo segment, idempotent.
 
-Giữ nguyên SilverValidatorEngine và DDL v1.1. Hostname: giữ hành vi hiện tại của validator
-(PH1-T04 chưa được quyết định).
+Giữ nguyên SilverValidatorEngine và không sửa DDL v1.1; áp DDL v1.1 rồi DDL v1.2 (ĐỀ XUẤT, chưa duyệt:
+lineage, alerts, response_actions...). Hostname: giữ hành vi hiện tại của validator (PH1-T04 chưa được quyết định).
 """
 from __future__ import annotations
 
