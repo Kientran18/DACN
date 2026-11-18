@@ -118,3 +118,23 @@ def test_same_event_id_with_different_raw_is_collision_not_silent_duplicate(tmp_
     st.ingest_segment(make_seg(tmp_path / "d", forged), "r4")
     assert st.con.execute("select count(*) from coverage_gaps").fetchone()[0] == 1
     assert counts(st)["silver_quarantine_dlq"] == before["silver_quarantine_dlq"] + 1
+
+
+def test_quarantined_segment_is_not_recounted_every_cycle_but_retried_after_repair(tmp_path):
+    """U7 (audit): segment hỏng không đổi không được đếm lại vào segments_quarantined ở mọi vòng worker;
+    vẫn thử lại mỗi vòng nên sửa xong (ví dụ khôi phục tệp) thì được nạp."""
+    import json
+    from pipeline.worker import IngestWorker
+    seg = make_seg(tmp_path / "b")
+    good = seg.read_bytes()
+    b = bytearray(good); b[5] ^= 1; seg.write_bytes(bytes(b))
+    st = SilverStore(tmp_path / "s.duckdb")
+    w = IngestWorker(tmp_path / "b", st, tmp_path / "metrics.jsonl")
+    assert w.run_once()["segments_quarantined"] == 1
+    assert w.run_once()["segments_quarantined"] == 0          # cùng tệp hỏng: không đếm lại
+    assert st.con.execute("select count(*) from _ingest_ledger").fetchone()[0] == 1
+    seg.write_bytes(good)                                     # khôi phục
+    m = w.run_once()
+    assert m["segments_ingested"] == 1 and m["segments_quarantined"] == 0
+    rows = [json.loads(x) for x in (tmp_path / "metrics.jsonl").read_text().splitlines()]
+    assert sum(r["segments_quarantined"] for r in rows) == 1

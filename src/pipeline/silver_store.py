@@ -100,6 +100,10 @@ class SilverStore:
         try:
             records = list(read_segment(seg))
         except SegmentError:
+            prev = self.con.execute("select status, sha256 from _ingest_ledger where segment=?", [seg.name]).fetchone()
+            if prev and prev[0] == "QUARANTINED_SEGMENT" and prev[1] == sha:
+                # vẫn hỏng như lần trước: không ghi/đếm lại; vòng sau vẫn thử (tự nạp khi tệp/manifest được sửa)
+                return {**res, "status": "SKIPPED_STILL_QUARANTINED"}
             res["status"] = "QUARANTINED_SEGMENT"
             self._write_ledger(seg.name, sha, res["status"], res, run_id)
             return res

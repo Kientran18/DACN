@@ -18,7 +18,7 @@ class IngestWorker:
     def run_once(self) -> dict:
         t0 = time.monotonic()
         results = [r for r in self.store.ingest_dir(self.dir, "worker-" + uuid.uuid4().hex[:8], self.lock)
-                   if r["status"] != "SKIPPED_ALREADY_INGESTED"]
+                   if not r["status"].startswith("SKIPPED_")]
         m = {"ts": datetime.now(timezone.utc).isoformat(),
              "segments_ingested": sum(r["status"] == "INGESTED" for r in results),
              "segments_quarantined": sum(r["status"] == "QUARANTINED_SEGMENT" for r in results),
