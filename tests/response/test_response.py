@@ -219,6 +219,16 @@ def test_quarantine_moves_file_records_hash_and_restore_matches(env):
     assert res2["status"] == "DONE" and f.read_bytes() == b"harmless" and not q.exists()
 
 
+def test_restore_accepts_uppercase_expected_sha256(env):
+    """B5 (audit): quarantine so hash không phân biệt hoa/thường; restore phải nhất quán, không báo nhầm 'tệp cách ly đã bị đổi'."""
+    st, actions, tmp = env
+    f, sha = mk_file(tmp)
+    ex = Executor(mk_policy(tmp, mode="execute", execute_unlocked=True), actions, LocalBackend(FakeProcessApi({}), [tmp / "lab"]), DryRunBackend(), own_pid=1)
+    rb = ex.run(approved(actions, "QUARANTINE_FILE", {"path": str(f), "expected_sha256": sha.upper()}))["rollback"]["target"]
+    res = ex.run(approved(actions, "RESTORE_FILE", {**rb, "expected_sha256": sha.upper()}))
+    assert res["status"] == "DONE" and f.read_bytes() == b"harmless"
+
+
 def test_quarantine_refuses_hash_mismatch_and_leaves_file(env):
     st, actions, tmp = env
     f, _ = mk_file(tmp)

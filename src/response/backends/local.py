@@ -109,7 +109,7 @@ class LocalBackend:
         meta = json.loads(meta_p.read_text(encoding="utf-8"))
         if orig.exists():
             return {"ok": False, "code": "X-DEST_EXISTS", "message": "không ghi đè tệp đang có"}
-        if _sha256(q) != meta["sha256"] or (t.get("expected_sha256") and t["expected_sha256"] != meta["sha256"]):
+        if _sha256(q) != meta["sha256"] or (t.get("expected_sha256") and t["expected_sha256"].lower() != meta["sha256"]):
             return {"ok": False, "code": "X-HASH_MISMATCH", "message": "tệp cách ly đã bị đổi"}
         shutil.move(str(q), str(orig))
         meta_p.unlink()
