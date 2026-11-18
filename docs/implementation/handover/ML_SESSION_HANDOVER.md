@@ -17,7 +17,7 @@ Mọi kết luận dưới đây có nguồn là file trong repo hoặc số đo
 ## 2. Trạng thái repo
 
 - Nhánh: `claude_implement`. Commit mới nhất đã push: `8d60e8f` `feat(ai-scoring): thêm mô hình PE tĩnh EMBER2024 (Dot_Net, Win64) ở trạng thái nháp`. Trước đó `685b3c7` (mức phần mềm).
-- Thay đổi **chưa commit** khi viết tài liệu này: `CLAUDE.md` (mục 2, 3.1, kết quả test) và file này. Kiểm tra bằng `git status`.
+- Commit `6f4c7e2` thêm `CLAUDE.md` (mục 2, 3.1, kết quả test) và file này; commit sau đó thêm `scripts/ml/kaggle/`. Kiểm tra bằng `git log --oneline -5`.
 - Test (Linux, 2026-11-18): `python -m pytest -q` → 233 pass, 1 skipped, 0 fail. Test skipped là `tests/detection/test_ember2024_models.py` khi không có `lightgbm`; có `lightgbm` thì 6 test pass.
 - Nghiệm thu AT (2026-11-09, chưa chạy lại): 28 PASS, 1 PARTIAL, 0 FAIL, 14 NOT RUN (mức Windows). Mọi thứ trên Windows thật chưa được chạy.
 
@@ -68,6 +68,6 @@ Hướng đã chọn: **Hướng B** = bộ phân loại PE tĩnh huấn luyện
 ## 7. Nơi chứa các thứ không nằm trong repo
 
 - Kết quả Kaggle gốc: thư mục `D:\DACN\New folder` trên máy người dùng (ngoài tầm với của phiên cloud).
-- Notebook Kaggle (`dacn_ember2024_dotnet/win64/win32_kaggle.ipynb`) đã được gửi trong hội thoại và nằm trên máy người dùng; **không** có trong repo. Phần train chính đã có ở `scripts/ml/train_ember2024.py`; phần gom zip và `model_card.json` nháp chỉ nằm trong notebook.
+- Notebook Kaggle: `scripts/ml/kaggle/` (có README ghi trạng thái từng notebook). Notebook Win32 bản mới **chưa chạy thành công trên Kaggle**; Win64 chạy thật bằng phiên bản đầu, bản trong repo chưa chạy lại. Phần train chính cũng có ở `scripts/ml/train_ember2024.py`.
 - Thư mục làm việc tạm của phiên cũ (dữ liệu EMBER2024 Dot_Net, venv) là thư mục tạm, **không bền**; không dựa vào nó.
 - Môi trường phiên cloud: `git push` tới `origin` hoạt động; `curl` tới `github.com` bị 403 (dùng `raw.githubusercontent.com` hoặc HF để tải).
