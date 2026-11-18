@@ -59,8 +59,8 @@ def check_doc_links() -> tuple[bool, str]:
 
 def match(nid_run: str, wanted: str) -> bool:
     base = nid_run.split("[")[0] if "[" in nid_run else nid_run
-    return nid_run == wanted or base == wanted or nid_run.startswith(wanted + "::") or (
-        "::" not in wanted and nid_run.startswith(wanted + "::")) or nid_run.startswith(wanted + "[")
+    return (nid_run == wanted or base == wanted or nid_run.startswith(wanted + "::")
+            or nid_run.startswith(wanted + "["))
 
 
 def git(*a: str) -> str:

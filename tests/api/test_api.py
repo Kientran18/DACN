@@ -45,7 +45,7 @@ def ctx(tmp_path):
     out = build_from_results(store, rules, results, st.con)
     cfg = Config(home=tmp_path)
     tokens = TokenStore({hash_token(t): {"role": r, "actor": f"user-{r}"} for r, t in TOK.items()})
-    policy = Policy(mode="dry_run", execute_unlocked=False, allowed_actions={"TERMINATE_PROCESS", "QUARANTINE_FILE", "RESTORE_FILE"},
+    policy = Policy(mode="dry_run", execute_unlocked=False, allowed_actions={"TERMINATE_PROCESS", "QUARANTINE_FILE", "RESTORE_FILE", "ADD_WHITELIST", "REMOVE_WHITELIST"},
                     protected_process_names=set(), protected_dirs=[], lab_dirs=[tmp_path / "lab"],
                     quarantine_dir=tmp_path / "lab" / "q")
     app = create_app(cfg, tokens, store=st, rules=rules, policy=policy, bronze_dir=bdir)
@@ -158,7 +158,6 @@ def test_incident_flow(ctx):
 def test_evidence_raw_only_for_allowed_roles_and_audited(ctx):
     st = ctx["st"]
     eid = st.con.execute("select event_id from silver_process_events where record_id <> 900 limit 1").fetchone()[0]
-    from datetime import datetime, timezone
     t = datetime(2026, 1, 1, tzinfo=timezone.utc)
     aid = AlertStore(st.con).insert_alert(detection_dedup_key="k-ev", group_key="g", first_seen_utc=t, last_seen_utc=t,
                                           detection_source="RULE", rule_id="DACN-DET-001", rule_version=1, rule_name="n",
@@ -198,6 +197,21 @@ def test_response_request_approve_and_role_separation(ctx):
     assert cl(ctx, "approver").post(f"/response/actions/{aid}/approve", json={"reason": "lần hai"}).status_code == 409
     assert cl(ctx, "analyst").post("/response/actions", json={**body, "action_type": "FORMAT_DISK"}).status_code == 422
     assert cl(ctx, "approver").post("/response/actions", json={**body, "requested_mode": "yolo"}).status_code == 422
+
+
+def test_whitelist_actions_can_be_requested_via_api(ctx):
+    """B1 (audit): dashboard và policy hỗ trợ ADD/REMOVE_WHITELIST nhưng API từng trả 422 E-VALIDATION cho action_type."""
+    sha = "ab" * 32
+    r = cl(ctx, "analyst").post("/response/actions", json={"action_type": "ADD_WHITELIST", "requested_mode": "dry_run",
+                                                            "target": {"sha256": sha, "reason": "phần mềm nội bộ"}})
+    assert r.status_code == 200 and r.json()["status"] == "REQUESTED"
+    r = cl(ctx, "analyst").post("/response/actions", json={"action_type": "REMOVE_WHITELIST", "requested_mode": "dry_run",
+                                                            "target": {"sha256": sha}})
+    assert r.status_code == 200
+    # cổng policy vẫn áp dụng: thiếu lý do thì bị từ chối ngay khi yêu cầu
+    r = cl(ctx, "analyst").post("/response/actions", json={"action_type": "ADD_WHITELIST", "requested_mode": "dry_run",
+                                                            "target": {"sha256": sha}})
+    assert r.status_code == 422 and "P-REASON_REQUIRED" in r.json()["error"]["message"]
 
 
 def test_reject_needs_reason(ctx):
@@ -282,7 +296,7 @@ def test_ui_is_served_with_strict_csp_and_no_cache(ctx):
 
 
 def _write_agent_health(ctx, age_s, state="running"):
-    from datetime import datetime, timedelta, timezone
+    from datetime import timedelta
     p = ctx["tmp"] / "agent" / "health.json"
     p.parent.mkdir(parents=True, exist_ok=True)
     hb = (datetime.now(timezone.utc) - timedelta(seconds=age_s)).isoformat()

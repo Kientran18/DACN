@@ -42,7 +42,7 @@ class AgentRunner:
 
     def _health(self, state: str) -> None:
         h = {"state": state, "heartbeat": _now(), "last_event_at": self.last_event_at,
-             "last_seal_at": _now() if self.writer.last_sealed else None,
+             "last_seal_at": self.writer.last_sealed_at,
              "events_written": self.written, "errors_by_code": dict(self.errors)}
         tmp = self.health_path.with_suffix(".tmp")
         tmp.parent.mkdir(parents=True, exist_ok=True)

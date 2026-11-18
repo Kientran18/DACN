@@ -6,7 +6,7 @@ import json
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, Literal, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query as Q, Request
 from fastapi.exceptions import RequestValidationError
@@ -56,10 +56,14 @@ class NoteIn(BaseModel):
 
 
 class ActionIn(BaseModel):
-    action_type: Literal["TERMINATE_PROCESS", "QUARANTINE_FILE", "RESTORE_FILE"]
+    action_type: Literal["TERMINATE_PROCESS", "QUARANTINE_FILE", "RESTORE_FILE", "ADD_WHITELIST", "REMOVE_WHITELIST"]
     target: Dict[str, Any]
     requested_mode: Literal["dry_run", "execute"]
     alert_id: Optional[str] = Field(default=None, max_length=64)
+
+
+if set(ActionIn.model_fields["action_type"].annotation.__args__) != ACTION_TYPES:   # giữ API khớp policy
+    raise RuntimeError("ActionIn.action_type lệch response.policy.ACTION_TYPES")
 
 
 class ReasonIn(BaseModel):

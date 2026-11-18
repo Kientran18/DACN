@@ -175,6 +175,8 @@ Các nội dung đã có trong repository bao gồm:
 - Tài liệu Endpoint Event Schema và các quy tắc chuẩn hóa dữ liệu.
 - Các tài liệu thiết kế Data Pipeline và kiểm tra dữ liệu.
 - Báo cáo nghiên cứu, đánh giá năm công cụ mã nguồn mở ở tuần 4.
+- Bản hiện thực thử nghiệm trên nhánh `claude_implement` (thư mục `src/`): agent ghi Bronze, pipeline Silver (DuckDB), Detection Engine dựa trên rule, alert/incident, Response Engine mặc định `dry_run`, API cục bộ và dashboard tĩnh. Các thành phần này **mới được kiểm thử trên Linux với dữ liệu synthetic/mẫu**, chưa chạy trên Windows; trạng thái chi tiết ở `docs/implementation/EDR_PROGRESS.md`.
+- Hai mô hình ML PE tĩnh EMBER2024 ở trạng thái **nháp**, chưa nối vào Detection Engine (`docs/implementation/ML_EMBER2024_MODELS.md`).
 
 **Những chức năng chưa được xem là hoàn chỉnh:** detection engine chạy liên tục, AI detection, hệ thống cảnh báo/incident tích hợp, response tự động và dashboard của sản phẩm cuối cùng.
 
@@ -194,8 +196,13 @@ Cấu trúc chính của dự án:
   - `scope/` — Phạm vi, giả định và giới hạn hệ thống.
 - `poc/sysmon-collector/` — Mã nguồn và cấu hình Collector PoC.
 - `references/samples/` — Bộ mẫu Sysmon XML/JSON và bằng chứng thực nghiệm.
-- `src/pipeline/` — Các thành phần PoC, schema và kiểm định dữ liệu.
-- `tests/` — Các bài kiểm thử hiện có.
+- `src/pipeline/` — Các thành phần PoC, schema và kiểm định dữ liệu; Silver store DuckDB.
+- `src/agent/`, `src/detection/`, `src/alerts/`, `src/response/`, `src/api/`, `src/dashboard/`, `src/core/`, `src/common/`, `src/edr_ctl.py` — Bản hiện thực thử nghiệm (kiểm thử trên Linux, chưa chạy trên Windows).
+- `config/` — Cấu hình mẫu (`edr.example.yaml`) và chính sách response (`response-policy.yaml`, mặc định `dry_run`).
+- `models/ember2024/` — Mô hình ML PE tĩnh ở trạng thái nháp.
+- `scripts/` — Script nghiệm thu, kiểm tra môi trường Windows, kịch bản lab, huấn luyện ML, khử định danh mẫu.
+- `experimental/` — Mã thử nghiệm chưa nối vào hệ thống (auto-response, block-hash).
+- `tests/` — Các bài kiểm thử hiện có (`python -m pytest -q` từ thư mục gốc).
 - `diagrams/` — Thư mục dành cho sơ đồ kiến trúc.
 
 Cấu trúc có thể được mở rộng và tổ chức lại khi hệ thống chuyển sang giai đoạn hiện thực.

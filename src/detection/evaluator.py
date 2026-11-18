@@ -12,7 +12,8 @@ def _vals(c) -> List[str]:
 
 
 def cond_match(c: dict, row: dict) -> Tuple[bool, Optional[str]]:
-    """Trả (khớp?, giá trị đã so). Không phân biệt hoa/thường."""
+    """Trả (khớp?, giá trị đã so). equals/contains/endswith/startswith không phân biệt hoa/thường;
+    regex PHÂN BIỆT hoa/thường như re.search — rule muốn bỏ qua hoa/thường phải tự thêm (?i) (ví dụ DACN-DET-003)."""
     v = row.get(c["field"])
     if v is None:
         return False, None

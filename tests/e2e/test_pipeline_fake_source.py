@@ -5,7 +5,6 @@ import sys
 import threading
 from pathlib import Path
 
-import pytest
 import yaml
 from fastapi.testclient import TestClient
 

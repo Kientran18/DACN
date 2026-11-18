@@ -38,6 +38,7 @@ class BronzeWriter:
         self._first = self._last = None
         self._counter = 0
         self.last_sealed: Optional[Path] = None
+        self.last_sealed_at: Optional[str] = None   # = sealed_at trong manifest của segment seal gần nhất
 
     def _open(self) -> None:
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
@@ -73,12 +74,13 @@ class BronzeWriter:
         self._fh.close()
         part, n, first, last = self._part, self._n, self._first, self._last
         self._fh = None
-        seg = _finalize(part, n, first, last)
-        self.last_sealed = seg
+        sealed_at = datetime.now(timezone.utc).isoformat()
+        seg = _finalize(part, n, first, last, sealed_at)
+        self.last_sealed, self.last_sealed_at = seg, sealed_at
         return seg
 
 
-def _finalize(part: Path, n: int, first, last) -> Path:
+def _finalize(part: Path, n: int, first, last, sealed_at: Optional[str] = None) -> Path:
     """Manifest TRƯỚC (tệp tạm -> fsync -> os.replace), đổi tên `.part` -> `.jsonl` SAU CÙNG.
     Nhờ đó reader không bao giờ thấy segment thiếu manifest hoặc manifest ghi dở; crash giữa chừng
     chỉ để lại `.part` mà recover_dir xử lý được."""
@@ -86,7 +88,7 @@ def _finalize(part: Path, n: int, first, last) -> Path:
     manifest = {"segment": seg.name, "sha256": _sha256(part), "record_count": n,
                 "first_record_id": first, "last_record_id": last,
                 "schema_version": bc.SCHEMA_VERSION, "collector_version": bc.COLLECTOR_VERSION,
-                "sealed_at": datetime.now(timezone.utc).isoformat()}
+                "sealed_at": sealed_at or datetime.now(timezone.utc).isoformat()}
     mp = seg.with_suffix(".manifest.json")
     tmp = mp.with_name(mp.name + ".tmp")
     with tmp.open("w", encoding="utf-8", newline="\n") as f:

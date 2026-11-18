@@ -15,11 +15,13 @@ OPEN_STATUSES = ("NEW", "TRIAGED", "INVESTIGATING", "CONFIRMED")
 
 
 def _sealed_at(manifest_path: Path) -> Optional[datetime]:
+    """None nếu không xác định chắc chắn được thời điểm seal (manifest hỏng, sai kiểu, thiếu múi giờ) -> segment vào 'unknown'."""
     try:
         v = json.loads(manifest_path.read_text(encoding="utf-8"))["sealed_at"]
-        return datetime.fromisoformat(v.replace("Z", "+00:00"))
-    except (OSError, KeyError, ValueError):
+        at = datetime.fromisoformat(v.replace("Z", "+00:00"))
+    except (OSError, KeyError, ValueError, TypeError, AttributeError):
         return None
+    return at if at.tzinfo is not None else None     # không đoán múi giờ (fail closed: không dọn)
 
 
 def plan_retention(bronze_dir: Path, con, *, raw_days: int, now: Optional[datetime] = None) -> Dict:

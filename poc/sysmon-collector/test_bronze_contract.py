@@ -81,6 +81,10 @@ def test_collector_errors_use_reason_codes():
                            '<Channel>c</Channel><Computer>h</Computer></System><EventData/></Event>')
     with pytest.raises(ValueError, match="C-002"):
         bc.build_bronze_record(xml_no_time_created, mode="file")
+    # B2 (audit): Event thiếu <System> có namespace -> mã C-002 ở ĐẦU thông báo (AgentRunner lấy từ đầu tiên làm mã lỗi)
+    for xml in ("<Event><System><EventID>1</EventID></System></Event>", "<Foo/>"):
+        with pytest.raises(ValueError, match=r"^C-002 "):
+            bc.build_bronze_record(xml, mode="file")
 
 
 def test_coverage_report_on_synthetic_samples(tmp_path):

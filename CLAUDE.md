@@ -22,7 +22,7 @@ DACN là đồ án về bảo mật endpoint (EPP/EDR) cho **Windows 10/11**, tr
 - Thực hiện các hành động phản ứng có kiểm soát: Terminate Process, Quarantine File, Block Hash, Add Whitelist.
 - Cung cấp giao diện quản lý trực quan (Dashboard).
 
-Các chức năng AI/ML (anomaly detection, risk scoring) mới chỉ có giao diện (tắt mặc định, không có mô hình); chưa có mô hình nào được triển khai.
+Các chức năng AI/ML (anomaly detection, risk scoring) mới có giao diện và bộ nạp mô hình (tắt mặc định). Có hai mô hình PE tĩnh EMBER2024 ở trạng thái **nháp** (xem 3.1), nhưng chưa nối vào Detection Engine; chưa có mô hình hành vi nào.
 
 Phạm vi Giai đoạn 1 (đồ án chuyên ngành, 12 tuần) được ghi tại `docs/scope/phase-1-scope.md` và `docs/decisions/week-1-decisions.md`. Giai đoạn 2 (luận văn) tập trung hiện thực, tích hợp và đánh giá.
 
@@ -32,7 +32,7 @@ Phân biệt rõ hai nhóm thông tin. **Không mô tả thành phần thuộc T
 
 ### 3.1. CURRENT STATE — đã triển khai và có bằng chứng
 
-Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết quả test ngày **2026-11-09** (Linux, Python 3.13). Chi tiết: `docs/implementation/` (`EDR_PROGRESS.md`, `EDR_TASK_BACKLOG.md`, `handover/TEST_REPORT.md`, `handover/LIMITATIONS_AND_RISKS.md`).
+Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết quả `pytest` và nghiệm thu AT ngày **2026-11-18** (Linux, Python 3.13, sau audit). Chi tiết: `docs/implementation/` (`EDR_PROGRESS.md`, `EDR_TASK_BACKLOG.md`, `handover/TEST_REPORT.md`, `handover/LIMITATIONS_AND_RISKS.md`).
 
 | Thành phần | Vị trí | Mức độ kiểm chứng |
 |---|---|---|
@@ -45,15 +45,17 @@ Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết qu�
 | API FastAPI (loopback, 4 vai trò) và Dashboard tĩnh | `src/api/`, `src/dashboard/` | Có test (kể cả Playwright) trên Linux |
 | Core service và launcher | `src/core/`, `src/edr_ctl.py` | Chạy nhiều tiến trình thật trên Linux; chưa trên Windows |
 | Script lab (SC01–SC07) và kiểm tra môi trường Windows | `scripts/lab/`, `scripts/windows/` | Chỉ kiểm tra tĩnh; **chưa chạy trên Windows** |
-| Nghiệm thu | `tests/acceptance/at_catalog.yaml`, `scripts/acceptance/run_acceptance.py`, `docs/implementation/acceptance/` | 43 AT: 28 PASS, 1 PARTIAL, 0 FAIL, 14 NOT RUN (mức W chưa chạy) |
+| Mô hình ML PE tĩnh EMBER2024 (Dot_Net, Win64; **nháp**, `DRAFT_CHUA_DUYET`) và bộ chấm điểm tĩnh nháp chạy theo yêu cầu | `models/ember2024/`, `scripts/ml/train_ember2024.py`, `src/detection/ml/loader.py`, `src/detection/ml/static_scorer.py`, `requirements-ml.txt`, `docs/implementation/ML_EMBER2024_MODELS.md` | Có test nạp qua loader (`tests/detection/test_ember2024_models.py`, cần `lightgbm`, thiếu thì bỏ qua) và test bộ chấm điểm với PE synthetic, extractor/predictor giả (`tests/detection/test_static_scorer.py`). Số liệu (AUC test 0,998 và 0,999) chỉ đo trên EMBER2024, **không phải chất lượng phát hiện của DACN**; chưa nối vào Detection Engine, bộ chấm điểm chưa chạy với `thrember` thật (`thrember` không có trên PyPI), chưa có ngưỡng, kết quả chưa phải `DetectionResult`, chưa duyệt Cyber/Data. Phụ thuộc ML ở `requirements-ml.txt` (tùy chọn). Điểm ML không kích hoạt response |
+| Nghiệm thu | `tests/acceptance/at_catalog.yaml`, `scripts/acceptance/run_acceptance.py`, `docs/implementation/acceptance/` | 43 AT: 28 PASS, 1 PARTIAL, 0 FAIL, 14 NOT RUN (mức W chưa chạy; chạy lại 2026-11-18) |
 
 **Chưa được chứng minh / chưa có:**
 - Mọi thứ trên Windows thật: live Event Log, `WinProcessApi`, Sysmon config, script lab, hướng dẫn cài đặt, response `execute`.
 - Chất lượng phát hiện, hiệu năng (CPU/RAM/độ trễ) trên VM 2 GB.
-- Retention xóa thật (mới có dry-run), Windows service, Gold/Feature, mô hình ML (chỉ có giao diện, tắt mặc định).
+- Retention xóa thật (mới có dry-run), Windows service, Gold/Feature.
+- ML: chạy bộ chấm điểm tĩnh với `thrember` thật, nối vào Detection Engine, ngưỡng đo trên tệp lành tính của VM, mô hình Win32, mô hình hành vi (Silver/Gold); mọi phép đo ML trên Windows.
 - Phê duyệt liên nhóm: DDL v1.2, schema `DetectionResult`, hostname D-07, tên event type (Q-X3), số hiệu DET-101, mã lỗi `R-*`/`A-*`, ADR 0004/0007.
 
-**Kết quả test (2026-11-09, Linux):** `python -m pytest -q` → 233 pass, 0 fail. Chưa có kết quả nào trên Windows. Chạy lại trước khi tin cậy.
+**Kết quả test (2026-11-18, Linux, sau audit):** `python -m pytest -q` → 260 pass, 0 fail khi có `lightgbm`; 254 pass, 1 skipped khi không có `lightgbm` (test nạp mô hình EMBER2024 bị bỏ qua). Cả hai con số đều đã đo. Chưa có kết quả nào trên Windows. Chạy lại trước khi tin cậy.
 
 ### 3.2. TARGET ARCHITECTURE — kế hoạch, chưa được triển khai
 
@@ -113,7 +115,7 @@ python poc/sysmon-collector/contract_check.py --samples references/samples --out
 
 Cấu hình mẫu: `config/edr.example.yaml`, `config/response-policy.yaml`. Hướng dẫn cài đặt Windows: `docs/implementation/EDR_INSTALL_GUIDE.md` (cú pháp `set PYTHONPATH` là của cmd; PowerShell dùng `$env:PYTHONPATH`). Live mode và `--live` cần Windows, `pywin32` và quyền Administrator; **chưa kiểm chứng trên Windows**.
 
-Các lệnh test đã chạy lại ngày 2026-11-09 trên Linux.
+Lệnh `pytest` và `run_acceptance.py` đã chạy lại ngày 2026-11-18; các lệnh còn lại ngày 2026-11-09, trên Linux.
 
 ## 5. Mô hình import (đọc trước khi thêm module)
 
@@ -122,7 +124,7 @@ Các file Python không phải là package. Chúng import lẫn nhau bằng tên
 - `test_canonical_bronze_contract.py` import `bronze_contract`, `bronze_to_silver_adapter` và `validator_poc` bằng tên trần.
 - `tests/test_validator_poc_w5.py` và `test_canonical_bronze_contract.py` tự chèn `src/pipeline` vào `sys.path`.
 
-Các package trong `src/` (`agent`, `pipeline`, `detection`, `alerts`, `response`, `api`, `core`, `common`) là package thật nhưng không cài đặt; chạy chúng bằng `PYTHONPATH=src` (test đã được `pytest.ini`/`conftest.py` cấu hình sẵn).
+Các package trong `src/` (`agent`, `pipeline`, `detection`, `alerts`, `response`, `api`, `core`, `common`) là package thật nhưng không cài đặt. `api.auth`, `edr_ctl` và `detection.ml.static_scorer` chạy được với `PYTHONPATH=src`; `agent`, `pipeline`, `core`, `api`, `response` còn import `bronze_contract`, `validator_poc`… nên cần `PYTHONPATH` gồm `src`, `src/pipeline` và `poc/sysmon-collector` (như `EDR_INSTALL_GUIDE.md` mục 2; `edr_ctl start` tự đặt cho tiến trình con). Test đã được `pytest.ini`/`conftest.py` cấu hình sẵn.
 
 Chạy test từ thư mục gốc repository bằng `python -m pytest` để rootdir của pytest đưa `poc/sysmon-collector` vào đường dẫn. Chạy script từ thư mục khác sẽ làm hỏng các import này.
 

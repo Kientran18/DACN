@@ -1,5 +1,4 @@
 """Vòng core phải sống sót sau exception và lộ lỗi ra status (/health)."""
-import json
 
 import bronze_contract as bc
 from agent.bronze_writer import BronzeWriter

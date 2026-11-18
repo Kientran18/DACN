@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Dict, List
 
 SYSTEM_USERS = {"system", "local service", "network service", "nt authority", "nt service", "window manager", "font driver host"}
-SYSTEM_SIDS = re.compile(r"^S-1-5-(18|19|20|32-\d+|80-.+)$")
 
 
 def discover(texts: List[str]) -> Dict[str, str]:

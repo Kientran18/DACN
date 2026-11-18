@@ -47,17 +47,14 @@ def _now_utc() -> str:
 
 
 def _system_metadata(ev: ET.Element) -> dict:
+    # build_bronze_record gọi poc._parse_event_element trước, hàm đó đã từ chối Event không có e:System.
     ns = poc.NS
     system = ev.find("e:System", ns)
-    use_ns = True
-    if system is None:
-        system = ev.find("System")
-        use_ns = False
     if system is None:
         raise ValueError("C-002 missing System element")
 
     def find_node(tag: str) -> Optional[ET.Element]:
-        return system.find(f"e:{tag}", ns) if use_ns else system.find(tag)
+        return system.find(f"e:{tag}", ns)
 
     def text(tag: str) -> Optional[str]:
         node = find_node(tag)

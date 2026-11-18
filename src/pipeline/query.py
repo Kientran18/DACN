@@ -46,8 +46,3 @@ class Query:
         if hostname:
             sql += " and hostname = ?"; params.append(hostname)
         return self._rows(sql + " order by tree_depth, timestamp", params)
-
-    def correlated(self, process_guid: str, start, end, limit: int = 500) -> Dict[str, List[Dict[str, Any]]]:
-        """Mọi sự kiện của một process_guid trong cửa sổ thời gian [start, end)."""
-        return {t: self.events(t, process_guid=process_guid, since=start, until=end, limit=limit)
-                for t in _FILTERS}

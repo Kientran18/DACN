@@ -3,8 +3,8 @@
 Local EDR W05 PoC: Bronze-to-Silver Validation, Deterministic Deduplication,
 Quarantine DLQ, DuckDB Storage, and Feature/Lineage Verification.
 
-Chạy kiểm chứng trực tiếp trên bộ mẫu thật W03 (process.json, file.json,
-registry.json, network.json, poc_run_20261018_021142.json) và bộ mẫu lỗi có nhãn.
+Chạy kiểm chứng trực tiếp trên bộ mẫu thật W03 trong references/samples/json (process.json, file.json,
+registry.json, network.json) và bộ mẫu lỗi có nhãn. Chạy từ thư mục gốc repository.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ import math
 import re
 import uuid
 from collections import Counter
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -866,17 +866,15 @@ def run_duckdb_verification(engine: SilverValidatorEngine) -> None:
 def main() -> None:
     engine = SilverValidatorEngine()
 
-    # Tự động tìm 4 file JSON mẫu thật nếu có trong thư mục hiện tại hoặc references/samples
+    # Tự động tìm 4 file JSON mẫu thật trong thư mục hiện tại hoặc references/samples/json (chạy từ thư mục gốc repo)
     sample_files = ["process.json", "file.json", "registry.json", "network.json"]
-    loaded_real_count = 0
 
     for fname in sample_files:
-        for candidate in [Path(fname), Path("references/samples") / fname]:
+        for candidate in [Path(fname), Path("references/samples/json") / fname]:
             if candidate.exists():
                 records = json.loads(candidate.read_text(encoding="utf-8-sig"))
                 for rec in records:
                     engine.process_record(rec, source_ref=str(candidate))
-                    loaded_real_count += 1
                 # Thử nạp lặp lại bản ghi đầu tiên của process.json và file.json để test Dedup
                 if fname in ("process.json", "file.json") and records:
                     engine.process_record(records[0], source_ref=f"{candidate}#duplicate_replay")
