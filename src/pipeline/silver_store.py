@@ -99,10 +99,9 @@ class SilverStore:
             return {**res, "status": "SKIPPED_ALREADY_INGESTED"}
         try:
             records = list(read_segment(seg))
-        except SegmentError as exc:
+        except SegmentError:
             res["status"] = "QUARANTINED_SEGMENT"
             self._write_ledger(seg.name, sha, res["status"], res, run_id)
-            self._last_error = str(exc)
             return res
 
         self.con.execute("begin")

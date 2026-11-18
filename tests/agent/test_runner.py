@@ -1,9 +1,8 @@
 import json
 from pathlib import Path
 from agent.runner import AgentRunner
-from agent.bronze_writer import BronzeWriter, recover_dir, verify_segment
+from agent.bronze_writer import BronzeWriter, verify_segment
 from agent.checkpoint import Checkpoint
-from agent.sources.base import SourceError
 from agent.sources.fake_source import FakeEventSource
 import bronze_contract as bc
 

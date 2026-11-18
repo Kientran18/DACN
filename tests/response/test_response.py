@@ -1,10 +1,8 @@
 import json
-import os
 import sys
 from pathlib import Path
 
 import pytest
-import yaml
 
 from alerts.store import AlertStore
 from pipeline.silver_store import SilverStore

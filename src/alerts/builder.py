@@ -3,17 +3,9 @@ from __future__ import annotations
 
 from typing import Dict, Iterable
 
+from .evidence import _silver as _first_event   # tra một sự kiện Silver theo event_id (dùng chung với evidence)
+
 BUCKET_SECONDS = 600   # cửa sổ dedup nhóm: giá trị tạm, chưa hiệu chỉnh
-
-
-def _first_event(con, event_id: str):
-    for t in ("silver_process_events", "silver_file_events", "silver_registry_events", "silver_network_events"):
-        cur = con.execute(f"select * from {t} where event_id=?", [event_id])
-        cols = [c[0] for c in cur.description]
-        r = cur.fetchone()
-        if r:
-            return dict(zip(cols, r))
-    return None
 
 
 def build_from_results(store, rules: Dict[str, dict], results: Iterable, con) -> dict:

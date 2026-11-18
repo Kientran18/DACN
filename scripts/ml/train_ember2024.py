@@ -23,7 +23,6 @@ MIN_FREE_GB = int(os.environ.get("DACN_MIN_FREE", MIN_FREE_GB))
 # ------------------------------------------------------------
 TEN = LOAI.lower().replace("_", "")
 T0 = time.time()
-STEP_TIMES = {}
 
 def log(msg): print(f"[{(time.time()-T0)/60:6.1f} phút] {msg}", flush=True)
 def sh(c, n=2500):

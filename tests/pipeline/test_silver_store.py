@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 import pytest
 import bronze_contract as bc

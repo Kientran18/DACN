@@ -1,6 +1,5 @@
 import json
 import sys
-import uuid
 from pathlib import Path
 
 import pytest
@@ -129,7 +128,7 @@ def test_evidence_resolves_to_raw_xml_both_ways(tmp_path):
     w.seal()
     st = SilverStore(tmp_path / "s.duckdb"); st.ingest_dir(seg_dir, "r")
     eid = st.con.execute("select event_id from silver_process_events limit 1").fetchone()[0]
-    rules = load_rules(); store = AlertStore(st.con)
+    store = AlertStore(st.con)
     # alert thủ công trỏ tới một sự kiện thật để thử resolver
     aid = mk_alert(store, eid)
     ev = resolve_evidence(st.con, aid, seg_dir)

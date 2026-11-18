@@ -1,5 +1,4 @@
 """Test launcher với tiến trình giả (PH10-T01): start/stop lặp lại không để tiến trình mồ côi."""
-import json
 import os
 import subprocess
 import sys
@@ -9,7 +8,6 @@ from pathlib import Path
 
 import pytest
 
-import edr_ctl
 from edr_ctl import EdrCtl, pid_alive
 
 FAKE = textwrap.dedent("""

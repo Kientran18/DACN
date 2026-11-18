@@ -158,7 +158,6 @@ def test_incident_flow(ctx):
 def test_evidence_raw_only_for_allowed_roles_and_audited(ctx):
     st = ctx["st"]
     eid = st.con.execute("select event_id from silver_process_events where record_id <> 900 limit 1").fetchone()[0]
-    from datetime import datetime, timezone
     t = datetime(2026, 1, 1, tzinfo=timezone.utc)
     aid = AlertStore(st.con).insert_alert(detection_dedup_key="k-ev", group_key="g", first_seen_utc=t, last_seen_utc=t,
                                           detection_source="RULE", rule_id="DACN-DET-001", rule_version=1, rule_name="n",
@@ -282,7 +281,7 @@ def test_ui_is_served_with_strict_csp_and_no_cache(ctx):
 
 
 def _write_agent_health(ctx, age_s, state="running"):
-    from datetime import datetime, timedelta, timezone
+    from datetime import timedelta
     p = ctx["tmp"] / "agent" / "health.json"
     p.parent.mkdir(parents=True, exist_ok=True)
     hb = (datetime.now(timezone.utc) - timedelta(seconds=age_s)).isoformat()
