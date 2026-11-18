@@ -1,6 +1,12 @@
 """Schema rule và DetectionResult (PH4-T01/T02). Đề xuất — cần Cyber/Data duyệt (#38, #39)."""
 OUTCOMES = ("MATCH", "NO_MATCH", "INSUFFICIENT_TELEMETRY", "PENDING_LATE_EVENTS")
 OPS = ("equals", "contains_any", "endswith_any", "startswith_any", "regex")
+# Bảng Silver chứa từng Sysmon Event ID (khớp cách validator_poc định tuyến SUPPORTED_SYSMON_IDS).
+SILVER_TABLE_FOR_EVENT = {1: "silver_process_events", 5: "silver_process_events",
+                          11: "silver_file_events", 15: "silver_file_events", 23: "silver_file_events",
+                          26: "silver_file_events", 29: "silver_file_events",
+                          12: "silver_registry_events", 13: "silver_registry_events", 14: "silver_registry_events",
+                          3: "silver_network_events", 22: "silver_network_events"}
 
 _COND = {
     "type": "object", "additionalProperties": False, "required": ["field", "op", "value"],

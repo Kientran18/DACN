@@ -8,7 +8,7 @@ from typing import Dict
 import jsonschema
 import yaml
 
-from .schema import RULE_SCHEMA
+from .schema import RULE_SCHEMA, SILVER_TABLE_FOR_EVENT
 
 DEFAULT_DIR = Path(__file__).parent / "rules"
 
@@ -29,6 +29,9 @@ def validate_rule(rule: dict, source: str = "") -> dict:
         raise RuleError(f"{source}: rule 'single' cần sysmon_event_ids")
     if r["type"] == "correlation" and not (r.get("time_window_seconds") and r.get("window_status")):
         raise RuleError(f"{source}: rule 'correlation' cần time_window_seconds và window_status")
+    unknown = sorted(set(r.get("sysmon_event_ids") or []) - set(SILVER_TABLE_FOR_EVENT))
+    if r["status"] == "enabled" and unknown:
+        raise RuleError(f"{source}: sysmon_event_ids {unknown} không có bảng Silver; rule đang bật sẽ không chạy được")
     if r["status"] == "blocked" and not r.get("blocked_reason"):
         raise RuleError(f"{source}: rule 'blocked' cần blocked_reason")
     if r.get("mitre_technique_ids") and not r.get("mitre_basis"):

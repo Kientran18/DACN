@@ -14,10 +14,8 @@ from .ioc import IocStore
 from .loader import load_rules
 from .ml.interface import NullDetector
 from .result import DetectionResult, make_dedup_key
+from .schema import SILVER_TABLE_FOR_EVENT as _TABLE_FOR
 
-_TABLE_FOR = {1: "silver_process_events", 11: "silver_file_events", 29: "silver_file_events",
-              13: "silver_registry_events", 12: "silver_registry_events", 14: "silver_registry_events",
-              3: "silver_network_events", 22: "silver_network_events"}
 
 DDL = """
 CREATE TABLE IF NOT EXISTS _detection_results (
