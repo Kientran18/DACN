@@ -1,11 +1,11 @@
 {
   "meta": {
-    "run_utc": "2026-11-09T10:32:42Z",
-    "duration_s": 37.8,
-    "commit": "6ea57a3",
-    "dirty": true,
+    "run_utc": "2026-11-18T14:18:21Z",
+    "duration_s": 34.7,
+    "commit": "a5996f2",
+    "dirty": false,
     "python": "3.13.18",
-    "os": "Linux 6.18.44-fc-v310",
+    "os": "Linux 6.18.44-fc-v595",
     "evidence_level": "L (Linux, dữ liệu synthetic/giả lập); W (Windows) chưa chạy",
     "pytest_exit_code": 0,
     "counts": {
@@ -14,9 +14,9 @@
       "PARTIAL": 1
     },
     "packages": {
-      "pytest": "9.2.0",
+      "pytest": "9.1.1",
       "duckdb": "2.0.0",
-      "fastapi": "0.162.2",
+      "fastapi": "0.164.0",
       "uvicorn": "0.54.0",
       "httpx": "0.28.1",
       "pydantic": "2.13.5",

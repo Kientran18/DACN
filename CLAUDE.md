@@ -32,7 +32,7 @@ Phân biệt rõ hai nhóm thông tin. **Không mô tả thành phần thuộc T
 
 ### 3.1. CURRENT STATE — đã triển khai và có bằng chứng
 
-Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết quả `pytest` ngày **2026-11-18** (Linux, Python 3.13); số liệu nghiệm thu AT là của ngày 2026-11-09. Chi tiết: `docs/implementation/` (`EDR_PROGRESS.md`, `EDR_TASK_BACKLOG.md`, `handover/TEST_REPORT.md`, `handover/LIMITATIONS_AND_RISKS.md`).
+Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết quả `pytest` và nghiệm thu AT ngày **2026-11-18** (Linux, Python 3.13, sau audit). Chi tiết: `docs/implementation/` (`EDR_PROGRESS.md`, `EDR_TASK_BACKLOG.md`, `handover/TEST_REPORT.md`, `handover/LIMITATIONS_AND_RISKS.md`).
 
 | Thành phần | Vị trí | Mức độ kiểm chứng |
 |---|---|---|
@@ -46,7 +46,7 @@ Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết qu�
 | Core service và launcher | `src/core/`, `src/edr_ctl.py` | Chạy nhiều tiến trình thật trên Linux; chưa trên Windows |
 | Script lab (SC01–SC07) và kiểm tra môi trường Windows | `scripts/lab/`, `scripts/windows/` | Chỉ kiểm tra tĩnh; **chưa chạy trên Windows** |
 | Mô hình ML PE tĩnh EMBER2024 (Dot_Net, Win64; **nháp**, `DRAFT_CHUA_DUYET`) và bộ chấm điểm tĩnh nháp chạy theo yêu cầu | `models/ember2024/`, `scripts/ml/train_ember2024.py`, `src/detection/ml/loader.py`, `src/detection/ml/static_scorer.py`, `requirements-ml.txt`, `docs/implementation/ML_EMBER2024_MODELS.md` | Có test nạp qua loader (`tests/detection/test_ember2024_models.py`, cần `lightgbm`, thiếu thì bỏ qua) và test bộ chấm điểm với PE synthetic, extractor/predictor giả (`tests/detection/test_static_scorer.py`). Số liệu (AUC test 0,998 và 0,999) chỉ đo trên EMBER2024, **không phải chất lượng phát hiện của DACN**; chưa nối vào Detection Engine, bộ chấm điểm chưa chạy với `thrember` thật (`thrember` không có trên PyPI), chưa có ngưỡng, kết quả chưa phải `DetectionResult`, chưa duyệt Cyber/Data. Phụ thuộc ML ở `requirements-ml.txt` (tùy chọn). Điểm ML không kích hoạt response |
-| Nghiệm thu | `tests/acceptance/at_catalog.yaml`, `scripts/acceptance/run_acceptance.py`, `docs/implementation/acceptance/` | 43 AT: 28 PASS, 1 PARTIAL, 0 FAIL, 14 NOT RUN (mức W chưa chạy) |
+| Nghiệm thu | `tests/acceptance/at_catalog.yaml`, `scripts/acceptance/run_acceptance.py`, `docs/implementation/acceptance/` | 43 AT: 28 PASS, 1 PARTIAL, 0 FAIL, 14 NOT RUN (mức W chưa chạy; chạy lại 2026-11-18) |
 
 **Chưa được chứng minh / chưa có:**
 - Mọi thứ trên Windows thật: live Event Log, `WinProcessApi`, Sysmon config, script lab, hướng dẫn cài đặt, response `execute`.
@@ -55,7 +55,7 @@ Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết qu�
 - ML: chạy bộ chấm điểm tĩnh với `thrember` thật, nối vào Detection Engine, ngưỡng đo trên tệp lành tính của VM, mô hình Win32, mô hình hành vi (Silver/Gold); mọi phép đo ML trên Windows.
 - Phê duyệt liên nhóm: DDL v1.2, schema `DetectionResult`, hostname D-07, tên event type (Q-X3), số hiệu DET-101, mã lỗi `R-*`/`A-*`, ADR 0004/0007.
 
-**Kết quả test (2026-11-18, Linux):** `python -m pytest -q` → 251 pass, 0 fail khi có `lightgbm` (đã chạy sau khi thêm 12 test của bộ chấm điểm). Không có `lightgbm` thì test nạp mô hình EMBER2024 bị bỏ qua (1 skipped, 6 test không chạy; con số này suy ra, không đo riêng). Chưa có kết quả nào trên Windows. Chạy lại trước khi tin cậy.
+**Kết quả test (2026-11-18, Linux, sau audit):** `python -m pytest -q` → 260 pass, 0 fail khi có `lightgbm`; 254 pass, 1 skipped khi không có `lightgbm` (test nạp mô hình EMBER2024 bị bỏ qua). Cả hai con số đều đã đo. Chưa có kết quả nào trên Windows. Chạy lại trước khi tin cậy.
 
 ### 3.2. TARGET ARCHITECTURE — kế hoạch, chưa được triển khai
 
@@ -115,7 +115,7 @@ python poc/sysmon-collector/contract_check.py --samples references/samples --out
 
 Cấu hình mẫu: `config/edr.example.yaml`, `config/response-policy.yaml`. Hướng dẫn cài đặt Windows: `docs/implementation/EDR_INSTALL_GUIDE.md` (cú pháp `set PYTHONPATH` là của cmd; PowerShell dùng `$env:PYTHONPATH`). Live mode và `--live` cần Windows, `pywin32` và quyền Administrator; **chưa kiểm chứng trên Windows**.
 
-Lệnh `pytest` đã chạy lại ngày 2026-11-18; các lệnh còn lại ngày 2026-11-09, trên Linux.
+Lệnh `pytest` và `run_acceptance.py` đã chạy lại ngày 2026-11-18; các lệnh còn lại ngày 2026-11-09, trên Linux.
 
 ## 5. Mô hình import (đọc trước khi thêm module)
 

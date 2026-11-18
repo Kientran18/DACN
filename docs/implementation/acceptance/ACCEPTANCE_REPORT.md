@@ -5,10 +5,10 @@
 
 ## Môi trường chạy
 
-- Thời điểm (UTC): 2026-11-09T10:32:42Z · thời lượng: 37.8 s
-- Commit: `6ea57a3` (cây làm việc có thay đổi chưa commit)
-- Python 3.13.18 · Linux 6.18.44-fc-v310
-- Thư viện: pytest 9.2.0, duckdb 2.0.0, fastapi 0.162.2, uvicorn 0.54.0, httpx 0.28.1, pydantic 2.13.5, PyYAML 6.0.3, jsonschema 4.26.0
+- Thời điểm (UTC): 2026-11-18T14:18:21Z · thời lượng: 34.7 s
+- Commit: `a5996f2`
+- Python 3.13.18 · Linux 6.18.44-fc-v595
+- Thư viện: pytest 9.1.1, duckdb 2.0.0, fastapi 0.164.0, uvicorn 0.54.0, httpx 0.28.1, pydantic 2.13.5, PyYAML 6.0.3, jsonschema 4.26.0
 - Mức bằng chứng: L (Linux, dữ liệu synthetic/giả lập); W (Windows) chưa chạy
 
 ## Tổng hợp
