@@ -168,6 +168,8 @@ tests/         common/ agent/ pipeline/ detection/ alerts/ response/ api/ dashbo
 
 ## 13. Trạng thái triển khai (cập nhật PH12, 2026-11-08)
 
+Bổ sung #40 ngày 17/11/2026: `src/static_analysis/` có bounded file observation, local knowledge revision/rollback, literal pattern store, exact-hash whitelist và candidate review/API. `src/detection/engine.py`/Core có durable outbox + ack, host watermark/lateness. Thiết kế/schema/test evidence mới ở [hồ sơ #40](../research/software/w7/03-issue-40-handoff-and-review.md); bảng dưới là baseline PH12, không bao gồm cập nhật này. Static signature provider vẫn UNAVAILABLE; chưa có nghiệm thu Windows VM/Data/Cyber.
+
 Nhãn: **Implemented** = có code; **Tested (L)** = có test tự động trên Linux với dữ liệu synthetic/giả lập; **Tested (W)** = đã kiểm chứng trên Windows VM thật; **Designed** = có thiết kế/tài liệu, chưa có code; **Future** = ngoài phạm vi MVP. Bằng chứng: [acceptance/ACCEPTANCE_REPORT.md](acceptance/ACCEPTANCE_REPORT.md).
 
 | Thành phần | Vị trí | Implemented | Tested (L) | Tested (W) | Ghi chú |

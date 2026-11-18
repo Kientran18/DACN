@@ -13,6 +13,7 @@ def evaluate_drop_execute_delete(rule: dict, files: List[dict], procs: List[dict
     watermark: timestamp lớn nhất đã nạp (mốc đóng cửa sổ)."""
     rid, ver = rule["rule_id"], rule["rule_version"]
     win = timedelta(seconds=rule["time_window_seconds"])
+    grace = timedelta(seconds=rule.get("allowed_lateness_seconds", 0))
     out: List[DetectionResult] = []
     deletes = [f for f in files if f["sysmon_event_id"] in (23, 26)]
     for c in sorted((f for f in files if f["sysmon_event_id"] == 11), key=lambda r: r["timestamp"]):
@@ -41,7 +42,8 @@ def evaluate_drop_execute_delete(rule: dict, files: List[dict], procs: List[dict
                                        matched_fields={"normalized_path": npath, **steps},
                                        severity=rule["severity"], severity_reason=rule["severity_reason"],
                                        notes=["window_status:" + rule["window_status"]], **base))
-        elif watermark is not None and watermark < t0 + win:
+        elif (watermark.get(c["hostname"]) if isinstance(watermark, dict) else watermark) is None or (
+                (watermark.get(c["hostname"]) if isinstance(watermark, dict) else watermark) < t0 + win + grace):
             out.append(DetectionResult(outcome="PENDING_LATE_EVENTS", contributing_event_ids=list(steps.values()),
                                        matched_fields={"normalized_path": npath, **steps},
                                        coverage_status="PARTIAL_CHAIN", severity_reason="cửa sổ chưa đóng",

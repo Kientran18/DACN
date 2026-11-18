@@ -110,6 +110,10 @@ def test_cli_jsonl_output(tmp_path):
     assert len(lines) == 4 and all(json.loads(line) for line in lines)
 
 
-def test_live_mode_gives_clear_error_without_pywin32():
+def test_live_mode_gives_clear_error_without_pywin32(monkeypatch):
+    # Unit test thiếu dependency phải mô phỏng dependency thiếu cả trên Windows có pywin32.
+    # Không mở Event Log thật khi chạy suite fixture.
+    import sys
+    monkeypatch.setitem(sys.modules, "win32evtlog", None)
     with pytest.raises(RuntimeError, match="pywin32"):
         next(c.iter_events_live())

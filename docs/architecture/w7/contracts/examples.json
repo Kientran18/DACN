@@ -1,0 +1,183 @@
+{
+  "synthetic": true,
+  "knowledge": {
+    "schema_version": "dacn-knowledge/1.0",
+    "version": 1,
+    "indicators": [
+      {
+        "id": "lab-sha",
+        "sha256": "98fc5211ecf54bc9bd57f0045e0d0ee488c5472c94ee22cc1580b081d04cc4ac",
+        "source": "synthetic-lab",
+        "expires_at": "2099-01-01T00:00:00Z"
+      }
+    ],
+    "allowlist": [],
+    "patterns": [
+      {
+        "id": "lab-marker",
+        "hex": "6861726d",
+        "source": "synthetic-lab",
+        "expires_at": "2099-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "static_result": {
+    "schema_version": "dacn-static/1.0",
+    "analysis_id": "11111111-2222-4333-8444-555555555555",
+    "observed_at": "2026-11-17T00:00:00Z",
+    "extractor_version": "1.0",
+    "path": "C:\\EDR\\lab\\harmless.txt",
+    "source_event_ids": [],
+    "status": "OK",
+    "error_code": null,
+    "sha256": "98fc5211ecf54bc9bd57f0045e0d0ee488c5472c94ee22cc1580b081d04cc4ac",
+    "size_bytes": 8,
+    "entropy": 2.75,
+    "file_identity": [
+      0,
+      0,
+      8,
+      0,
+      0
+    ],
+    "pe": {
+      "status": "NOT_PE",
+      "value": null
+    },
+    "signature": {
+      "status": "UNAVAILABLE",
+      "reason": "NO_OFFLINE_TRUST_PROVIDER"
+    },
+    "pattern_ids": [
+      "lab-marker"
+    ],
+    "historical_identity": "UNVERIFIED"
+  },
+  "error_result": {
+    "schema_version": "dacn-static/1.0",
+    "analysis_id": "11111111-2222-4333-8444-555555555555",
+    "observed_at": "2026-11-17T00:00:00Z",
+    "extractor_version": "1.0",
+    "path": "C:\\EDR\\lab\\harmless.txt",
+    "source_event_ids": [],
+    "status": "ERROR",
+    "error_code": "NOT_FOUND",
+    "sha256": null,
+    "size_bytes": null,
+    "entropy": null,
+    "file_identity": null,
+    "pe": {
+      "status": "UNAVAILABLE",
+      "value": null
+    },
+    "signature": {
+      "status": "UNAVAILABLE",
+      "reason": "NO_OFFLINE_TRUST_PROVIDER"
+    },
+    "pattern_ids": [],
+    "historical_identity": "UNVERIFIED"
+  },
+  "signature_hit": {
+    "schema_version": "dacn-signature-hit/1.0",
+    "ioc_ids": [
+      "lab-sha"
+    ],
+    "pattern_ids": [
+      "lab-marker"
+    ],
+    "suppressed": false
+  },
+  "whitelist_verdict": {
+    "schema_version": "dacn-whitelist-verdict/1.0",
+    "knowledge_revision": "c9a36c973b92fa25902296b0bde5a92d52a153151fe3ffdbbc4a862ef2c1ec5d",
+    "knowledge_version": 1,
+    "verdict": "HIT",
+    "allowlist_ids": [],
+    "signature_hit": {
+      "schema_version": "dacn-signature-hit/1.0",
+      "ioc_ids": [
+        "lab-sha"
+      ],
+      "pattern_ids": [
+        "lab-marker"
+      ],
+      "suppressed": false
+    },
+    "policy": "STATIC_ALLOWLIST_FIRST_BEHAVIOR_UNCHANGED",
+    "evaluated_at": "2026-11-17T00:00:01Z"
+  },
+  "candidate": {
+    "schema_version": "dacn-candidate/1.0",
+    "candidate_id": "66666666-7777-4888-8999-000000000000",
+    "state": "NEW",
+    "revision": 1,
+    "created_by": "lab-analyst",
+    "analysis": {
+      "schema_version": "dacn-static/1.0",
+      "analysis_id": "11111111-2222-4333-8444-555555555555",
+      "observed_at": "2026-11-17T00:00:00Z",
+      "extractor_version": "1.0",
+      "path": "C:\\EDR\\lab\\harmless.txt",
+      "source_event_ids": [],
+      "status": "OK",
+      "error_code": null,
+      "sha256": "98fc5211ecf54bc9bd57f0045e0d0ee488c5472c94ee22cc1580b081d04cc4ac",
+      "size_bytes": 8,
+      "entropy": 2.75,
+      "file_identity": [
+        0,
+        0,
+        8,
+        0,
+        0
+      ],
+      "pe": {
+        "status": "NOT_PE",
+        "value": null
+      },
+      "signature": {
+        "status": "UNAVAILABLE",
+        "reason": "NO_OFFLINE_TRUST_PROVIDER"
+      },
+      "pattern_ids": [
+        "lab-marker"
+      ],
+      "historical_identity": "UNVERIFIED"
+    },
+    "verdict": {
+      "schema_version": "dacn-whitelist-verdict/1.0",
+      "knowledge_revision": "c9a36c973b92fa25902296b0bde5a92d52a153151fe3ffdbbc4a862ef2c1ec5d",
+      "knowledge_version": 1,
+      "verdict": "HIT",
+      "allowlist_ids": [],
+      "signature_hit": {
+        "schema_version": "dacn-signature-hit/1.0",
+        "ioc_ids": [
+          "lab-sha"
+        ],
+        "pattern_ids": [
+          "lab-marker"
+        ],
+        "suppressed": false
+      },
+      "policy": "STATIC_ALLOWLIST_FIRST_BEHAVIOR_UNCHANGED",
+      "evaluated_at": "2026-11-17T00:00:01Z"
+    },
+    "detection": {
+      "rule_id": "DACN-STATIC-001",
+      "rule_version": 1,
+      "outcome": "MATCH",
+      "subject": "synthetic-subject",
+      "contributing_event_ids": [],
+      "matched_fields": {},
+      "missing_fields": [],
+      "coverage_status": "SYNTHETIC_EXAMPLE",
+      "severity": "medium",
+      "severity_reason": "synthetic example; not a confirmed threat",
+      "dedup_key": "synthetic-key",
+      "notes": []
+    },
+    "alert_ids": [],
+    "created_at": "2026-11-17T00:00:01Z"
+  }
+}

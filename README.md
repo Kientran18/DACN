@@ -1,5 +1,7 @@
 # DACN — Windows Endpoint Security
 
+Bàn giao Software W06–W07: [issue #40 — thiết kế, PoC, kiểm thử và phần chờ review](docs/research/software/w7/03-issue-40-handoff-and-review.md).
+
 **Đề tài:** Tìm hiểu và hiện thực một hệ thống bảo mật cho thiết bị đầu cuối (Endpoint Security)
 
 **Trạng thái dự án:** Đang thực hiện Giai đoạn 1 — Đồ án chuyên ngành  

@@ -21,6 +21,9 @@ from pipeline.query import Query
 from response.actions import ActionError, ActionStore
 from response.executor import precheck
 from response.policy import ACTION_TYPES
+from static_analysis.service import StaticWorkflow
+from static_analysis.knowledge import KnowledgeError
+from static_analysis.review import ReviewError
 
 from .auth import ROLES, TokenStore
 
@@ -61,6 +64,26 @@ class ActionIn(BaseModel):
 
 class ReasonIn(BaseModel):
     reason: str = Field(min_length=1, max_length=1000)
+
+
+class StaticIn(BaseModel):
+    path: str = Field(min_length=1, max_length=1024)
+    source_event_ids: List[str] = Field(default_factory=list, max_length=100)
+
+
+class CandidateTransitionIn(ReasonIn):
+    to_state: Literal["TRIAGED", "ALLOWLISTED", "SUSPICIOUS", "REJECTED"]
+    expected_revision: int = Field(ge=1)
+
+
+class KnowledgeIn(ReasonIn):
+    expected_revision: Optional[str] = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    bundle: Dict[str, Any]
+
+
+class KnowledgeRollbackIn(ReasonIn):
+    revision: str = Field(pattern=r"^[a-f0-9]{64}$")
+    expected_revision: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
 class ResultIn(BaseModel):
@@ -105,6 +128,7 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
     alerts, actions = AlertStore(con), ActionStore(con, AlertStore(con))
     actions.require_distinct = policy.require_distinct_approver
     q = Query(con)
+    static = StaticWorkflow(con, [cfg.home / "lab"], cfg.home / "static-knowledge", lock=lock)
     health_path = Path(health_path) if health_path else cfg.home / "agent" / "health.json"
 
     # -- lỗi thống nhất ---------------------------------------------------------------
@@ -439,6 +463,78 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
         with lock:
             alerts.record(f"executor({who['actor']})", body.action, "response_action", body.target_id, body.reason)
         return {"ok": True}
+
+    # W07: chỉ đọc bytes trong <EDR_HOME>/lab; không nhận root từ HTTP.
+    @app.post("/static/analyses", tags=["static"])
+    def static_analyze(body: StaticIn, who: dict = Depends(need("alert_write"))):
+        try:
+            return static.analyze(body.path, source_event_ids=body.source_event_ids, actor=who["actor"])
+        except KeyError as exc:
+            raise ApiError(404, "E-SOURCE_NOT_FOUND", "không tìm thấy source event") from exc
+        except (ValueError, OSError) as exc:
+            raise ApiError(409, "E-STATIC_INPUT", "source/package không hợp lệ hoặc không truy cập được") from exc
+
+    @app.get("/static/candidates", tags=["static"])
+    def candidates(limit: int = Q(100, ge=1, le=500), offset: int = Q(0, ge=0),
+                   _: dict = Depends(need("read"))):
+        with lock:
+            return page(static.candidates.list(limit, offset), limit, offset)
+
+    @app.get("/static/candidates/{candidate_id}", tags=["static"])
+    def candidate(candidate_id: str, _: dict = Depends(need("read"))):
+        with lock:
+            row = static.candidates.get(candidate_id)
+        if row is None:
+            raise HTTPException(404, "không tìm thấy candidate")
+        return row
+
+    @app.post("/static/candidates/{candidate_id}/transition", tags=["static"])
+    def candidate_transition(candidate_id: str, body: CandidateTransitionIn,
+                             who: dict = Depends(need("alert_write"))):
+        try:
+            with lock:
+                return static.candidates.transition(candidate_id, body.to_state, expected_revision=body.expected_revision,
+                                                    actor=who["actor"], role=who["role"], reason=body.reason)
+        except KeyError as exc:
+            raise HTTPException(404, "không tìm thấy candidate") from exc
+        except PermissionError as exc:
+            raise HTTPException(403, "cần người có quyền duyệt") from exc
+        except ReviewError as exc:
+            raise ApiError(409, "E-CANDIDATE_STATE", str(exc)) from exc
+
+    @app.get("/static/candidates/{candidate_id}/history", tags=["static"])
+    def candidate_history(candidate_id: str, _: dict = Depends(need("read"))):
+        with lock:
+            try:
+                return {"items": static.candidates.history(candidate_id)}
+            except KeyError as exc:
+                raise HTTPException(404, "không tìm thấy candidate") from exc
+
+    @app.get("/static/knowledge", tags=["static"])
+    def knowledge(_: dict = Depends(need("read"))):
+        with lock:
+            rev, bundle = static.knowledge.snapshot()
+        return {"revision": rev, "bundle": bundle}
+
+    @app.post("/static/knowledge/activate", tags=["static"])
+    def knowledge_activate(body: KnowledgeIn, who: dict = Depends(need("approve"))):
+        try:
+            with lock:
+                rev = static.knowledge.activate(body.bundle, expected_revision=body.expected_revision,
+                                                actor=who["actor"], reason=body.reason)
+            return {"revision": rev}
+        except (KnowledgeError, OSError, ValueError) as exc:
+            raise ApiError(409, "E-KNOWLEDGE_UPDATE", "package không hợp lệ hoặc revision xung đột") from exc
+
+    @app.post("/static/knowledge/rollback", tags=["static"])
+    def knowledge_rollback(body: KnowledgeRollbackIn, who: dict = Depends(need("approve"))):
+        try:
+            with lock:
+                rev = static.knowledge.rollback(body.revision, expected_revision=body.expected_revision,
+                                                actor=who["actor"], reason=body.reason)
+            return {"revision": rev}
+        except (KnowledgeError, OSError, ValueError) as exc:
+            raise ApiError(409, "E-KNOWLEDGE_UPDATE", "không thể rollback revision này") from exc
 
     @app.get("/", include_in_schema=False)
     def root():

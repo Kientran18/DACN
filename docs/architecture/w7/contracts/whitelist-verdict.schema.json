@@ -1,0 +1,84 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "dacn-whitelist-verdict/1.0"
+    },
+    "knowledge_revision": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "knowledge_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "verdict": {
+      "enum": [
+        "UNAVAILABLE",
+        "ALLOWLISTED",
+        "HIT",
+        "NO_HIT"
+      ]
+    },
+    "allowlist_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "signature_hit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "dacn-signature-hit/1.0"
+        },
+        "ioc_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "pattern_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "suppressed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schema_version",
+        "ioc_ids",
+        "pattern_ids",
+        "suppressed"
+      ]
+    },
+    "policy": {
+      "const": "STATIC_ALLOWLIST_FIRST_BEHAVIOR_UNCHANGED"
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "schema_version",
+    "knowledge_revision",
+    "knowledge_version",
+    "verdict",
+    "allowlist_ids",
+    "signature_hit",
+    "policy",
+    "evaluated_at"
+  ]
+}

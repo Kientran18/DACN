@@ -37,9 +37,18 @@ class CoreService:
         m = self.worker.run_once()
         with self.lock:
             eng = DetectionEngine(self.store.con, rules=self.rules, ioc=IocStore(self.ioc_path) if self.ioc_path else IocStore())
-            results = eng.run()
+            eng.run()
         with self.lock:
-            built = build_from_results(self.alerts, self.rules, results, self.store.con)
+            # Outbox: alert commit và ack cùng transaction; restart không mất delivery.
+            with self.alerts.tx():
+                results = eng.pending_delivery()
+                built = {"alerts": [], "gaps": [], "suppressed": 0, "skipped": 0}
+                for result in results:
+                    one = build_from_results(self.alerts, {result.rule_id: eng.delivery_rule(result)},
+                                             [result], self.store.con)
+                    for key in built:
+                        built[key] += one[key]
+                eng.acknowledge(results)
         return {**m, "alerts_created": len(built["alerts"]), "coverage_gaps": len(built["gaps"]), "suppressed": built["suppressed"]}
 
     def run_forever(self, interval_s: float = 2.0, stop_file: Optional[Path] = None) -> None:

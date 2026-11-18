@@ -3,3 +3,4 @@ __pycache__/
 .pytest_cache/
 *.duckdb
 verify_report.json
+.venv-issue40/

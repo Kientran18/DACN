@@ -1,0 +1,259 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "rule_id",
+    "rule_version",
+    "name",
+    "type",
+    "severity",
+    "status",
+    "description"
+  ],
+  "properties": {
+    "rule_id": {
+      "type": "string",
+      "pattern": "^DACN-DET-\\d{3}$"
+    },
+    "legacy_id": {
+      "type": "string",
+      "pattern": "^DET-\\d{3}$"
+    },
+    "rule_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "type": {
+      "enum": [
+        "single",
+        "correlation",
+        "ioc"
+      ]
+    },
+    "status": {
+      "enum": [
+        "enabled",
+        "disabled",
+        "blocked",
+        "candidate"
+      ]
+    },
+    "blocked_reason": {
+      "type": "string"
+    },
+    "severity": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "severity_reason": {
+      "type": "string"
+    },
+    "sysmon_event_ids": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      },
+      "minItems": 1
+    },
+    "required_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "match": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "all": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "field",
+              "op",
+              "value"
+            ],
+            "properties": {
+              "field": {
+                "type": "string",
+                "pattern": "^[a-z_]+$"
+              },
+              "op": {
+                "enum": [
+                  "equals",
+                  "contains_any",
+                  "endswith_any",
+                  "startswith_any",
+                  "regex"
+                ]
+              },
+              "value": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "any": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "field",
+              "op",
+              "value"
+            ],
+            "properties": {
+              "field": {
+                "type": "string",
+                "pattern": "^[a-z_]+$"
+              },
+              "op": {
+                "enum": [
+                  "equals",
+                  "contains_any",
+                  "endswith_any",
+                  "startswith_any",
+                  "regex"
+                ]
+              },
+              "value": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "exclude": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "field",
+          "op",
+          "value"
+        ],
+        "properties": {
+          "field": {
+            "type": "string",
+            "pattern": "^[a-z_]+$"
+          },
+          "op": {
+            "enum": [
+              "equals",
+              "contains_any",
+              "endswith_any",
+              "startswith_any",
+              "regex"
+            ]
+          },
+          "value": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    "correlation_keys": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "time_window_seconds": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "allowed_lateness_seconds": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 86400
+    },
+    "window_status": {
+      "enum": [
+        "TBD_UNCALIBRATED",
+        "CALIBRATED"
+      ]
+    },
+    "mitre_technique_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^T\\d{4}(\\.\\d{3})?$"
+      }
+    },
+    "mitre_basis": {
+      "type": "string"
+    },
+    "false_positives": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "validation_status": {
+      "enum": [
+        "synthetic_only",
+        "lab_verified"
+      ]
+    },
+    "response_policy": {
+      "enum": [
+        "alert_only"
+      ],
+      "default": "alert_only"
+    }
+  }
+}

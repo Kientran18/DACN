@@ -1,0 +1,32 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "dacn-signature-hit/1.0"
+    },
+    "ioc_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "pattern_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "suppressed": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schema_version",
+    "ioc_ids",
+    "pattern_ids",
+    "suppressed"
+  ]
+}

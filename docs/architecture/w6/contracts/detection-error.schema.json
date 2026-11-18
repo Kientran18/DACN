@@ -1,0 +1,46 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "stage",
+    "reason_code",
+    "run_id",
+    "retryable",
+    "source_event_ids"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dacn-detection-error/1.0"
+    },
+    "stage": {
+      "enum": [
+        "LOAD",
+        "READ",
+        "EVALUATE",
+        "PUBLISH"
+      ]
+    },
+    "reason_code": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "rule_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "retryable": {
+      "type": "boolean"
+    },
+    "source_event_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

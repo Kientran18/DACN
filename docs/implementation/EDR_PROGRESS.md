@@ -1,5 +1,7 @@
 # EDR — Tiến độ (cập nhật sau mỗi phiên làm việc)
 
+**Bổ sung #40 — 17/11/2026:** kết quả Software W06/W07 mới trên nhánh `codex/40-static-review-completion` được ghi riêng trong [hồ sơ bàn giao #40](../research/software/w7/03-issue-40-handoff-and-review.md). Các bảng PH1–PH12 và số 233/Linux dưới đây là baseline trước lần bổ sung này, không phải kết quả kiểm thử mới. Không tự đổi review liên nhóm thành DONE.
+
 > Tệp này là nguồn trạng thái duy nhất giữa các phiên Claude Code. **Không dựa vào lịch sử hội thoại.** Chỉ ghi `DONE` khi có bằng chứng liên kết ở mục "Bằng chứng nghiệm thu".
 > Cập nhật lần cuối: 2026-11-09 (ghi nhận commit `36ee751`). Dòng cũ: 2026-11-08 ~10:40 UTC (người dùng đã duyệt đề xuất mặc định D-01…D-14; bắt đầu PH1; **thay đổi mã chưa commit**).
 
