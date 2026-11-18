@@ -8,6 +8,12 @@ from typing import Optional
 import yaml
 
 
+def _expiry_utc(exp) -> datetime:
+    """`expires` không có múi giờ (YAML date, hoặc datetime thiếu offset) được hiểu là UTC, KHÔNG theo giờ máy."""
+    dt = datetime.fromisoformat(str(exp).replace("Z", "+00:00"))
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt.astimezone(timezone.utc)
+
+
 class IocStore:
     def __init__(self, path: Optional[Path] = None, now: Optional[datetime] = None):
         self.hashes: dict = {}
@@ -19,7 +25,7 @@ class IocStore:
             self.version = d.get("version")
             for h in d.get("ioc_hashes", []):
                 exp = h.get("expires")
-                if exp and datetime.fromisoformat(str(exp).replace("Z", "+00:00")).astimezone(timezone.utc) < now:
+                if exp and _expiry_utc(exp) < now:
                     continue
                 self.hashes[h["sha256"].lower()] = {"source": h.get("source"), "note": h.get("note")}
             self.allow = {a.lower() for a in d.get("allowlist_hashes", [])}
