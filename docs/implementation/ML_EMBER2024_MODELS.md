@@ -63,13 +63,23 @@ Test: `tests/detection/test_ember2024_models.py` (cần `lightgbm`; thiếu thì
 
 ## 5. Chưa có và chưa được duyệt
 
-- **Bộ chấm điểm tĩnh** (đọc tệp trong thư mục cho phép, chọn mô hình theo loại Win32/Win64/.NET, trích đặc trưng bằng `thrember`). Chưa có.
+- **Bộ chấm điểm tĩnh:** đã có bản NHÁP chạy theo yêu cầu ở `src/detection/ml/static_scorer.py` (mục 5.1). Chưa nối vào Detection Engine, chưa lưu kết quả, chưa có đường trích đặc trưng thật được chạy (xem `thrember` bên dưới).
 - **Ngưỡng cho DACN** đo trên tệp lành tính của VM; thời gian mỗi tệp và RAM trên VM 2 GB chưa đo. Mọi số đo trên Windows chưa có.
 - Win32, mô hình khác (APK, ELF, PDF) chưa huấn luyện.
 - `DetectionResult`, hợp đồng dữ liệu của điểm ML và phạm vi "static scoring" cần Cyber/Data duyệt.
 - Tệp không đọc được hoặc loại không hỗ trợ ⇒ `INSUFFICIENT_TELEMETRY`, không điền điểm giả.
 - Điểm ML chỉ để tăng rủi ro, **không kích hoạt response**.
-- `lightgbm` chưa nằm trong `requirements.txt` (chờ quyết định phụ thuộc).
+- Phụ thuộc ML nằm ở `requirements-ml.txt` (tùy chọn, không thuộc `requirements.txt`). `thrember` **không có trên PyPI** (kiểm tra 2026-11-18): phải cài từ GitHub, chưa thử trên Windows VM; `oscrypto` từng lỗi với OpenSSL 3.x trên Kaggle.
+
+### 5.1. Bộ chấm điểm tĩnh (NHÁP)
+
+- Dùng: `PYTHONPATH=src python -m detection.ml.static_scorer <file> --allow-dir <thư mục>`; hoặc `StaticScorer(StaticScorerConfig(...)).score_file(path)`.
+- Chỉ đọc tệp trong `allowed_dirs` (mặc định rỗng = từ chối), kiểm tra sau `resolve()`; không thực thi tệp; giới hạn `max_bytes` (64 MiB là giá trị tạm, chưa đo trên VM).
+- Chọn mô hình theo header PE: có CLR → `dotnet`; PE32+ → `win64`; PE32 → `win32` (chưa có mô hình ⇒ `NO_MODEL_FOR_KIND`).
+- Không chấm được ⇒ `INSUFFICIENT_TELEMETRY` kèm `reason` (`DIR_NOT_ALLOWED`, `FILE_UNREADABLE`, `FILE_TOO_LARGE`, `NOT_PE`, `NO_MODEL_FOR_KIND`, `MODEL_REJECTED`, `DEPENDENCY_MISSING`, `FEATURE_EXTRACTION_FAILED`, `FEATURE_DIM_MISMATCH`, `SCORING_FAILED`); không điền điểm giả.
+- Kết quả là dataclass nội bộ `StaticScoreResult`, **chưa phải `DetectionResult`**; `triggers_response` luôn `False`; `threshold` mặc định `None` (chưa có ngưỡng cho DACN).
+- Test: `tests/detection/test_static_scorer.py` dùng PE synthetic, bộ trích đặc trưng và predictor giả (không cần `lightgbm`/`thrember`). Chưa kiểm chứng đường `thrember` thật và chưa đo thời gian/RAM trên VM.
+- Chưa quyết định (cần Cyber/Data duyệt): dạng `DetectionResult`, kích hoạt theo sự kiện hay theo yêu cầu, nơi lưu điểm.
 
 ## 6. Nguồn và giấy phép
 

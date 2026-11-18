@@ -45,17 +45,17 @@ Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết qu�
 | API FastAPI (loopback, 4 vai trò) và Dashboard tĩnh | `src/api/`, `src/dashboard/` | Có test (kể cả Playwright) trên Linux |
 | Core service và launcher | `src/core/`, `src/edr_ctl.py` | Chạy nhiều tiến trình thật trên Linux; chưa trên Windows |
 | Script lab (SC01–SC07) và kiểm tra môi trường Windows | `scripts/lab/`, `scripts/windows/` | Chỉ kiểm tra tĩnh; **chưa chạy trên Windows** |
-| Mô hình ML PE tĩnh EMBER2024 (Dot_Net, Win64; **nháp**, `DRAFT_CHUA_DUYET`) | `models/ember2024/`, `scripts/ml/train_ember2024.py`, `src/detection/ml/loader.py`, `docs/implementation/ML_EMBER2024_MODELS.md` | Có test nạp qua loader (`tests/detection/test_ember2024_models.py`, cần `lightgbm`, thiếu thì bỏ qua). Số liệu (AUC test 0,998 và 0,999) chỉ đo trên EMBER2024, **không phải chất lượng phát hiện của DACN**; chưa nối vào Detection Engine, chưa có bộ chấm điểm tĩnh, chưa duyệt Cyber/Data. Điểm ML không kích hoạt response |
+| Mô hình ML PE tĩnh EMBER2024 (Dot_Net, Win64; **nháp**, `DRAFT_CHUA_DUYET`) và bộ chấm điểm tĩnh nháp chạy theo yêu cầu | `models/ember2024/`, `scripts/ml/train_ember2024.py`, `src/detection/ml/loader.py`, `src/detection/ml/static_scorer.py`, `requirements-ml.txt`, `docs/implementation/ML_EMBER2024_MODELS.md` | Có test nạp qua loader (`tests/detection/test_ember2024_models.py`, cần `lightgbm`, thiếu thì bỏ qua) và test bộ chấm điểm với PE synthetic, extractor/predictor giả (`tests/detection/test_static_scorer.py`). Số liệu (AUC test 0,998 và 0,999) chỉ đo trên EMBER2024, **không phải chất lượng phát hiện của DACN**; chưa nối vào Detection Engine, bộ chấm điểm chưa chạy với `thrember` thật (`thrember` không có trên PyPI), chưa có ngưỡng, kết quả chưa phải `DetectionResult`, chưa duyệt Cyber/Data. Phụ thuộc ML ở `requirements-ml.txt` (tùy chọn). Điểm ML không kích hoạt response |
 | Nghiệm thu | `tests/acceptance/at_catalog.yaml`, `scripts/acceptance/run_acceptance.py`, `docs/implementation/acceptance/` | 43 AT: 28 PASS, 1 PARTIAL, 0 FAIL, 14 NOT RUN (mức W chưa chạy) |
 
 **Chưa được chứng minh / chưa có:**
 - Mọi thứ trên Windows thật: live Event Log, `WinProcessApi`, Sysmon config, script lab, hướng dẫn cài đặt, response `execute`.
 - Chất lượng phát hiện, hiệu năng (CPU/RAM/độ trễ) trên VM 2 GB.
 - Retention xóa thật (mới có dry-run), Windows service, Gold/Feature.
-- ML: bộ chấm điểm tĩnh dùng mô hình EMBER2024, ngưỡng đo trên tệp lành tính của VM, mô hình Win32, mô hình hành vi (Silver/Gold); mọi phép đo ML trên Windows.
+- ML: chạy bộ chấm điểm tĩnh với `thrember` thật, nối vào Detection Engine, ngưỡng đo trên tệp lành tính của VM, mô hình Win32, mô hình hành vi (Silver/Gold); mọi phép đo ML trên Windows.
 - Phê duyệt liên nhóm: DDL v1.2, schema `DetectionResult`, hostname D-07, tên event type (Q-X3), số hiệu DET-101, mã lỗi `R-*`/`A-*`, ADR 0004/0007.
 
-**Kết quả test (2026-11-18, Linux):** `python -m pytest -q` → 233 pass, 1 skipped, 0 fail (test nạp mô hình EMBER2024 bị bỏ qua vì môi trường không có `lightgbm`; có `lightgbm` thì 6 test đó pass). Chưa có kết quả nào trên Windows. Chạy lại trước khi tin cậy.
+**Kết quả test (2026-11-18, Linux):** `python -m pytest -q` → 251 pass, 0 fail khi có `lightgbm` (đã chạy sau khi thêm 12 test của bộ chấm điểm). Không có `lightgbm` thì test nạp mô hình EMBER2024 bị bỏ qua (1 skipped, 6 test không chạy; con số này suy ra, không đo riêng). Chưa có kết quả nào trên Windows. Chạy lại trước khi tin cậy.
 
 ### 3.2. TARGET ARCHITECTURE — kế hoạch, chưa được triển khai
 

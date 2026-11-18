@@ -1,0 +1,9 @@
+# Phụ thuộc TÙY CHỌN cho phần ML tĩnh (EMBER2024). Không nằm trong requirements.txt: ML tắt mặc định, chưa nối vào Detection Engine.
+# Cài: pip install -r requirements.txt -r requirements-ml.txt
+lightgbm==4.7.0   # 4.6.0 (Kaggle, nơi train) và 4.7.0 nạp được file mô hình của nhau
+numpy
+pefile
+signify==0.8.1    # bản mới hơn làm hỏng SignedPEFile (ghi nhận khi train trên Kaggle)
+# thrember (FutureComputing4AI/EMBER2024, Apache-2.0) KHÔNG có trên PyPI (đã kiểm tra 2026-11-18, pip: No matching distribution).
+# Cài từ nguồn GitHub theo hướng dẫn của dự án EMBER2024 (feature version 3, 2568 đặc trưng) rồi ghim commit khi chốt trên VM.
+# Lưu ý: thư viện oscrypto (phụ thuộc của signify) từng lỗi với OpenSSL 3.x hai chữ số khi train trên Kaggle; chưa kiểm tra trên Windows.
