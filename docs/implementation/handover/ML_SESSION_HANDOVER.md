@@ -17,8 +17,8 @@ Mọi kết luận dưới đây có nguồn là file trong repo hoặc số đo
 ## 2. Trạng thái repo
 
 - Nhánh: `claude_implement`. Commit mới nhất đã push: `8d60e8f` `feat(ai-scoring): thêm mô hình PE tĩnh EMBER2024 (Dot_Net, Win64) ở trạng thái nháp`. Trước đó `685b3c7` (mức phần mềm).
-- Commit `6f4c7e2` thêm `CLAUDE.md` (mục 2, 3.1, kết quả test) và file này; commit sau đó thêm `scripts/ml/kaggle/`. Kiểm tra bằng `git log --oneline -5`.
-- Test (Linux, 2026-11-18): `python -m pytest -q` → 233 pass, 1 skipped, 0 fail. Test skipped là `tests/detection/test_ember2024_models.py` khi không có `lightgbm`; có `lightgbm` thì 6 test pass.
+- Commit `6f4c7e2` thêm `CLAUDE.md` (mục 2, 3.1, kết quả test) và file này; `8051f37` thêm `scripts/ml/kaggle/`; `d6ff78a` thêm bộ chấm điểm tĩnh nháp, `requirements-ml.txt` và cập nhật `CLAUDE.md`, `ML_EMBER2024_MODELS.md`. Kiểm tra bằng `git log --oneline -5`.
+- Test (Linux, 2026-11-18): `python -m pytest -q` → 251 pass, 0 fail (có `lightgbm` 4.7.0; gồm 12 test bộ chấm điểm và 6 test mô hình). Không có `lightgbm` thì `tests/detection/test_ember2024_models.py` bị bỏ qua (1 skipped; con số này suy ra, không đo riêng). Môi trường phiên mới có thể thiếu `duckdb`/`fastapi`/`httpx`: chạy `pip install -r requirements.txt` trước, nếu không pytest báo 15 lỗi collection (không phải lỗi mã).
 - Nghiệm thu AT (2026-11-09, chưa chạy lại): 28 PASS, 1 PARTIAL, 0 FAIL, 14 NOT RUN (mức Windows). Mọi thứ trên Windows thật chưa được chạy.
 
 ## 3. Phần ML đã làm
@@ -49,10 +49,10 @@ Hướng đã chọn: **Hướng B** = bộ phân loại PE tĩnh huấn luyện
 
 ## 5. Chưa có / chưa được duyệt
 
-- Bộ chấm điểm tĩnh: đọc tệp trong thư mục cho phép, chọn mô hình theo loại (Win32/Win64/.NET), trích đặc trưng bằng `thrember`, nạp qua loader. Chưa có.
+- Bộ chấm điểm tĩnh: **đã có bản nháp** `src/detection/ml/static_scorer.py` (chạy theo yêu cầu; chỉ đọc tệp trong `allowed_dirs`, chọn mô hình theo header PE, nạp qua loader, lỗi ⇒ `INSUFFICIENT_TELEMETRY` kèm `reason`; kết quả nội bộ `StaticScoreResult`, chưa phải `DetectionResult`; `threshold` mặc định `None`). Mô tả: `ML_EMBER2024_MODELS.md` mục 5.1. **Chưa nối vào Detection Engine, chưa lưu kết quả.** Đường trích đặc trưng `thrember` thật **chưa được chạy** ở đâu (test dùng extractor/predictor giả); `thrember` không có trên PyPI (kiểm tra 2026-11-18). Chưa đo thời gian mỗi tệp/RAM; `max_bytes` 64 MiB là giá trị tạm; chưa có giới hạn thời gian trích đặc trưng; Win32 ⇒ `NO_MODEL_FOR_KIND`.
 - Ngưỡng cho DACN phải đo trên tệp lành tính của VM; thời gian mỗi tệp và RAM trên VM 2 GB chưa đo. Chưa có phép đo ML nào trên Windows.
 - `DetectionResult`, hợp đồng dữ liệu của điểm ML, phạm vi "static scoring" cần Cyber/Data duyệt. Tệp không đọc được ⇒ `INSUFFICIENT_TELEMETRY`.
-- `lightgbm` chưa nằm trong `requirements.txt` (chờ quyết định).
+- Đã quyết định: `lightgbm` và phụ thuộc ML nằm ở `requirements-ml.txt` (tùy chọn), **không** thêm vào `requirements.txt`. Cài `thrember` từ GitHub theo hướng dẫn EMBER2024 (chưa thử trên Windows; `oscrypto` từng lỗi với OpenSSL 3.x trên Kaggle).
 - Win32 và các loại khác (APK, ELF, PDF) chưa huấn luyện.
 - Hướng A (mô hình hành vi trên Silver/`gold_process_features`) chờ dữ liệu lành tính từ VM và hợp đồng đặc trưng ML-T01 từ nhóm Data (backlog ML-T01..T07 trong `docs/implementation/EDR_TASK_BACKLOG.md`).
 - Phần việc ngoài ML người dùng phải tự làm trên Windows VM: xem `docs/implementation/EDR_INSTALL_GUIDE.md` và `docs/implementation/handover/USER_GUIDE.md`.
@@ -60,9 +60,9 @@ Hướng đã chọn: **Hướng B** = bộ phân loại PE tĩnh huấn luyện
 ## 6. Những việc tiếp theo khả dĩ (chỉ làm khi người dùng chọn)
 
 1. Commit `CLAUDE.md` và tài liệu bàn giao này (người dùng chưa yêu cầu).
-2. Thiết kế bộ chấm điểm tĩnh và test với tệp lành tính của VM (cần duyệt phạm vi và schema; cần người dùng chạy trên Windows).
+2. Bộ chấm điểm tĩnh: cài `thrember` và chạy thử trên tệp lành tính của VM để đo thời gian/RAM và đặt ngưỡng (người dùng chạy trên Windows); xin Cyber/Data duyệt dạng `DetectionResult`, cách kích hoạt (theo sự kiện hay theo yêu cầu) và nơi lưu điểm trước khi nối vào engine.
 3. Chạy lại Win32 với notebook bản mới, hoặc dùng mô hình công bố sẵn làm mốc.
-4. Quyết định `lightgbm` trong `requirements.txt` và vị trí đặt phụ thuộc ML.
+4. (Đã xong) Quyết định `lightgbm`: dùng `requirements-ml.txt`.
 5. Hướng A khi có dữ liệu VM.
 
 ## 7. Nơi chứa các thứ không nằm trong repo
