@@ -225,18 +225,19 @@ class SilverValidatorEngine:
         data_block = raw_record.get("data") or {}
 
         hostname = str(raw_record.get("hostname") or "").strip()
-        channel = str(
-            raw_record.get("channel") or "Microsoft-Windows-Sysmon/Operational"
-        ).strip()
+        # channel thuộc khóa tự nhiên (ADR 0001): thiếu thì quarantine, KHÔNG điền mặc định (Zero Data Fabrication)
+        channel = str(raw_record.get("channel") or "").strip()
 
-        if not hostname:
-            self._quarantine(
-                "ERR_MISSING_NATURAL_KEY",
-                "Missing mandatory field 'hostname' (System.Computer)",
-                source_ref,
-                raw_record,
-            )
-            return False
+        for field_name, value, label in (("hostname", hostname, "System.Computer"),
+                                         ("channel", channel, "System.Channel")):
+            if not value:
+                self._quarantine(
+                    "ERR_MISSING_NATURAL_KEY",
+                    f"Missing mandatory field '{field_name}' ({label})",
+                    source_ref,
+                    raw_record,
+                )
+                return False
 
         try:
             record_id = int(raw_record.get("record_id"))
@@ -618,7 +619,17 @@ class SilverValidatorEngine:
                 )
                 return False
 
-            protocol = str(data.get("protocol") or raw_data.get("Protocol") or "TCP").upper()
+            # Hợp đồng W5 (data_pipeline_architecture_and_contracts_v1 Bảng 4, validation ràng buộc 9): protocol BẮT BUỘC
+            # với ID 3 và thuộc {TCP, UDP}. Thiếu/sai thì quarantine, KHÔNG tự điền 'TCP' (Zero Data Fabrication).
+            protocol = str(data.get("protocol") or raw_data.get("Protocol") or "").strip().upper()
+            if protocol not in ("TCP", "UDP"):
+                self._quarantine(
+                    "ERR_NET_INVALID_IP_OR_PORT",
+                    f"Missing or invalid Protocol in Sysmon Event ID 3: {protocol or None!r}",
+                    source_ref,
+                    raw_record,
+                )
+                return False
             initiated = str(raw_data.get("Initiated") or "").lower()
             direction = data.get("direction") or (
                 "OUTBOUND" if initiated == "true" else "INBOUND"
@@ -674,7 +685,7 @@ class SilverValidatorEngine:
                 "pid": pid,
                 "image_path": image_path,
                 "user_name": raw_data.get("User"),
-                "protocol": "UDP",
+                "protocol": "UDP",       # mặc định do hợp đồng W5 Bảng 4 quy định cho ID 22 (Sysmon không ghi trường này)
                 "direction": "OUTBOUND",
                 "ip_version": None,
                 "src_ip": None,

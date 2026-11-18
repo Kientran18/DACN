@@ -176,6 +176,7 @@ class TestDataPipelineW05(unittest.TestCase):
             bad_rec = {
                 "timestamp": "2026-10-18T09:12:00Z",
                 "sysmon_event_id": 1,
+                "channel": "Microsoft-Windows-Sysmon/Operational",  # U3: thiếu channel nay bị chặn sớm hơn (khóa tự nhiên)
                 "record_id": 90001,
                 "hostname": "DESKTOP-IDEMGQU",
                 "process_guid": "",
