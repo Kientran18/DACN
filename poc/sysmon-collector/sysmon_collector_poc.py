@@ -80,7 +80,7 @@ def parse_hashes(value: Optional[str]) -> dict:
 def _parse_event_element(ev: ET.Element) -> dict:
     system = ev.find("e:System", NS)
     if system is None:
-        raise ValueError("Event XML has no <System> element")
+        raise ValueError("C-002 Event XML has no <System> element")
 
     def text(tag: str) -> Optional[str]:
         node = system.find(f"e:{tag}", NS)
