@@ -11,7 +11,7 @@
 
 | Hạng mục | Kết quả (2026-11-08; chạy lại 2026-11-09 sau `36ee751`; chạy lại 2026-11-18 sau audit) |
 |---|---|
-| Toàn bộ pytest | 260 pass, 0 fail khi có `lightgbm`; 254 pass, 1 skipped khi không có (Linux, 2026-11-18, đo cả hai). Lịch sử: 201 → 213 sau `36ee751` → 233 (2026-11-09) → 251 sau ML → 260 sau audit 2026-11-18 |
+| Toàn bộ pytest | 284 pass, 0 fail khi có `lightgbm`; 278 pass, 1 skipped khi không có (Linux, 2026-11-18, đo cả hai). Lịch sử: 201 → 213 sau `36ee751` → 233 (2026-11-09) → 251 sau ML → 260 sau audit đợt 1 → 284 sau sửa U2–U8 (2026-11-18) |
 | Nghiệm thu AT-01…43 mức L | 28 PASS · 1 PARTIAL · 0 FAIL · 14 NOT RUN (chạy lại 2026-11-18, không đổi) |
 | Hai lỗi baseline của PH1 | Đã sửa và chạy lại (`C-002`; entropy test dùng giá trị đã biết) |
 

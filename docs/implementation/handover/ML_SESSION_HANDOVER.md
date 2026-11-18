@@ -18,7 +18,7 @@ Mọi kết luận dưới đây có nguồn là file trong repo hoặc số đo
 
 - Nhánh: `claude_implement`. Commit mới nhất đã push: `8d60e8f` `feat(ai-scoring): thêm mô hình PE tĩnh EMBER2024 (Dot_Net, Win64) ở trạng thái nháp`. Trước đó `685b3c7` (mức phần mềm).
 - Commit `6f4c7e2` thêm `CLAUDE.md` (mục 2, 3.1, kết quả test) và file này; `8051f37` thêm `scripts/ml/kaggle/`; `d6ff78a` thêm bộ chấm điểm tĩnh nháp, `requirements-ml.txt` và cập nhật `CLAUDE.md`, `ML_EMBER2024_MODELS.md`. Kiểm tra bằng `git log --oneline -5`.
-- Test (Linux, 2026-11-18, sau audit): `python -m pytest -q` → 260 pass, 0 fail (có `lightgbm` 4.7.0; gồm 12 test bộ chấm điểm và 6 test mô hình). Không có `lightgbm`: 254 pass, 1 skipped (`tests/detection/test_ember2024_models.py`); cả hai đều đã đo. Môi trường phiên mới có thể thiếu `duckdb`/`fastapi`/`httpx`: chạy `pip install -r requirements.txt` trước, nếu không pytest báo 15 lỗi collection (không phải lỗi mã).
+- Test (Linux, 2026-11-18, sau audit): `python -m pytest -q` → 284 pass, 0 fail (có `lightgbm` 4.7.0; gồm 12 test bộ chấm điểm và 6 test mô hình). Không có `lightgbm`: 278 pass, 1 skipped (`tests/detection/test_ember2024_models.py`); cả hai đều đã đo. Môi trường phiên mới có thể thiếu `duckdb`/`fastapi`/`httpx`: chạy `pip install -r requirements.txt` trước, nếu không pytest báo 15 lỗi collection (không phải lỗi mã).
 - Nghiệm thu AT (2026-11-09, chưa chạy lại): 28 PASS, 1 PARTIAL, 0 FAIL, 14 NOT RUN (mức Windows). Mọi thứ trên Windows thật chưa được chạy.
 
 ## 3. Phần ML đã làm
