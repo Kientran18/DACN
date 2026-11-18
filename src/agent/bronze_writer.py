@@ -121,30 +121,40 @@ def verify_segment(seg: Path) -> List[str]:
 
 
 def recover_dir(directory: Path) -> List[dict]:
-    """Xử lý `.part` mồ côi sau crash: cắt dòng dở, seal phần hợp lệ; rỗng → quarantine/."""
+    """Xử lý `.part` mồ côi sau crash: seal mọi dòng JSON hợp lệ; dòng hỏng (dòng dở ở cuối, hoặc hỏng giữa tệp)
+    được chuyển nguyên byte vào quarantine/<tên>.invalid, không xóa. Không còn dòng hợp lệ -> cả tệp vào quarantine/."""
     d = Path(directory)
     report = []
     for part in sorted(d.glob("*.jsonl.part")):
-        good, first, last, truncated = [], None, None, False
-        for raw in part.read_bytes().splitlines(keepends=True):
+        good, bad, first, last, bad_not_tail = [], [], None, None, False
+        lines = part.read_bytes().splitlines(keepends=True)
+        for i, raw in enumerate(lines):
             try:
                 if not raw.endswith(b"\n"):
                     raise ValueError("no newline")
                 rec = json.loads(raw)
-                good.append(raw)
-                first = first or rec["record_id"]
-                last = rec["record_id"]
-            except (ValueError, KeyError):
-                truncated = True
-                break
+                rid = rec["record_id"]
+            except (ValueError, KeyError, TypeError):
+                bad.append(raw)
+                bad_not_tail = bad_not_tail or i < len(lines) - 1
+                continue
+            good.append(raw)
+            first = first or rid
+            last = rid
+        q = d / "quarantine"
         if not good:
-            q = d / "quarantine"
             q.mkdir(exist_ok=True)
             os.replace(part, q / part.name)
-            report.append({"file": part.name, "reason": "R-EMPTY_PART", "records": 0})
+            report.append({"file": part.name, "reason": "R-EMPTY_PART", "records": 0, "invalid_lines": len(bad)})
             continue
+        if bad:
+            q.mkdir(exist_ok=True)
+            with (q / (part.name + ".invalid")).open("ab") as f:
+                f.write(b"".join(bad))
+                f.flush()
+                os.fsync(f.fileno())
         part.write_bytes(b"".join(good))
         _finalize(part, len(good), first, last)
-        report.append({"file": part.name, "records": len(good),
-                       "reason": "R-TRUNCATED_TAIL" if truncated else "R-SEALED_ORPHAN"})
+        reason = "R-INVALID_LINES" if bad_not_tail else ("R-TRUNCATED_TAIL" if bad else "R-SEALED_ORPHAN")
+        report.append({"file": part.name, "records": len(good), "invalid_lines": len(bad), "reason": reason})
     return report

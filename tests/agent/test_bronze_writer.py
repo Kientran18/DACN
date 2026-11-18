@@ -107,3 +107,22 @@ def test_unreadable_manifest_is_an_error_code_not_an_exception(tmp_path):
     w = BronzeWriter(tmp_path); w.append(recs(1)[0]); seg = w.seal()
     seg.with_suffix(".manifest.json").write_text('{"segment": "x", "sha2')   # ghi dở
     assert verify_segment(seg) == ["V-MANIFEST_UNREADABLE"]
+
+
+def test_recover_keeps_valid_lines_after_corrupt_middle_line_and_preserves_bad_bytes(tmp_path):
+    """U8 (audit): dòng hỏng ở GIỮA tệp .part không được làm mất âm thầm các bản ghi hợp lệ phía sau;
+    byte hỏng được giữ trong quarantine/ (không xóa) và báo cáo nêu số dòng hỏng."""
+    w = BronzeWriter(tmp_path)
+    for r in recs(3):
+        w.append(r)
+    w.flush()
+    w._fh.close()
+    part = next(tmp_path.glob("*.part"))
+    lines = part.read_bytes().splitlines(keepends=True)
+    part.write_bytes(lines[0] + b'{"broken\n' + lines[1] + lines[2] + b'{"tail')
+    report = recover_dir(tmp_path)
+    assert report[0]["records"] == 3 and report[0]["invalid_lines"] == 2 and report[0]["reason"] == "R-INVALID_LINES"
+    seg = next(tmp_path.glob("*.jsonl"))
+    assert verify_segment(seg) == [] and seg.read_bytes() == b"".join(lines)
+    kept = (tmp_path / "quarantine" / (part.name + ".invalid")).read_bytes()
+    assert kept == b'{"broken\n{"tail'
