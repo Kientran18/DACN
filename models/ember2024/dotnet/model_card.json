@@ -1,0 +1,31 @@
+{
+ "model_version": "ember2024-dotnet-5ecd93c6",
+ "feature_schema_version": "thrember-v3-2568",
+ "artifact_file": "ember2024_dotnet.txt",
+ "artifact_sha256": "5ecd93c62b82736795b6bc02d636f14e338a6aca0b620f259c6edf1fc03086c9",
+ "status": "DRAFT_CHUA_DUYET",
+ "loai_file": "Dot_Net",
+ "nguon_du_lieu": "HF joyce8/EMBER2024 (apache-2.0)",
+ "danh_gia_ember2024": {
+  "auc_test": 0.9979985333333333,
+  "n_test": 120000,
+  "ty_le_doc_hai_test": 0.5,
+  "thr_fpr_0.01": 0.9175136961393191,
+  "tpr_tai_fpr_0.01": 0.9585,
+  "thr_fpr_0.001": 0.9979104465363691,
+  "tpr_tai_fpr_0.001": 0.8294666666666667,
+  "precision_thr0.5": 0.9755412328540737,
+  "recall_thr0.5": 0.9838333333333333
+ },
+ "n_train": 468000,
+ "phien_ban": {
+  "python": "3.13.18",
+  "lightgbm": "4.6.0",
+  "numpy": "2.1.3",
+  "pefile": "2024.8.26",
+  "signify": "0.8.1",
+  "polars": "1.35.2",
+  "scikit-learn": "1.6.1"
+ },
+ "luu_y": "Chỉ phản ánh EMBER2024 (test tách theo thời gian). Không phải chất lượng phát hiện của DACN; ngưỡng cho DACN phải đo trên tệp lành tính của VM."
+}
