@@ -83,3 +83,16 @@ def test_logs_are_captured(ctl):
     ctl.stop(timeout=5)
     assert (ctl.log_dir / "core.log").exists()
     assert isinstance(ctl.logs("core"), str)
+
+
+def test_pid_alive_on_windows_never_uses_os_kill_signal_0(monkeypatch):
+    """U2 (audit): trên Windows, os.kill(pid, 0) là CTRL_C_EVENT (gửi Ctrl+C), không phải phép kiểm tra.
+    pid_alive phải hỏi trạng thái qua API Windows và không bao giờ gọi os.kill."""
+    import edr_ctl as ec
+
+    def boom(*a, **k):
+        raise AssertionError("os.kill không được gọi trên Windows")
+    monkeypatch.setattr(ec, "_IS_WINDOWS", True)
+    monkeypatch.setattr(ec.os, "kill", boom)
+    monkeypatch.setattr(ec, "_win_pid_alive", lambda pid: pid == 1234)
+    assert ec.pid_alive(1234) is True and ec.pid_alive(999) is False

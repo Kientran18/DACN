@@ -15,6 +15,7 @@ from typing import Dict, List, Optional
 ROOT = Path(__file__).resolve().parents[1]
 PY_PATH = [ROOT / "src", ROOT / "src" / "pipeline", ROOT / "poc" / "sysmon-collector"]
 ORDER = ["core", "agent", "responder"]       # khởi động core trước; dừng ngược lại
+_IS_WINDOWS = sys.platform == "win32"
 
 
 def default_commands(cfg_path: Optional[Path], agent_args: List[str]) -> Dict[str, List[str]]:
@@ -24,7 +25,32 @@ def default_commands(cfg_path: Optional[Path], agent_args: List[str]) -> Dict[st
             "responder": [sys.executable, "-m", "response", *c]}
 
 
+def _win_pid_alive(pid: int) -> bool:
+    """Windows: hỏi trạng thái qua OpenProcess + GetExitCodeProcess. CHƯA kiểm chứng trên Windows thật."""
+    import ctypes
+    from ctypes import wintypes
+    k = ctypes.WinDLL("kernel32", use_last_error=True)
+    k.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    k.OpenProcess.restype = wintypes.HANDLE
+    k.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+    k.GetExitCodeProcess.restype = wintypes.BOOL
+    k.CloseHandle.argtypes = [wintypes.HANDLE]
+    h = k.OpenProcess(0x1000, False, pid)            # PROCESS_QUERY_LIMITED_INFORMATION
+    if not h:
+        return ctypes.get_last_error() == 5           # ACCESS_DENIED: tiến trình tồn tại nhưng không mở được
+    try:
+        code = wintypes.DWORD()
+        if not k.GetExitCodeProcess(h, ctypes.byref(code)):
+            return True                                # không đọc được trạng thái: coi như còn chạy (không xóa pidfile nhầm)
+        return code.value == 259                       # STILL_ACTIVE
+    finally:
+        k.CloseHandle(h)
+
+
 def pid_alive(pid: int) -> bool:
+    # Trên Windows os.kill(pid, 0) là signal.CTRL_C_EVENT (gửi Ctrl+C), KHÔNG phải phép kiểm tra tồn tại.
+    if _IS_WINDOWS:
+        return _win_pid_alive(pid)
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
