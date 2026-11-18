@@ -48,3 +48,17 @@ def test_threshold_is_required(tmp_path):
     st = SilverStore(tmp_path / "s.duckdb")
     with pytest.raises(ValueError):
         plan_retention(tmp_path, st.con, raw_days=0)
+
+
+@pytest.mark.parametrize("manifest", [{"sealed_at": None}, {"sealed_at": 123}, ["không phải mapping"],
+                                      {"sealed_at": "2020-01-01T00:00:00"}])   # thiếu múi giờ: không xác định được tuổi
+def test_corrupt_manifest_is_unknown_not_crash(tmp_path, manifest):
+    """B3 (audit): manifest hỏng phải vào 'unknown' (KHÔNG dọn) như docstring, không được làm crash cả báo cáo."""
+    st = SilverStore(tmp_path / "s.duckdb")
+    seg(tmp_path, "seg-ok.jsonl", 40)
+    bad = tmp_path / "seg-bad.jsonl"
+    bad.write_text("{}\n", encoding="utf-8")
+    bad.with_suffix(".manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    rep = plan_retention(tmp_path, st.con, raw_days=30, now=NOW)
+    assert [u["segment"] for u in rep["unknown"]] == ["seg-bad.jsonl"]
+    assert [c["segment"] for c in rep["would_delete"]] == ["seg-ok.jsonl"]
