@@ -173,6 +173,24 @@ def test_timeline_orders_and_reports_skew_and_tree_flags_partial_ancestry(tmp_pa
     assert tree["coverage_status"] == "PARTIAL_ANCESTRY"
 
 
+def test_process_tree_cut_at_max_depth_is_not_reported_full(tmp_path):
+    """U5 (audit): chuỗi tổ tiên/con cháu bị cắt ở max_depth không được báo FULL như thể đã đủ."""
+    g = lambda i: f"bbbbbbbb-0000-0000-0000-{i:012d}"
+    zero = "00000000-0000-0000-0000-000000000000"
+    rows = [{"id": f"p{i}", "table": "process", "process_guid": g(i), "parent_guid": g(i - 1) if i else zero,
+             "timestamp": f"2026-01-01T10:00:{i:02d}+00:00", "record_id": 700 + i} for i in range(6)]
+    st = silver_with_rows(tmp_path, rows)
+    full = process_tree(st.con, g(3))                     # đủ sâu: chuỗi về tới GUID 0
+    assert full["coverage_status"] == "FULL" and len(full["ancestors"]) == 3
+    assert full["ancestors_truncated"] is False and full["descendants_truncated"] is False
+    cut = process_tree(st.con, g(3), max_depth=2)         # tổ tiên p0 và con cháu p5 nằm ngoài giới hạn
+    assert [n["process_guid"] for n in cut["ancestors"]] == [g(2), g(1)]
+    assert cut["coverage_status"] == "PARTIAL_ANCESTRY" and cut["ancestors_truncated"] is True
+    assert [d["process_guid"] for d in process_tree(st.con, g(3), max_depth=1)["descendants"]] == [g(4)]
+    assert process_tree(st.con, g(3), max_depth=1)["descendants_truncated"] is True
+    assert process_tree(st.con, g(3), max_depth=2)["descendants_truncated"] is False
+
+
 def test_state_change_and_audit_are_one_transaction(tmp_path, monkeypatch):
     st, store, rules, results = alerts_for(tmp_path)
     aid = build_from_results(store, rules, results, st.con)["alerts"][0]

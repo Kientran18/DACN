@@ -31,7 +31,8 @@ def _proc(con, guid: str):
 
 
 def process_tree(con, process_guid: str, max_depth: int = 12) -> Dict:
-    """Tổ tiên (từ gần đến xa) và con cháu. PARTIAL_ANCESTRY nếu một tổ tiên không có Event 1 trong Silver."""
+    """Tổ tiên (từ gần đến xa) và con cháu. PARTIAL_ANCESTRY nếu một tổ tiên không có Event 1 trong Silver
+    hoặc chuỗi tổ tiên bị cắt ở max_depth (ancestors_truncated). descendants_truncated: còn con cháu sâu hơn max_depth."""
     node = _proc(con, process_guid)
     ancestors, status, seen = [], "FULL", {process_guid}
     cur_guid = node["parent_guid"] if node else None
@@ -46,6 +47,9 @@ def process_tree(con, process_guid: str, max_depth: int = 12) -> Dict:
             status = "PARTIAL_ANCESTRY"; break
         ancestors.append(p)
         cur_guid = p["parent_guid"]
+    ancestors_truncated = bool(status == "FULL" and cur_guid and cur_guid != _ZERO_GUID)   # dừng vì chạm max_depth
+    if ancestors_truncated:
+        status = "PARTIAL_ANCESTRY"
     descendants, frontier = [], [process_guid]
     for depth in range(1, max_depth + 1):
         nxt = []
@@ -60,4 +64,7 @@ def process_tree(con, process_guid: str, max_depth: int = 12) -> Dict:
         frontier = nxt
         if not frontier:
             break
-    return {"process": node, "ancestors": ancestors, "descendants": descendants, "coverage_status": status}
+    descendants_truncated = any(con.execute("select 1 from silver_process_events where parent_guid=? and sysmon_event_id=1 "
+                                            "limit 1", [g]).fetchone() for g in frontier)
+    return {"process": node, "ancestors": ancestors, "descendants": descendants, "coverage_status": status,
+            "ancestors_truncated": ancestors_truncated, "descendants_truncated": descendants_truncated}
