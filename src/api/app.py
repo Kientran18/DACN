@@ -53,10 +53,14 @@ class NoteIn(BaseModel):
 
 
 class ActionIn(BaseModel):
-    action_type: Literal["TERMINATE_PROCESS", "QUARANTINE_FILE", "RESTORE_FILE"]
+    action_type: Literal["TERMINATE_PROCESS", "QUARANTINE_FILE", "RESTORE_FILE", "ADD_WHITELIST", "REMOVE_WHITELIST"]
     target: Dict[str, Any]
     requested_mode: Literal["dry_run", "execute"]
     alert_id: Optional[str] = Field(default=None, max_length=64)
+
+
+if set(ActionIn.model_fields["action_type"].annotation.__args__) != ACTION_TYPES:   # giữ API khớp policy
+    raise RuntimeError("ActionIn.action_type lệch response.policy.ACTION_TYPES")
 
 
 class ReasonIn(BaseModel):

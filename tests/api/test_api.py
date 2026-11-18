@@ -45,7 +45,7 @@ def ctx(tmp_path):
     out = build_from_results(store, rules, results, st.con)
     cfg = Config(home=tmp_path)
     tokens = TokenStore({hash_token(t): {"role": r, "actor": f"user-{r}"} for r, t in TOK.items()})
-    policy = Policy(mode="dry_run", execute_unlocked=False, allowed_actions={"TERMINATE_PROCESS", "QUARANTINE_FILE", "RESTORE_FILE"},
+    policy = Policy(mode="dry_run", execute_unlocked=False, allowed_actions={"TERMINATE_PROCESS", "QUARANTINE_FILE", "RESTORE_FILE", "ADD_WHITELIST", "REMOVE_WHITELIST"},
                     protected_process_names=set(), protected_dirs=[], lab_dirs=[tmp_path / "lab"],
                     quarantine_dir=tmp_path / "lab" / "q")
     app = create_app(cfg, tokens, store=st, rules=rules, policy=policy, bronze_dir=bdir)
@@ -197,6 +197,21 @@ def test_response_request_approve_and_role_separation(ctx):
     assert cl(ctx, "approver").post(f"/response/actions/{aid}/approve", json={"reason": "lần hai"}).status_code == 409
     assert cl(ctx, "analyst").post("/response/actions", json={**body, "action_type": "FORMAT_DISK"}).status_code == 422
     assert cl(ctx, "approver").post("/response/actions", json={**body, "requested_mode": "yolo"}).status_code == 422
+
+
+def test_whitelist_actions_can_be_requested_via_api(ctx):
+    """B1 (audit): dashboard và policy hỗ trợ ADD/REMOVE_WHITELIST nhưng API từng trả 422 E-VALIDATION cho action_type."""
+    sha = "ab" * 32
+    r = cl(ctx, "analyst").post("/response/actions", json={"action_type": "ADD_WHITELIST", "requested_mode": "dry_run",
+                                                            "target": {"sha256": sha, "reason": "phần mềm nội bộ"}})
+    assert r.status_code == 200 and r.json()["status"] == "REQUESTED"
+    r = cl(ctx, "analyst").post("/response/actions", json={"action_type": "REMOVE_WHITELIST", "requested_mode": "dry_run",
+                                                            "target": {"sha256": sha}})
+    assert r.status_code == 200
+    # cổng policy vẫn áp dụng: thiếu lý do thì bị từ chối ngay khi yêu cầu
+    r = cl(ctx, "analyst").post("/response/actions", json={"action_type": "ADD_WHITELIST", "requested_mode": "dry_run",
+                                                            "target": {"sha256": sha}})
+    assert r.status_code == 422 and "P-REASON_REQUIRED" in r.json()["error"]["message"]
 
 
 def test_reject_needs_reason(ctx):
