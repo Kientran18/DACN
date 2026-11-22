@@ -3,6 +3,8 @@
   python tests/e2e/compare_expected.py --manifest lab_run_X.json --silver silver.duckdb \
       [--bronze DIR] [--ioc ioc.yaml] [--out report.md]
 
+Không bao giờ ghi vào file Silver có sẵn: làm việc trên bản sao tạm (xem compare()). --bronze nạp vào bản sao đó.
+
 Trạng thái: PASS / FAIL / NOT RUN / OBSERVED. Không suy ra điều chưa chạy; kịch bản không có trong manifest = NOT RUN.
 Chạy được trên fixture lưu sẵn (Linux) và trên dữ liệu VM.
 """
@@ -13,7 +15,9 @@ import base64
 import binascii
 import json
 import re
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 from typing import Dict, List
 
@@ -107,16 +111,36 @@ def evaluate(spec: dict, sid: str, entry, con, results, ioc_given: bool) -> dict
 
 
 def compare(manifest: dict, silver: Path, bronze: Path = None, ioc: Path = None, scenarios: Path = SCENARIOS):
+    """Silver đã tồn tại có thể là DB core đang dùng: chạy phát hiện với IOC ứng viên sẽ ghi _detection_results/_detection_cursor,
+    làm core về sau không bao giờ tạo kết quả cho hash đó. Vì vậy làm việc trên BẢN SAO tạm và xóa sau khi xong.
+    Đường dẫn chưa tồn tại (không ai đang dùng) thì giữ hành vi cũ: tạo mới tại đó."""
     spec = yaml.safe_load(Path(scenarios).read_text(encoding="utf-8"))["scenarios"]
+    silver = Path(silver)
+    if not silver.exists():
+        return _compare_on(manifest, silver, spec, bronze, ioc)
+    with tempfile.TemporaryDirectory(prefix="dacn_compare_") as tmp:
+        work = Path(tmp) / silver.name
+        try:
+            for src in (silver, silver.with_name(silver.name + ".wal")):
+                if src.exists():
+                    shutil.copy2(src, Path(tmp) / src.name)
+        except OSError as exc:
+            raise RuntimeError("không sao chép được Silver để so sánh (đang bị tiến trình khác khóa?): dừng core hoặc sao chép "
+                               "thủ công rồi truyền bản sao") from exc
+        return _compare_on(manifest, work, spec, bronze, ioc)
+
+
+def _compare_on(manifest: dict, silver: Path, spec: dict, bronze, ioc):
     st = SilverStore(silver)
-    if bronze:
-        st.ingest_dir(bronze, run_id="compare")
-    DetectionEngine(st.con, ioc=IocStore(ioc) if ioc else IocStore()).run()
-    results = stored_results(st.con)
-    by_id = {s["id"]: s for s in manifest.get("scenarios", [])}
-    rows = [evaluate(sp, sid, by_id.get(sid), st.con, results, ioc is not None) for sid, sp in spec.items()]
-    st.close()
-    return rows
+    try:
+        if bronze:
+            st.ingest_dir(bronze, run_id="compare")
+        DetectionEngine(st.con, ioc=IocStore(ioc) if ioc else IocStore()).run()
+        results = stored_results(st.con)
+        by_id = {s["id"]: s for s in manifest.get("scenarios", [])}
+        return [evaluate(sp, sid, by_id.get(sid), st.con, results, ioc is not None) for sid, sp in spec.items()]
+    finally:
+        st.close()
 
 
 def to_markdown(rows: List[dict], run_id: str) -> str:
@@ -139,7 +163,11 @@ def main(argv=None) -> int:
     ap.add_argument("--out", type=Path)
     a = ap.parse_args(argv)
     manifest = json.loads(a.manifest.read_text(encoding="utf-8-sig"))
-    rows = compare(manifest, a.silver, a.bronze, a.ioc)
+    try:
+        rows = compare(manifest, a.silver, a.bronze, a.ioc)
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     md = to_markdown(rows, manifest.get("run_id", "?"))
     (a.out.write_text(md, encoding="utf-8") if a.out else print(md))
     return 1 if any(r["status"] == "FAIL" for r in rows) else 0

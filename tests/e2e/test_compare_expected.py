@@ -99,3 +99,40 @@ def test_markdown_report_has_totals(tmp_path):
     db, ioc = build(tmp_path)
     md = ce.to_markdown(ce.compare(manifest(), db, ioc=ioc), RUN)
     assert "**PASS**" in md and "không suy rộng" in md
+
+
+def test_compare_does_not_mutate_a_live_silver_db_so_core_still_alerts(tmp_path):
+    """E1 (audit): compare_expected mở thẳng file Silver được truyền vào và ghi _detection_results/_detection_cursor với IOC ứng viên.
+    Trỏ vào DB đang dùng thì core KHÔNG BAO GIỜ tạo kết quả DET-101 cho hash đó nữa (dedup_key đã có). Phải chạy trên bản sao."""
+    from detection.engine import DetectionEngine
+    from detection.ioc import IocStore
+    db, ioc = build(tmp_path)
+    st = SilverStore(db)
+    DetectionEngine(st.con).run()                                   # "core" vòng trước, chưa có IOC
+    before = (st.con.execute("select count(*) from _detection_results").fetchone()[0],
+              st.con.execute("select sig from _detection_cursor").fetchone()[0])
+    st.close()
+    assert by(ce.compare(manifest(), db, ioc=ioc))["SC04"]["status"] == "PASS"        # công cụ vẫn cho kết quả đúng
+    st = SilverStore(db)
+    after = (st.con.execute("select count(*) from _detection_results").fetchone()[0],
+             st.con.execute("select sig from _detection_cursor").fetchone()[0])
+    assert after == before, "compare_expected đã ghi vào DB gốc"
+    emitted = DetectionEngine(st.con, ioc=IocStore(ioc)).run()                         # core vòng sau, người dùng đã nạp IOC
+    assert any(r.rule_id == "DACN-DET-101" and r.outcome == "MATCH" for r in emitted), "core bị mất kết quả DET-101"
+
+
+def test_compare_on_a_new_silver_path_still_creates_it(tmp_path):
+    """Đường dẫn Silver chưa tồn tại: không ai đang dùng, giữ hành vi cũ (tạo mới và nạp --bronze vào đó)."""
+    db = tmp_path / "fresh.duckdb"
+    assert not db.exists()
+    ce.compare({"run_id": RUN, "scenarios": []}, db)
+    assert db.exists()
+
+
+def test_compare_gives_clear_error_when_live_db_cannot_be_copied(tmp_path, monkeypatch):
+    db, ioc = build(tmp_path)
+    import shutil
+    monkeypatch.setattr(shutil, "copy2", lambda *a, **k: (_ for _ in ()).throw(PermissionError("locked")))
+    import pytest
+    with pytest.raises(RuntimeError, match="sao chép"):
+        ce.compare(manifest(), db, ioc=ioc)

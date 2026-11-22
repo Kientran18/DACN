@@ -22,6 +22,7 @@ Sau đó: chạy agent live (PH2-T09) hoặc export `wevtutil` → Bronze → Si
 python tests/e2e/compare_expected.py --manifest lab_run_<runid>.json --silver silver.duckdb --bronze <thư mục bronze> [--ioc ioc_candidate_<runid>.yaml] --out report.md
 ```
 Cột "ai phát hiện" (EDR / Windows Defender / không ai) do người vận hành điền vào báo cáo.
+`compare_expected.py` không ghi vào file Silver có sẵn: nó làm việc trên bản sao tạm (nếu file đang bị core khóa và không sao chép được, nó báo lỗi và thoát mã 2; khi đó dừng core hoặc truyền một bản sao). Nếu đường dẫn `--silver` chưa tồn tại thì tạo mới ở đó.
 
 ## Danh mục kịch bản (đề xuất — chờ bạn/Cyber duyệt từng dòng)
 | ID | Hành vi vô hại | Telemetry kỳ vọng | Kỳ vọng phát hiện | Cleanup |
