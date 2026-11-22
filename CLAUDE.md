@@ -57,7 +57,7 @@ Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết qu�
 - ML: chạy bộ chấm điểm tĩnh với `thrember` thật, nối vào Detection Engine, ngưỡng đo trên tệp lành tính của VM, mô hình Win32, mô hình hành vi (Silver/Gold); mọi phép đo ML trên Windows.
 - Phê duyệt liên nhóm: DDL v1.2, schema `DetectionResult`, hostname D-07, tên event type (Q-X3), số hiệu DET-101, mã lỗi `R-*`/`A-*`, ADR 0004/0007, các schema/contract W06–W07 (`docs/architecture/w6/contracts/`, `docs/architecture/w7/contracts/`), bảng `static_candidates` và số hiệu `DACN-STATIC-001`.
 
-**Kết quả test (2026-11-22, Linux, sau audit và merge #40):** `python -m pytest -q` → 322 pass, 1 skipped, 0 fail khi có `lightgbm` (test skipped cần Windows thật, marker `windows`); 316 pass, 2 skipped khi không có `lightgbm` (thêm test nạp mô hình EMBER2024 bị bỏ qua). Cả hai con số đều đã đo. Chưa có kết quả nào trên Windows. Chạy lại trước khi tin cậy.
+**Kết quả test (2026-11-22, Linux, sau audit đợt 2 và merge #40):** `python -m pytest -q` → 395 pass, 1 skipped, 0 fail khi có `lightgbm` (test skipped cần Windows thật, marker `windows`); 389 pass, 2 skipped khi không có `lightgbm` (thêm test nạp mô hình EMBER2024 bị bỏ qua). Cả hai con số đều đã đo. Chưa có kết quả nào trên Windows. Chạy lại trước khi tin cậy.
 
 ### 3.2. TARGET ARCHITECTURE — kế hoạch, chưa được triển khai
 

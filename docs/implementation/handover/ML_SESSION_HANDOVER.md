@@ -18,8 +18,9 @@ Mọi kết luận dưới đây có nguồn là file trong repo hoặc số đo
 
 - Nhánh: `claude_implement`. Commit mới nhất đã push: `8d60e8f` `feat(ai-scoring): thêm mô hình PE tĩnh EMBER2024 (Dot_Net, Win64) ở trạng thái nháp`. Trước đó `685b3c7` (mức phần mềm).
 - Commit `6f4c7e2` thêm `CLAUDE.md` (mục 2, 3.1, kết quả test) và file này; `8051f37` thêm `scripts/ml/kaggle/`; `d6ff78a` thêm bộ chấm điểm tĩnh nháp, `requirements-ml.txt` và cập nhật `CLAUDE.md`, `ML_EMBER2024_MODELS.md`. Kiểm tra bằng `git log --oneline -5`.
-- Test (Linux, 2026-11-18, sau audit): `python -m pytest -q` → 284 pass, 0 fail (có `lightgbm` 4.7.0; gồm 12 test bộ chấm điểm và 6 test mô hình). Không có `lightgbm`: 278 pass, 1 skipped (`tests/detection/test_ember2024_models.py`); cả hai đều đã đo. Môi trường phiên mới có thể thiếu `duckdb`/`fastapi`/`httpx`: chạy `pip install -r requirements.txt` trước, nếu không pytest báo 15 lỗi collection (không phải lỗi mã).
-- Nghiệm thu AT (2026-11-09, chưa chạy lại): 28 PASS, 1 PARTIAL, 0 FAIL, 14 NOT RUN (mức Windows). Mọi thứ trên Windows thật chưa được chạy.
+- Sau đó (2026-11-18 đến 2026-11-22): hai đợt audit (nhiều commit `fix(...)`/`refactor(...)`/`docs(...)`) và merge `cc65bd6`/`6c196c7` của BuiCuongTuan (issue #40: `src/static_analysis/`, 8 endpoint `/static/*`, outbox cho engine). Chi tiết: `EDR_PROGRESS.md` mục 9.
+- Test (Linux, 2026-11-18, sau audit): `python -m pytest -q` → 395 pass, 1 skipped, 0 fail (có `lightgbm` 4.7.0, đo 2026-11-22; gồm 12 test bộ chấm điểm và 6 test mô hình; skipped = test cần Windows thật). Không có `lightgbm`: 389 pass, 2 skipped (`tests/detection/test_ember2024_models.py`); cả hai đều đã đo. Môi trường phiên mới có thể thiếu `duckdb`/`fastapi`/`httpx`: chạy `pip install -r requirements.txt` trước, nếu không pytest báo 15 lỗi collection (không phải lỗi mã).
+- Nghiệm thu AT (chạy lại 2026-11-22): 28 PASS, 1 PARTIAL, 0 FAIL, 14 NOT RUN (mức Windows). Mọi thứ trên Windows thật chưa được chạy.
 
 ## 3. Phần ML đã làm
 
@@ -54,6 +55,7 @@ Hướng đã chọn: **Hướng B** = bộ phân loại PE tĩnh huấn luyện
 - `DetectionResult`, hợp đồng dữ liệu của điểm ML, phạm vi "static scoring" cần Cyber/Data duyệt. Tệp không đọc được ⇒ `INSUFFICIENT_TELEMETRY`.
 - Đã quyết định: `lightgbm` và phụ thuộc ML nằm ở `requirements-ml.txt` (tùy chọn), **không** thêm vào `requirements.txt`. Cài `thrember` từ GitHub theo hướng dẫn EMBER2024 (chưa thử trên Windows; `oscrypto` từng lỗi với OpenSSL 3.x trên Kaggle).
 - Win32 và các loại khác (APK, ELF, PDF) chưa huấn luyện.
+- Có hai module "static" riêng: `detection/ml/static_scorer.py` (điểm ML cho PE) và `src/static_analysis/` của BuiCuongTuan (hash/entropy/header PE/pattern, candidate review, `DACN-STATIC-001`). Chưa phối hợp: khác thư mục gốc được phép đọc (`allowed_dirs` mặc định rỗng so với `<EDR_HOME>/lab`), khác kiểu kết quả. Cần thống nhất trước khi nối điểm ML vào engine.
 - Hướng A (mô hình hành vi trên Silver/`gold_process_features`) chờ dữ liệu lành tính từ VM và hợp đồng đặc trưng ML-T01 từ nhóm Data (backlog ML-T01..T07 trong `docs/implementation/EDR_TASK_BACKLOG.md`).
 - Phần việc ngoài ML người dùng phải tự làm trên Windows VM: xem `docs/implementation/EDR_INSTALL_GUIDE.md` và `docs/implementation/handover/USER_GUIDE.md`.
 
