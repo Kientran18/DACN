@@ -1,5 +1,7 @@
 # Nghiên Cứu & Khảo Sát: Mô Hình Dữ Liệu, Định Dạng Xuất Và Truy Vết Của 5 Công Cụ Trong Hệ Sinh Thái EDR
 
+> Ghi chú khử định danh (2026-11-22): tên người dùng trong các ví dụ đã thay bằng `LABUSER01` (cùng quy ước `scripts/sanitize_samples.py`). Tên máy `DESKTOP-IDEMGQU` được giữ nguyên vì là đầu vào của các ví dụ UUIDv5 và của mẫu W3 dùng trong test; chưa khử định danh.
+
 **Người thực hiện:** Huỳnh Hữu Nhật (Data Engineer)  
 **Thời điểm khảo sát:** Ngày 20/10/2026 – 23/10/2026 (Tuần 4)  
 **Mục tiêu:** Phân tích chuyên sâu mô hình dữ liệu (Data Model), định dạng xuất (Output Format), cơ chế truy vấn/API và metadata truy vết (Lineage/Correlation) của **Sysmon, Wazuh, osquery, Velociraptor và Atomic Red Team** theo đúng vai trò kiến trúc của từng công cụ.
@@ -66,10 +68,10 @@ Sysmon cung cấp bộ metadata truy vết mạnh nhất cho điểm cuối Wind
     "UtcTime": "2026-10-18 09:11:55.884",
     "ProcessGuid": "{43f71ec6-8d5b-6ad4-2601-000000000400}",
     "ProcessId": "8412",
-    "Image": "C:\\Users\\Trankien\\AppData\\Local\\Temp\\edr_poc\\EDR_POC_drop.exe",
-    "CommandLine": "\"C:\\Users\\Trankien\\AppData\\Local\\Temp\\edr_poc\\EDR_POC_drop.exe\" --silent",
-    "CurrentDirectory": "C:\\Users\\Trankien\\AppData\\Local\\Temp\\edr_poc\\",
-    "User": "DESKTOP-IDEMGQU\\Trankien",
+    "Image": "C:\\Users\\LABUSER01\\AppData\\Local\\Temp\\edr_poc\\EDR_POC_drop.exe",
+    "CommandLine": "\"C:\\Users\\LABUSER01\\AppData\\Local\\Temp\\edr_poc\\EDR_POC_drop.exe\" --silent",
+    "CurrentDirectory": "C:\\Users\\LABUSER01\\AppData\\Local\\Temp\\edr_poc\\",
+    "User": "DESKTOP-IDEMGQU\\LABUSER01",
     "IntegrityLevel": "Medium",
     "Hashes": "SHA256=C43CF46192DA061DD6169E55A0B1C2D3E4F5A6B7C8D9E0F1A2B3C4D5E6F7A8B9",
     "ParentProcessGuid": "{43f71ec6-8d5b-6ad4-2501-000000000400}",
@@ -127,7 +129,7 @@ Khi Wazuh nhận một bản ghi Sysmon, Wazuh bọc (wrap) bản ghi đó vào 
       "eventdata": {
         "processGuid": "{43f71ec6-8d5b-6ad4-2601-000000000400}",
         "processId": "8412",
-        "image": "C:\\\\Users\\\\Trankien\\\\AppData\\\\Local\\\\Temp\\\\edr_poc\\\\EDR_POC_drop.exe"
+        "image": "C:\\\\Users\\\\LABUSER01\\\\AppData\\\\Local\\\\Temp\\\\edr_poc\\\\EDR_POC_drop.exe"
       }
     }
   },
@@ -168,15 +170,15 @@ Khi Wazuh nhận một bản ghi Sysmon, Wazuh bọc (wrap) bản ghi đó vào 
   "numerics": false,
   "decorations": {
     "host_uuid": "A1B2C3D4-E5F6-7890-ABCD-1234567890AB",
-    "username": "Trankien"
+    "username": "LABUSER01"
   },
   "columns": {
     "pid": "8412",
     "parent": "5120",
     "name": "EDR_POC_drop.exe",
-    "path": "C:\\Users\\Trankien\\AppData\\Local\\Temp\\edr_poc\\EDR_POC_drop.exe",
-    "cmdline": "\"C:\\Users\\Trankien\\AppData\\Local\\Temp\\edr_poc\\EDR_POC_drop.exe\" --silent",
-    "cwd": "C:\\Users\\Trankien\\AppData\\Local\\Temp\\edr_poc\\",
+    "path": "C:\\Users\\LABUSER01\\AppData\\Local\\Temp\\edr_poc\\EDR_POC_drop.exe",
+    "cmdline": "\"C:\\Users\\LABUSER01\\AppData\\Local\\Temp\\edr_poc\\EDR_POC_drop.exe\" --silent",
+    "cwd": "C:\\Users\\LABUSER01\\AppData\\Local\\Temp\\edr_poc\\",
     "uid": "1001",
     "start_time": "1792657795"
   },
@@ -217,8 +219,8 @@ Khi Wazuh nhận một bản ghi Sysmon, Wazuh bọc (wrap) bản ghi đó vào 
   },
   "EventData": {
     "ProcessId": 8412,
-    "Image": "C:\\Users\\Trankien\\AppData\\Local\\Temp\\edr_poc\\EDR_POC_drop.exe",
-    "CommandLine": "\"C:\\Users\\Trankien\\AppData\\Local\\Temp\\edr_poc\\EDR_POC_drop.exe\" --silent"
+    "Image": "C:\\Users\\LABUSER01\\AppData\\Local\\Temp\\edr_poc\\EDR_POC_drop.exe",
+    "CommandLine": "\"C:\\Users\\LABUSER01\\AppData\\Local\\Temp\\edr_poc\\EDR_POC_drop.exe\" --silent"
   },
   "ProcessChain": [
     {"Pid": 5120, "Exe": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"}
@@ -266,7 +268,7 @@ atomic_tests:
   "attack_technique": "T1059.001",
   "test_name": "Mimikatz PowerShell Execution",
   "hostname": "DESKTOP-IDEMGQU",
-  "user": "DESKTOP-IDEMGQU\\Trankien",
+  "user": "DESKTOP-IDEMGQU\\LABUSER01",
   "runner_pid": 5120,
   "start_time_utc": "2026-10-21T14:00:01.120Z",
   "end_time_utc": "2026-10-21T14:00:04.890Z",

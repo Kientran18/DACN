@@ -1,5 +1,7 @@
 # Nghiên Cứu: Cơ Chế Suy Diễn Kiểu Dữ Liệu Registry (Registry Type Inference Heuristics)
 
+> Ghi chú khử định danh (2026-11-22): tên người dùng trong các ví dụ đã thay bằng `LABUSER01` (cùng quy ước `scripts/sanitize_samples.py`). Tên máy `DESKTOP-IDEMGQU` được giữ nguyên vì là đầu vào của các ví dụ UUIDv5 và của mẫu W3 dùng trong test; chưa khử định danh.
+
 **Người thực hiện:** Huỳnh Hữu Nhật (Data Engineer)  
 **Thời điểm:** Tuần 3 (10/2026)  
 **Mục tiêu:** Giải quyết hạn chế mất thông tin kiểu dữ liệu (data gaps) trong Sysmon Event ID 13 phục vụ luật phát hiện Persistence.
@@ -65,6 +67,6 @@ Các trường hợp kiểm thử sau đã pass 100% trong `test_sysmon_collecto
 * `DWORD (0x00000001)` $\rightarrow$ `REG_DWORD`
 * `QWORD (0x0000000000000001)` $\rightarrow$ `REG_QWORD`
 * `Binary Data` $\rightarrow$ `REG_BINARY`
-* `C:\Users\Trankien\...\EDR_POC.exe` $\rightarrow$ `STRING_UNSPECIFIED`
+* `C:\Users\LABUSER01\...\EDR_POC.exe` $\rightarrow$ `STRING_UNSPECIFIED`
 
 Giải pháp này hoàn toàn bù đắp được khoảng trống dữ liệu (Data Gaps) của Sysmon mà không gây quá tải bộ xử lý của máy trạm.

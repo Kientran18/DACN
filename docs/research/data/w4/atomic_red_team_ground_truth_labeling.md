@@ -1,5 +1,7 @@
 # Nghiên Cứu: Phân Tích Metadata Kịch Bản Atomic Red Team & Thuật Toán Gắn Nhãn Ground-Truth Theo Phả Hệ Tiến Trình
 
+> Ghi chú khử định danh (2026-11-22): tên người dùng trong các ví dụ đã thay bằng `LABUSER01` (cùng quy ước `scripts/sanitize_samples.py`). Tên máy `DESKTOP-IDEMGQU` được giữ nguyên vì là đầu vào của các ví dụ UUIDv5 và của mẫu W3 dùng trong test; chưa khử định danh.
+
 **Người thực hiện:** Huỳnh Hữu Nhật (Data Engineer)  
 **Thời điểm khảo sát:** Ngày 21/10/2026 (Tuần 4)  
 **Phiên bản & Nguồn tài liệu chính thức:**  
@@ -57,7 +59,7 @@ Khi kích hoạt kịch bản thông qua framework `Invoke-AtomicRedTeam` (Power
   "attack_technique": "T1059.001",
   "test_name": "PowerShell Drop-Execute-Connect PoC",
   "hostname": "DESKTOP-IDEMGQU",
-  "username": "DESKTOP-IDEMGQU\\Trankien",
+  "username": "DESKTOP-IDEMGQU\\LABUSER01",
   "executor": "powershell",
   "runner_pid": 5120,
   "start_time_utc": "2026-10-18T09:11:54.0000000Z",
@@ -183,7 +185,7 @@ GROUP BY process_guid, test_run_id, atomic_guid, mitre_technique_id;
 | Thứ Tự | Bảng Sự Kiện Silver | `sysmon_event_id` | `process_guid` | Hành Vi Thực Tế Trong Mẫu PoC Tuần 3 | Kết Quả Đối Chiếu Nhãn |
 | :---: | :--- | :---: | :--- | :--- | :--- |
 | 1 | `silver_process_events` | `1` | `43f71ec6-8d5b-6ad4-2501-000000000400` | Tiến trình gốc `powershell.exe` (Runner PID `5120`) kích hoạt kịch bản thử nghiệm. | **Khớp Pha 1 (Anchor Seed)** $\rightarrow$ Gán nhãn gốc. |
-| 2 | `silver_file_events` | `11` | `43f71ec6-8d5b-6ad4-2501-000000000400` | PowerShell tạo file nhị phân `C:\Users\Trankien\AppData\Local\Temp\edr_poc\..._drop.exe`. | **Khớp qua `process_guid`** của Seed $\rightarrow$ Gán nhãn File Drop. |
+| 2 | `silver_file_events` | `11` | `43f71ec6-8d5b-6ad4-2501-000000000400` | PowerShell tạo file nhị phân `C:\Users\LABUSER01\AppData\Local\Temp\edr_poc\..._drop.exe`. | **Khớp qua `process_guid`** của Seed $\rightarrow$ Gán nhãn File Drop. |
 | 3 | `silver_process_events` | `1` | `43f71ec6-8d5b-6ad4-2601-000000000400` | PowerShell spawn tiến trình con `EDR_POC_..._drop.exe` và `conhost.exe` (`parent_guid = ...2501...`). | **Khớp Pha 2 (Depth = 2)** $\rightarrow$ Lan truyền nhãn sang con. |
 | 4 | `silver_registry_events` | `13` | `43f71ec6-8d5b-6ad4-2601-000000000400` | Thao tác `SetValue` ghi giá trị `DWORD (0x00000001)` vào khóa `HKU\...\SOFTWARE\EDR_PoC\TestDword`. | **Khớp qua `process_guid` con** $\rightarrow$ Gán nhãn Registry Modification. |
 | 5 | `silver_network_events` | `3` | `43f71ec6-8d5b-6ad4-2601-000000000400` | Mở kết nối outbound TCP cổng `443` tới địa chỉ IP `172.66.147.243`. | **Khớp qua `process_guid` con** $\rightarrow$ Gán nhãn C2 Network Connect. |
