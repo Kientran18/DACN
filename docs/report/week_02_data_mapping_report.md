@@ -6,7 +6,7 @@
 
 Ánh xạ [13 MITRE techniques](../scope/selected_mitre_techniques_v1.md) do Cyber lựa chọn sang observable behavior, nguồn telemetry Windows/Sysmon, trường dùng rule detection và ứng viên trích xuất đặc trưng AI.
 
-Tài liệu bàn giao gốc: [Behavior-to-Telemetry Mapping](week_02_behavior_telemetry_mapping.md), [Windows source mapping](../research/software/w2/02-telemetry-source-mapping-table%20(1).md), [local architecture mapping](../architecture/w2/phase_1_local_data_architecture_mapping.md).
+Tài liệu bàn giao gốc: [Behavior-to-Telemetry Mapping](week_02_behavior_telemetry_mapping.md), [Windows source mapping](../research/software/w2/02-telemetry-source-mapping-table.md), [local architecture mapping](../architecture/w2/phase_1_local_data_architecture_mapping.md).
 
 ## 2. Kết quả phân tích
 
