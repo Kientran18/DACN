@@ -220,7 +220,9 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
             # agent chết thì health.json giữ nguyên "running": chỉ tuổi heartbeat mới lộ ra
             age = (datetime.now(timezone.utc) - datetime.fromisoformat(agent["heartbeat"])).total_seconds()
             agent["heartbeat_age_s"] = age
-            if agent.get("state") != "stopped" and age > 3 * agent_poll_s:
+            if agent.get("state") == "error":
+                agent["status"] = "ERROR"        # agent dừng vì lỗi ghi (C-004); không che bằng STALE
+            elif agent.get("state") != "stopped" and age > 3 * agent_poll_s:
                 agent["status"] = "STALE"
         except (OSError, ValueError, KeyError, TypeError):
             pass

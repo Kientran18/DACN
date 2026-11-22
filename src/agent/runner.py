@@ -19,6 +19,10 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+class _WriteFailure(Exception):
+    """Lỗi ghi đĩa/checkpoint (C-004), gói OSError để phân biệt với lỗi đọc nguồn."""
+
+
 class AgentRunner:
     def __init__(self, source, writer: BronzeWriter, checkpoint: Checkpoint, health_path: Path,
                  *, batch_size: int = 100, mode: str = "file", stop_file: Optional[Path] = None):
@@ -30,6 +34,7 @@ class AgentRunner:
         self.errors = Counter()
         self.written = 0
         self.last_event_at = None
+        self.failed = False          # True nếu lượt chạy gần nhất dừng vì lỗi ghi (C-004)
 
     def request_stop(self) -> None:
         self.stop_requested = True
@@ -45,9 +50,12 @@ class AgentRunner:
              "last_seal_at": self.writer.last_sealed_at,
              "events_written": self.written, "errors_by_code": dict(self.errors)}
         tmp = self.health_path.with_suffix(".tmp")
-        tmp.parent.mkdir(parents=True, exist_ok=True)
-        tmp.write_text(json.dumps(h), encoding="utf-8")
-        os.replace(tmp, self.health_path)
+        try:
+            tmp.parent.mkdir(parents=True, exist_ok=True)
+            tmp.write_text(json.dumps(h), encoding="utf-8")
+            os.replace(tmp, self.health_path)
+        except OSError:
+            pass     # đĩa lỗi: không để việc ghi health làm chết agent; heartbeat cũ sẽ bị API đánh dấu STALE
 
     def _record_error(self, code: str, xml: Optional[str], msg: str) -> None:
         self.errors[code] += 1
@@ -67,13 +75,17 @@ class AgentRunner:
             self.errors[reason] += 1
         self._health("running")
         pending_bm, in_batch, seq = None, 0, 0
+        self.failed = False
         try:
             for item in self.source.iter_events(bookmark):
                 if self._should_stop():
                     break
                 try:
                     rec = bc.build_bronze_record(item.xml, mode=self.mode, seq=seq)
-                    self.writer.append(rec)
+                    try:
+                        self.writer.append(rec)
+                    except OSError as exc:
+                        raise _WriteFailure from exc
                     self.written += 1
                     self.last_event_at = _now()
                 except ValueError as exc:
@@ -85,13 +97,27 @@ class AgentRunner:
                     in_batch = 0
                     self._health("running")
         except SourceError as exc:
-            self.errors[exc.code] += 1
+            self._record_error(exc.code, None, str(exc))       # tăng bộ đếm + dấu vết; không bịa nội dung (raw_xml = None)
+        except _WriteFailure:
+            self.failed = True
         finally:
-            if pending_bm is not None and in_batch:
-                self._commit(pending_bm)
-            self.writer.seal()
-            self._health("stopped" if final else "idle")
+            if not self.failed:
+                try:
+                    if pending_bm is not None and in_batch:
+                        self._commit(pending_bm)
+                    self.writer.seal()
+                except (_WriteFailure, OSError):
+                    self.failed = True
+            if self.failed:
+                # Hợp đồng W5 (C-004): dừng nạp, KHÔNG nâng checkpoint quá phần đã bền, cảnh báo. Không seal trên đĩa đang lỗi:
+                # bỏ segment đang mở, recover_dir ở lượt sau seal phần hợp lệ; lượt sau (--follow) tự thử lại từ checkpoint.
+                self.errors["C-004"] += 1
+                self.writer.abort()
+            self._health("error" if self.failed else ("stopped" if final else "idle"))
 
     def _commit(self, bookmark: str) -> None:
-        self.writer.flush()      # bản ghi bền trước
-        self.cp.save(bookmark)   # rồi mới tiến bookmark
+        try:
+            self.writer.flush()      # bản ghi bền trước
+            self.cp.save(bookmark)   # rồi mới tiến bookmark
+        except OSError as exc:
+            raise _WriteFailure from exc

@@ -88,3 +88,68 @@ def test_health_last_seal_at_none_before_any_seal(tmp_path):
     r = mk(tmp_path, FakeEventSource([]))
     r.run()
     assert json.loads((tmp_path / "health.json").read_text())["last_seal_at"] is None
+
+
+class _FailingWriter(BronzeWriter):
+    """Mô phỏng đĩa đầy: append thứ `fail_at` (đếm từ 1) hoặc flush ném OSError(ENOSPC)."""
+    def __init__(self, *a, fail_append_at=None, fail_flush=False, **k):
+        super().__init__(*a, **k)
+        self.n_append, self.fail_append_at, self.fail_flush = 0, fail_append_at, fail_flush
+
+    def append(self, record):
+        self.n_append += 1
+        if self.n_append == self.fail_append_at:
+            raise OSError(28, "No space left on device")
+        super().append(record)
+
+    def flush(self):
+        if self.fail_flush:
+            raise OSError(28, "No space left on device")
+        super().flush()
+
+
+def _health(tmp_path):
+    return json.loads((tmp_path / "health.json").read_text())
+
+
+def test_disk_write_failure_is_c004_stops_without_losing_events(tmp_path):
+    """N1 (audit): hợp đồng W5 (C-004): ghi đĩa thất bại -> dừng nạp, KHÔNG nâng checkpoint quá phần đã bền, có cảnh báo.
+    Trước đây run() ném OSError và health.json ghi 'stopped' với errors_by_code rỗng."""
+    w = _FailingWriter(tmp_path / "b", max_records=3, fail_append_at=3)
+    r = AgentRunner(FakeEventSource(XMLS), w, Checkpoint(tmp_path / "cp.json"), tmp_path / "health.json", batch_size=2)
+    r.run(final=False)                                            # không được ném
+    h = _health(tmp_path)
+    assert h["state"] == "error" and h["errors_by_code"].get("C-004") == 1 and r.failed is True
+    assert json.loads((tmp_path / "cp.json").read_text())["bookmark"] == "1"       # chỉ 2 bản ghi đầu đã bền
+    mk(tmp_path, FakeEventSource(XMLS)).run()                      # đĩa ổn lại: tiếp tục từ checkpoint
+    assert len(set(ids(tmp_path))) == 4                            # không mất sự kiện nào
+
+
+def test_flush_failure_does_not_advance_checkpoint(tmp_path):
+    w = _FailingWriter(tmp_path / "b", max_records=100, fail_flush=True)
+    r = AgentRunner(FakeEventSource(XMLS), w, Checkpoint(tmp_path / "cp.json"), tmp_path / "health.json", batch_size=2)
+    r.run(final=False)
+    assert not (tmp_path / "cp.json").exists() and r.failed is True and _health(tmp_path)["errors_by_code"].get("C-004", 0) >= 1
+    mk(tmp_path, FakeEventSource(XMLS)).run()
+    assert len(set(ids(tmp_path))) == 4
+
+
+def test_undecodable_xml_file_is_c003_not_a_crash(tmp_path):
+    """N1 (audit): lỗi giải mã văn bản (C-003) làm run() ném UnicodeDecodeError; hợp đồng: ghi mã lỗi và không chết."""
+    from agent.sources.file_source import FileEventSource
+    bad = tmp_path / "bad.xml"
+    bad.write_bytes(b"\x80\x81\x82 not utf-8")
+    r = mk(tmp_path, FileEventSource(bad))
+    r.run()
+    assert _health(tmp_path)["errors_by_code"] == {"C-003": 1} and r.failed is False
+    line = json.loads((tmp_path / "b" / "errors" / "collector_errors.jsonl").read_text().splitlines()[0])
+    assert line["code"] == "C-003" and line["raw_xml"] is None        # có dấu vết, không bịa nội dung
+
+
+def test_cli_exits_nonzero_on_write_failure_but_zero_when_healthy(tmp_path, monkeypatch):
+    import agent.__main__ as cli
+    monkeypatch.setenv("EDR_HOME", str(tmp_path / "home"))
+    assert cli.main(["run", "--input", str(SYN)]) == 0
+    monkeypatch.setenv("EDR_HOME", str(tmp_path / "home2"))
+    monkeypatch.setattr(cli, "BronzeWriter", lambda d: _FailingWriter(d, fail_append_at=2))
+    assert cli.main(["run", "--input", str(SYN)]) == 1

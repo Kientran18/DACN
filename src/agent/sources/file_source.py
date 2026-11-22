@@ -6,7 +6,7 @@ from typing import Iterator, Optional
 
 import bronze_contract as bc
 
-from .base import RawItem
+from .base import RawItem, SourceError
 
 
 class FileEventSource:
@@ -15,6 +15,9 @@ class FileEventSource:
 
     def iter_events(self, from_bookmark: Optional[str]) -> Iterator[RawItem]:
         start = int(from_bookmark) + 1 if from_bookmark is not None else 0
-        for i, xml in enumerate(bc.iter_raw_xml_from_file(self.path)):
-            if i >= start:
-                yield RawItem(xml, str(i))
+        try:
+            for i, xml in enumerate(bc.iter_raw_xml_from_file(self.path)):
+                if i >= start:
+                    yield RawItem(xml, str(i))
+        except UnicodeError as exc:       # hợp đồng W5: lỗi giải mã văn bản/BOM = C-003, không làm chết agent
+            raise SourceError("C-003", "không giải mã được tệp XML") from exc

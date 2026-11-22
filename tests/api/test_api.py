@@ -313,6 +313,14 @@ def test_health_flags_dead_agent_as_stale(ctx):
     assert cl(ctx, "viewer").get("/health").json()["agent"]["status"] == "REPORTED"
 
 
+def test_health_reports_agent_write_failure_as_error(ctx):
+    """N1 (audit): agent dừng vì lỗi ghi đĩa (C-004) ghi state "error"; /health phải báo ERROR để người vận hành thấy cảnh báo."""
+    _write_agent_health(ctx, 1, state="error")
+    assert cl(ctx, "viewer").get("/health").json()["agent"]["status"] == "ERROR"
+    _write_agent_health(ctx, 600, state="error")        # lỗi + heartbeat cũ: vẫn là ERROR (không bị che thành STALE)
+    assert cl(ctx, "viewer").get("/health").json()["agent"]["status"] == "ERROR"
+
+
 def test_responder_does_not_leave_action_stuck_when_finish_fails(ctx):
     import httpx
     from response.backends.dryrun import DryRunBackend

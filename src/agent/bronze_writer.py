@@ -67,6 +67,16 @@ class BronzeWriter:
             self._fh.flush()
             os.fsync(self._fh.fileno())
 
+    def abort(self) -> None:
+        """Bỏ segment đang mở sau lỗi ghi (đĩa đầy, từ chối quyền): đóng handle, bỏ qua lỗi đóng, KHÔNG seal.
+        Tệp `.part` được giữ nguyên để recover_dir cắt dòng dở và seal phần hợp lệ ở lượt sau."""
+        fh, self._fh = self._fh, None
+        if fh is not None:
+            try:
+                fh.close()
+            except OSError:
+                pass
+
     def seal(self) -> Optional[Path]:
         if self._fh is None:
             return None

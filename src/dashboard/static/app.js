@@ -131,7 +131,7 @@ async function pageOverview() {
     box.append(h("p", { class: "muted", text: "Cập nhật lúc " + utc(at) + " · nguồn dữ liệu: " + (health.data_label === "SAMPLE" ? "MẪU (synthetic)" : "chưa xác nhận") }));
     box.append(h("div", { class: "grid" },
       h("div", { class: "card" }, h("h3", { text: "Agent" }), h("dl", { class: "kv" },
-        h("dt", { text: "Trạng thái" }), h("dd", {}, badge(ag.status, { UNKNOWN: "warn", STALE: "bad" }[ag.status] || "ok")),
+        h("dt", { text: "Trạng thái" }), h("dd", {}, badge(ag.status, { UNKNOWN: "warn", STALE: "bad", ERROR: "bad" }[ag.status] || "ok")),
         ag.heartbeat ? [h("dt", { text: "Heartbeat" }), h("dd", { text: utc(ag.heartbeat) + (ag.heartbeat_age_s != null ? " (" + Math.round(ag.heartbeat_age_s) + " giây trước)" : "") }), h("dt", { text: "Sự kiện ghi" }), h("dd", { text: fmt(ag.events_written) })] : [h("dt", { text: "Ghi chú" }), h("dd", { text: ag.note || "—" })])),
       h("div", { class: "card" }, h("h3", { text: "Pipeline" }), h("dl", { class: "kv" },
         h("dt", { text: "Segment đã nạp" }), h("dd", { text: fmt(pl.segments_ingested) }),
