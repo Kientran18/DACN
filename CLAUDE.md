@@ -32,30 +32,32 @@ Phân biệt rõ hai nhóm thông tin. **Không mô tả thành phần thuộc T
 
 ### 3.1. CURRENT STATE — đã triển khai và có bằng chứng
 
-Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết quả `pytest` và nghiệm thu AT ngày **2026-11-18** (Linux, Python 3.13, sau audit). Chi tiết: `docs/implementation/` (`EDR_PROGRESS.md`, `EDR_TASK_BACKLOG.md`, `handover/TEST_REPORT.md`, `handover/LIMITATIONS_AND_RISKS.md`).
+Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết quả `pytest` và nghiệm thu AT ngày **2026-11-22** (Linux, Python 3.13, sau audit và sau khi merge phần issue #40 của BuiCuongTuan). Chi tiết: `docs/implementation/` (`EDR_PROGRESS.md`, `EDR_TASK_BACKLOG.md`, `handover/TEST_REPORT.md`, `handover/LIMITATIONS_AND_RISKS.md`).
 
 | Thành phần | Vị trí | Mức độ kiểm chứng |
 |---|---|---|
 | Sysmon collector PoC, Bronze contract, adapter, validator W05 | `poc/sysmon-collector/`, `src/pipeline/validator_poc.py` | Có test; dữ liệu synthetic và mẫu lab. Bronze contract vẫn là **đề xuất**, chưa phê duyệt chéo |
 | Agent (nguồn giả/tệp/Event Log, Bronze sealed + manifest, checkpoint, recover) | `src/agent/` | Có test trên Linux; nguồn Event Log thật **chưa chạy trên Windows** |
 | Pipeline (Silver DuckDB, dedup, quarantine/DLQ, replay, ledger) | `src/pipeline/` | Có test trên Linux; dùng DDL v1.2 là **đề xuất chưa duyệt** |
-| Detection Engine (DET-001/002/003/004/010/101 bật; DET-007/008 blocked; IOC, allowlist, correlation, 4 kết quả đánh giá) | `src/detection/`, `config/` | Có test với fixture; mọi rule `synthetic_only`, chưa hiệu chỉnh, không có số liệu TP/FP/FN |
+| Detection Engine (DET-001/002/003/004/010/101 bật; DET-007/008 blocked; IOC, allowlist, correlation, 4 kết quả đánh giá). Từ issue #40: `run()` chạy trong một transaction, `_detection_outbox` bền vững (kết quả → alert → ack cùng transaction, metadata rule đóng băng), watermark theo host, `allowed_lateness_seconds` tùy chọn cho rule correlation, `process_context.py` (helper tham chiếu, chưa nối vào rule) | `src/detection/`, `config/` | Có test với fixture; mọi rule `synthetic_only`, chưa hiệu chỉnh, không có số liệu TP/FP/FN. Outbox/lateness chỉ có test fixture, không claim exactly-once streaming |
 | Alert/Incident, audit hash-chain, truy vết alert→Silver→Bronze→raw_xml | `src/alerts/` | Có test trên Linux |
 | Response Engine (mặc định `dry_run`, hai khóa execute, duyệt, quarantine/restore) | `src/response/`, `config/response-policy.yaml` | Có test với backend giả; **chưa từng thực thi hành động thật**; có ADD/REMOVE_WHITELIST (chưa chạy thật). Auto-response và block-hash nằm ở `experimental/`, chưa nối vào hệ thống |
-| API FastAPI (loopback, 4 vai trò) và Dashboard tĩnh | `src/api/`, `src/dashboard/` | Có test (kể cả Playwright) trên Linux |
+| API FastAPI (loopback, 4 vai trò) và Dashboard tĩnh. Có thêm 8 endpoint `/static/*` (phân tích tệp, candidate, knowledge) | `src/api/`, `src/dashboard/` | Có test (kể cả Playwright) trên Linux. Dashboard **chưa có** màn hình cho `/static/*` |
+| Static analysis (issue #40): quan sát byte HIỆN TẠI của tệp trong `<EDR_HOME>/lab` (SHA-256, kích thước, entropy, header PE tối thiểu, khớp pattern literal), kho knowledge có phiên bản (activate/rollback/hết hạn), kho candidate có duyệt (vai trò, CAS, audit), kết quả `DACN-STATIC-001` chỉ alert, không response | `src/static_analysis/`, `scripts/contracts/export_issue40_contracts.py`, `scripts/poc/run_issue40_demo.py`, `docs/architecture/w6/`, `docs/architecture/w7/`, `docs/research/software/w6/`, `docs/research/software/w7/` | Có test (`tests/static_analysis/`, `tests/detection/test_issue40_correlation.py`, `tests/core/test_issue40_delivery.py`: 35 pass, 1 skipped trên Linux). Tác giả báo chạy trên Windows host (Python 3.12.8, gồm test khóa tệp thật); **chưa chạy trên Windows 10 VM với Sysmon live**. Chữ ký số trả `UNAVAILABLE`. Schema/contract W06–W07 là **đề xuất chưa được Data/Cyber duyệt** |
 | Core service và launcher | `src/core/`, `src/edr_ctl.py` | Chạy nhiều tiến trình thật trên Linux; chưa trên Windows |
 | Script lab (SC01–SC07) và kiểm tra môi trường Windows | `scripts/lab/`, `scripts/windows/` | Chỉ kiểm tra tĩnh; **chưa chạy trên Windows** |
-| Mô hình ML PE tĩnh EMBER2024 (Dot_Net, Win64; **nháp**, `DRAFT_CHUA_DUYET`) và bộ chấm điểm tĩnh nháp chạy theo yêu cầu | `models/ember2024/`, `scripts/ml/train_ember2024.py`, `src/detection/ml/loader.py`, `src/detection/ml/static_scorer.py`, `requirements-ml.txt`, `docs/implementation/ML_EMBER2024_MODELS.md` | Có test nạp qua loader (`tests/detection/test_ember2024_models.py`, cần `lightgbm`, thiếu thì bỏ qua) và test bộ chấm điểm với PE synthetic, extractor/predictor giả (`tests/detection/test_static_scorer.py`). Số liệu (AUC test 0,998 và 0,999) chỉ đo trên EMBER2024, **không phải chất lượng phát hiện của DACN**; chưa nối vào Detection Engine, bộ chấm điểm chưa chạy với `thrember` thật (`thrember` không có trên PyPI), chưa có ngưỡng, kết quả chưa phải `DetectionResult`, chưa duyệt Cyber/Data. Phụ thuộc ML ở `requirements-ml.txt` (tùy chọn). Điểm ML không kích hoạt response |
+| Mô hình ML PE tĩnh EMBER2024 (Dot_Net, Win64; **nháp**, `DRAFT_CHUA_DUYET`) và bộ chấm điểm tĩnh nháp chạy theo yêu cầu | `models/ember2024/`, `scripts/ml/train_ember2024.py`, `src/detection/ml/loader.py`, `src/detection/ml/static_scorer.py`, `requirements-ml.txt`, `docs/implementation/ML_EMBER2024_MODELS.md` | Có test nạp qua loader (`tests/detection/test_ember2024_models.py`, cần `lightgbm`, thiếu thì bỏ qua) và test bộ chấm điểm với PE synthetic, extractor/predictor giả (`tests/detection/test_static_scorer.py`). Số liệu (AUC test 0,998 và 0,999) chỉ đo trên EMBER2024, **không phải chất lượng phát hiện của DACN**; chưa nối vào Detection Engine, bộ chấm điểm chưa chạy với `thrember` thật (`thrember` không có trên PyPI), chưa có ngưỡng, kết quả chưa phải `DetectionResult`, chưa duyệt Cyber/Data. Phụ thuộc ML ở `requirements-ml.txt` (tùy chọn). Điểm ML không kích hoạt response. `static_scorer.py` (ML) và `static_analysis/` (hash/entropy/pattern) là hai module tĩnh riêng, chưa phối hợp với nhau |
 | Nghiệm thu | `tests/acceptance/at_catalog.yaml`, `scripts/acceptance/run_acceptance.py`, `docs/implementation/acceptance/` | 43 AT: 28 PASS, 1 PARTIAL, 0 FAIL, 14 NOT RUN (mức W chưa chạy; chạy lại 2026-11-18) |
 
 **Chưa được chứng minh / chưa có:**
 - Mọi thứ trên Windows thật: live Event Log, `WinProcessApi`, Sysmon config, script lab, hướng dẫn cài đặt, response `execute`.
 - Chất lượng phát hiện, hiệu năng (CPU/RAM/độ trễ) trên VM 2 GB.
 - Retention xóa thật (mới có dry-run), Windows service, Gold/Feature.
+- Static analysis: chạy trên Windows 10 VM với Sysmon live, chữ ký số/offline trust provider, giao diện dashboard cho `/static/*`, nối kết quả ML với kết quả static.
 - ML: chạy bộ chấm điểm tĩnh với `thrember` thật, nối vào Detection Engine, ngưỡng đo trên tệp lành tính của VM, mô hình Win32, mô hình hành vi (Silver/Gold); mọi phép đo ML trên Windows.
-- Phê duyệt liên nhóm: DDL v1.2, schema `DetectionResult`, hostname D-07, tên event type (Q-X3), số hiệu DET-101, mã lỗi `R-*`/`A-*`, ADR 0004/0007.
+- Phê duyệt liên nhóm: DDL v1.2, schema `DetectionResult`, hostname D-07, tên event type (Q-X3), số hiệu DET-101, mã lỗi `R-*`/`A-*`, ADR 0004/0007, các schema/contract W06–W07 (`docs/architecture/w6/contracts/`, `docs/architecture/w7/contracts/`), bảng `static_candidates` và số hiệu `DACN-STATIC-001`.
 
-**Kết quả test (2026-11-18, Linux, sau audit):** `python -m pytest -q` → 284 pass, 0 fail khi có `lightgbm`; 278 pass, 1 skipped khi không có `lightgbm` (test nạp mô hình EMBER2024 bị bỏ qua). Cả hai con số đều đã đo. Chưa có kết quả nào trên Windows. Chạy lại trước khi tin cậy.
+**Kết quả test (2026-11-22, Linux, sau audit và merge #40):** `python -m pytest -q` → 322 pass, 1 skipped, 0 fail khi có `lightgbm` (test skipped cần Windows thật, marker `windows`); 316 pass, 2 skipped khi không có `lightgbm` (thêm test nạp mô hình EMBER2024 bị bỏ qua). Cả hai con số đều đã đo. Chưa có kết quả nào trên Windows. Chạy lại trước khi tin cậy.
 
 ### 3.2. TARGET ARCHITECTURE — kế hoạch, chưa được triển khai
 
@@ -81,6 +83,7 @@ Các ADR và tài liệu trạng thái chưa được chốt:
 - ADR 0004: "Quyết định đề xuất từ Data; cần minh chứng xác nhận liên nhóm"; chưa có bằng chứng review độc lập.
 - ADR 0007: **PROPOSED / chưa phê duyệt**.
 - Hợp đồng Bronze chung (`docs/architecture/w5/contracts/README.md`): **chưa được phê duyệt chéo** giữa Data, Software và Cyber.
+- Contract rule/`DetectionResult`/error (W06) và static/knowledge/candidate (W07) trong `docs/architecture/w6/contracts/`, `docs/architecture/w7/contracts/`: **đề xuất của Software, chờ Data/Cyber review** (hồ sơ: `docs/research/software/w7/03-issue-40-handoff-and-review.md`).
 
 Ưu tiên P0 trước khi gọi kiến trúc là đã hiện thực (theo v2 mục 10): (i) owner sign-off Bronze 1.0, adapter và schema theo từng loại sự kiện; (ii) lineage và identity epoch; (iii) vòng đời và kiểm thử collector trên Windows; (iv) các trường của alert contract và quyền truy cập.
 
@@ -115,7 +118,7 @@ python poc/sysmon-collector/contract_check.py --samples references/samples --out
 
 Cấu hình mẫu: `config/edr.example.yaml`, `config/response-policy.yaml`. Hướng dẫn cài đặt Windows: `docs/implementation/EDR_INSTALL_GUIDE.md` (cú pháp `set PYTHONPATH` là của cmd; PowerShell dùng `$env:PYTHONPATH`). Live mode và `--live` cần Windows, `pywin32` và quyền Administrator; **chưa kiểm chứng trên Windows**.
 
-Lệnh `pytest` và `run_acceptance.py` đã chạy lại ngày 2026-11-18; các lệnh còn lại ngày 2026-11-09, trên Linux.
+Lệnh `pytest` và `run_acceptance.py` đã chạy lại ngày 2026-11-22 (nghiệm thu không đổi: 28 PASS, 1 PARTIAL, 14 NOT RUN); các lệnh còn lại ngày 2026-11-09, trên Linux. `scripts/contracts/export_issue40_contracts.py` và `scripts/poc/run_issue40_demo.py` chưa chạy lại trong phiên này.
 
 ## 5. Mô hình import (đọc trước khi thêm module)
 
@@ -124,7 +127,7 @@ Các file Python không phải là package. Chúng import lẫn nhau bằng tên
 - `test_canonical_bronze_contract.py` import `bronze_contract`, `bronze_to_silver_adapter` và `validator_poc` bằng tên trần.
 - `tests/test_validator_poc_w5.py` và `test_canonical_bronze_contract.py` tự chèn `src/pipeline` vào `sys.path`.
 
-Các package trong `src/` (`agent`, `pipeline`, `detection`, `alerts`, `response`, `api`, `core`, `common`) là package thật nhưng không cài đặt. `api.auth`, `edr_ctl` và `detection.ml.static_scorer` chạy được với `PYTHONPATH=src`; `agent`, `pipeline`, `core`, `api`, `response` còn import `bronze_contract`, `validator_poc`… nên cần `PYTHONPATH` gồm `src`, `src/pipeline` và `poc/sysmon-collector` (như `EDR_INSTALL_GUIDE.md` mục 2; `edr_ctl start` tự đặt cho tiến trình con). Test đã được `pytest.ini`/`conftest.py` cấu hình sẵn.
+Các package trong `src/` (`agent`, `pipeline`, `detection`, `alerts`, `response`, `static_analysis`, `api`, `core`, `common`) là package thật nhưng không cài đặt. `api.auth`, `edr_ctl` và `detection.ml.static_scorer` chạy được với `PYTHONPATH=src`; `agent`, `pipeline`, `core`, `api`, `response` còn import `bronze_contract`, `validator_poc`… nên cần `PYTHONPATH` gồm `src`, `src/pipeline` và `poc/sysmon-collector` (như `EDR_INSTALL_GUIDE.md` mục 2; `edr_ctl start` tự đặt cho tiến trình con). Test đã được `pytest.ini`/`conftest.py` cấu hình sẵn.
 
 Chạy test từ thư mục gốc repository bằng `python -m pytest` để rootdir của pytest đưa `poc/sysmon-collector` vào đường dẫn. Chạy script từ thư mục khác sẽ làm hỏng các import này.
 
@@ -225,5 +228,6 @@ Danh sách này có thể đã thay đổi; kiểm tra lại trước khi dùng.
 - `docs/decisions/`: ADR 0001–0007 và `week-1-decisions.md`.
 - `docs/architecture/local-edr-reference-architecture-v2.md`: kiến trúc mục tiêu (PROPOSAL).
 - `docs/architecture/w5/`: hợp đồng dữ liệu, schema reconciliation, validation và lineage.
+- `docs/architecture/w6/`, `docs/architecture/w7/`: kiến trúc Detection và static/whitelist/signature (đề xuất, chờ review).
 - `docs/report/`: báo cáo tiến độ theo tuần.
 - `docs/conventions/`: quy ước nhánh, commit, issue và GitHub Project.
