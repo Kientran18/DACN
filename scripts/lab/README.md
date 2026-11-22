@@ -29,7 +29,7 @@ Cột "ai phát hiện" (EDR / Windows Defender / không ai) do người vận h
 | SC01 | `powershell -EncodedCommand` in marker | Event 1 | DACN-DET-001 `MATCH` | không có gì cần dọn |
 | SC02 | Ghi/xóa giá trị Run `DACN_LAB_..._SC02` | Event 13 (12 khi xóa) | DACN-DET-003 `MATCH` | xóa ngay + dọn trong `finally` |
 | SC03 | Copy `whoami.exe` vào Temp, chạy, xóa | Event 11 → 1 → 26 | DACN-DET-010 `MATCH` | xóa tệp |
-| SC04 | Tệp C# tự biên dịch (hash duy nhất) | Event 1 (SHA256) | DACN-DET-101 `MATCH` khi nạp `ioc_candidate` | xóa tệp |
+| SC04 | Tệp C# tự biên dịch (hash duy nhất) | Event 1 (SHA256) | DACN-DET-101 `MATCH` khi nạp `ioc_candidate` | xóa `.cs`/`.exe`; **giữ** `ioc_candidate_<runid>.yaml` trong `%TEMP%\dacn_lab\` (dùng cho `--ioc`, tự xóa sau khi so sánh) |
 | SC05 | EICAR (tùy chọn) | Event 11 | chỉ quan sát (Defender có thể xóa) | xóa tệp |
 | SC06 | Lành tính: `Get-Date`, tệp tạm không chạy, registry ngoài Run | Event 1, 11, 26, 13 | không rule nào có kết quả | xóa |
 | SC07 | Drop+chạy ở `Users\Public`, xóa (không bị Sysmon theo dõi xóa) | Event 11, 1; **không** có 26 | DET-010 không `MATCH` đầy đủ | xóa tệp |

@@ -35,3 +35,23 @@ def test_registry_writes_limited_to_run_prefix_and_test_key():
     assert "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" in SCRIPT
     assert "HKCU:\\Software\\EDR_PoC" in SCRIPT
     assert "HKLM" not in CODE
+
+
+def _function_body(name):
+    m = re.search(rf"function {re.escape(name)}\b.*?\n}}", CODE, re.S)
+    assert m, name
+    return m.group(0)
+
+
+def test_lab_guard_compares_with_trailing_separator():
+    """L2 (audit): so tiền tố KHÔNG kèm dấu phân cách thì ...\\Temp\\dacn_labX\\a vẫn qua guard của ...\\Temp\\dacn_lab."""
+    body = _function_body("Assert-InLab")
+    assert "StartsWith($LabDir" not in body and "StartsWith($PubDir" not in body, body
+    assert "DirectorySeparatorChar" in body and "TrimEnd(" in body, body
+
+
+def test_ioc_candidate_is_kept_for_the_comparison_step():
+    """L1 (audit): README bảo dùng ioc_candidate_<runid>.yaml cho compare_expected.py --ioc, nên finally KHÔNG được xóa nó."""
+    sc04 = CODE[CODE.index("Invoke-Scenario 'SC04'"):CODE.index("Invoke-Scenario 'SC05'")]
+    assert "ioc_candidate_" in sc04
+    assert "$Created.Add($cand)" not in CODE, "ioc_candidate bị đưa vào danh sách dọn"

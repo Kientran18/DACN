@@ -39,7 +39,11 @@ function ConvertTo-Token([string]$p) {
 
 function Assert-InLab([string]$p) {
     $full = [System.IO.Path]::GetFullPath($p)
-    $ok = $full.StartsWith($LabDir, [StringComparison]::OrdinalIgnoreCase) -or $full.StartsWith($PubDir, [StringComparison]::OrdinalIgnoreCase)
+    # So với dấu phân cách ở cuối: nếu không, "...\Temp\dacn_labX\a" vẫn khớp tiền tố "...\Temp\dacn_lab".
+    $sep = [System.IO.Path]::DirectorySeparatorChar
+    $labRoot = $LabDir.TrimEnd($sep) + $sep
+    $pubRoot = $PubDir.TrimEnd($sep) + $sep
+    $ok = $full.StartsWith($labRoot, [StringComparison]::OrdinalIgnoreCase) -or $full.StartsWith($pubRoot, [StringComparison]::OrdinalIgnoreCase)
     if (-not $ok) { throw "Từ chối thao tác ngoài thư mục lab: $full" }
     if ($full.Contains('*') -or $full.Contains('?')) { throw "Từ chối wildcard: $full" }
     return $full
@@ -110,11 +114,11 @@ try {
             & $csc /nologo /out:$exe $src | Out-Null
             $sha = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLower()
             $cand = Assert-InLab (Join-Path $LabDir "ioc_candidate_$RunId.yaml")
-            $Created.Add($cand)
+            # KHÔNG đưa vào $Created: tệp này phải còn lại để dùng cho compare_expected.py --ioc (người dùng tự xóa sau khi so sánh).
             Set-Content -LiteralPath $cand -Encoding ASCII -Value @(
                 'version: lab-' + $RunId, 'ioc_hashes:',
                 '  - sha256: ' + $sha, '    source: dacn-lab-self-built', '    note: tệp thử nghiệm do nhóm tự tạo, không phải mã độc')
-            Write-Host "SHA-256 của tệp thử nghiệm: $sha  (ứng viên IOC: $(ConvertTo-Token $cand))"
+            Write-Host "SHA-256 của tệp thử nghiệm: $sha  (ứng viên IOC, ĐƯỢC GIỮ LẠI: $(ConvertTo-Token $cand))"
             Start-Process -FilePath $exe -WindowStyle Hidden -Wait
             Remove-LabFile $exe; Remove-LabFile $src
         }
