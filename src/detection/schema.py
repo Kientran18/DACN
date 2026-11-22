@@ -37,6 +37,7 @@ RULE_SCHEMA = {
         "exclude": {"type": "array", "items": _COND},
         "correlation_keys": {"type": "array", "items": {"type": "string"}},
         "time_window_seconds": {"type": "integer", "minimum": 1},
+        "allowed_lateness_seconds": {"type": "integer", "minimum": 0, "maximum": 86400},
         "window_status": {"enum": ["TBD_UNCALIBRATED", "CALIBRATED"]},
         "mitre_technique_ids": {"type": "array", "items": {"type": "string", "pattern": r"^T\d{4}(\.\d{3})?$"}},
         "mitre_basis": {"type": "string"},

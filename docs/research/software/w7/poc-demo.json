@@ -1,0 +1,117 @@
+{
+  "synthetic": true,
+  "path_and_file_identity_redacted": true,
+  "result": "PASS",
+  "scope": "current-byte standalone lab observation; no fabricated event refs; no response",
+  "candidate": {
+    "candidate_id": "017f534e-cfdc-5717-9a3c-c81628dc0964",
+    "schema_version": "dacn-candidate/1.0",
+    "state": "SUSPICIOUS",
+    "revision": 3,
+    "created_by": "lab-analyst",
+    "analysis": {
+      "schema_version": "dacn-static/1.0",
+      "analysis_id": "6d8a7774-47f1-45a1-8f7a-2e57b70478da",
+      "observed_at": "2026-11-17T14:54:33.081419+00:00",
+      "extractor_version": "1.0",
+      "path": "<LAB_ROOT>/harmless.txt",
+      "source_event_ids": [],
+      "status": "OK",
+      "error_code": null,
+      "sha256": "f011e8bf37cfc6859e1bae3d62ec523f8856a0b97bc20629a104740d63a180e2",
+      "size_bytes": 15,
+      "entropy": 3.323231428797621,
+      "file_identity": null,
+      "pe": {
+        "status": "NOT_PE",
+        "value": null
+      },
+      "signature": {
+        "status": "UNAVAILABLE",
+        "reason": "NO_OFFLINE_TRUST_PROVIDER"
+      },
+      "pattern_ids": [
+        "lab-marker"
+      ],
+      "historical_identity": "UNVERIFIED"
+    },
+    "verdict": {
+      "schema_version": "dacn-whitelist-verdict/1.0",
+      "knowledge_revision": "2705ff0ac4943d70e16c3431c761fb2847d50cd7a1791938d3a82ed3d63f15d2",
+      "knowledge_version": 1,
+      "verdict": "HIT",
+      "allowlist_ids": [],
+      "signature_hit": {
+        "schema_version": "dacn-signature-hit/1.0",
+        "ioc_ids": [
+          "lab-hash"
+        ],
+        "pattern_ids": [
+          "lab-marker"
+        ],
+        "suppressed": false
+      },
+      "policy": "STATIC_ALLOWLIST_FIRST_BEHAVIOR_UNCHANGED",
+      "evaluated_at": "2026-11-17T14:54:33.089075+00:00"
+    },
+    "detection": {
+      "rule_id": "DACN-STATIC-001",
+      "rule_version": 1,
+      "outcome": "MATCH",
+      "subject": "dcdcba3762a8e9c698deeed8b767caad46976185e01161e63e79093b97db2b18",
+      "contributing_event_ids": [],
+      "matched_fields": {
+        "analysis_id": "6d8a7774-47f1-45a1-8f7a-2e57b70478da",
+        "sha256": "f011e8bf37cfc6859e1bae3d62ec523f8856a0b97bc20629a104740d63a180e2",
+        "knowledge_revision": "2705ff0ac4943d70e16c3431c761fb2847d50cd7a1791938d3a82ed3d63f15d2",
+        "signature_hit": {
+          "schema_version": "dacn-signature-hit/1.0",
+          "ioc_ids": [
+            "lab-hash"
+          ],
+          "pattern_ids": [
+            "lab-marker"
+          ],
+          "suppressed": false
+        }
+      },
+      "missing_fields": [],
+      "coverage_status": "CURRENT_BYTES_ONLY",
+      "severity": "medium",
+      "severity_reason": "Chỉ báo static là candidate, không chứng minh malware; alert-only",
+      "dedup_key": "8fe2a76c5960758b028e482008292c3a45a6b8ec2d4fd754c4188c8ca0feea55",
+      "notes": [
+        "no_auto_response",
+        "behavioral_results_unchanged"
+      ]
+    },
+    "alert_ids": [],
+    "created_at": "2026-11-17T21:54:33.089398+07:00"
+  },
+  "history": [
+    {
+      "seq": 1,
+      "at": "2026-11-17T21:54:33.096263+07:00",
+      "actor": "lab-analyst",
+      "action": "CANDIDATE_CREATE",
+      "reason": "static observation; alert-only",
+      "row_hash": "7867326d64c1260f311065cf1cfeefac7aaf711108f6234e286c260af1b403c0"
+    },
+    {
+      "seq": 2,
+      "at": "2026-11-17T21:54:33.373728+07:00",
+      "actor": "lab-analyst",
+      "action": "CANDIDATE_TRIAGED",
+      "reason": "reviewed lab marker",
+      "row_hash": "e0d81101af5f7297004bb199f5c586c8269fff8f941b6145cc1535e924041953"
+    },
+    {
+      "seq": 3,
+      "at": "2026-11-17T21:54:33.387403+07:00",
+      "actor": "lab-reviewer",
+      "action": "CANDIDATE_SUSPICIOUS",
+      "reason": "test review state only, not malware",
+      "row_hash": "696c8dfe74a11bf4958c465626989fc3bff0fa003f4fc1fafbef6d19c18b66a6"
+    }
+  ]
+}

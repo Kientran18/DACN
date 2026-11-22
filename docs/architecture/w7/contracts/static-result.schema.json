@@ -1,0 +1,168 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "dacn-static/1.0"
+    },
+    "analysis_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "extractor_version": {
+      "const": "1.0"
+    },
+    "path": {
+      "type": "string"
+    },
+    "source_event_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "status": {
+      "enum": [
+        "OK",
+        "ERROR"
+      ]
+    },
+    "error_code": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "size_bytes": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "entropy": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 8.000000001
+    },
+    "file_identity": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "integer"
+      },
+      "minItems": 5,
+      "maxItems": 5
+    },
+    "pe": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "value": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "value"
+      ]
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "UNAVAILABLE"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "reason"
+      ]
+    },
+    "pattern_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "historical_identity": {
+      "enum": [
+        "UNVERIFIED",
+        "HASH_VERIFIED"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "analysis_id",
+    "observed_at",
+    "extractor_version",
+    "path",
+    "source_event_ids",
+    "status",
+    "error_code",
+    "sha256",
+    "size_bytes",
+    "entropy",
+    "file_identity",
+    "pe",
+    "signature",
+    "pattern_ids",
+    "historical_identity"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "OK"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sha256": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": "integer"
+          },
+          "entropy": {
+            "type": "number"
+          },
+          "error_code": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}

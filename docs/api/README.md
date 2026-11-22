@@ -20,6 +20,9 @@ Mọi yêu cầu (trừ `GET /livez`) cần `Authorization: Bearer <token>`.
 `actor` luôn lấy từ token, không nhận từ nội dung yêu cầu.
 
 ## Endpoint chính
+
+W07 bổ sung `/static/analyses`, `/static/candidates` (+ detail/history/transition), `/static/knowledge` (+ activate/rollback). Xem [request/response, phân quyền và lỗi W07](../research/software/w7/02-candidate-review-and-integration-api.md). Static file root do server ấn định tại `<EDR_HOME>/lab`, không nhận root từ HTTP; kết quả không tự response.
+
 `/livez` (công khai) `/me` `/stats` `/health` `/endpoint` `/events` `/detections` `/alerts` `/alerts/{id}` `/alerts/{id}/history` `/alerts/{id}/transition` `/alerts/{id}/evidence` `/alerts/{id}/timeline` `/alerts/{id}/process-tree` `/coverage-gaps` `/incidents` (+ `/incidents/{id}/alerts`, `/incidents/{id}/notes`) `/rules` `/rules/{id}` `/response/actions` (+ `approve`, `reject`, `claim`, `result`) `/response/audit`.
 
 `POST /response/actions` nhận `action_type` ∈ `TERMINATE_PROCESS`, `QUARANTINE_FILE`, `RESTORE_FILE`, `ADD_WHITELIST`, `REMOVE_WHITELIST` (khớp `ACTION_TYPES` của policy); policy vẫn kiểm mục tiêu ngay khi yêu cầu (`422 E-POLICY`).

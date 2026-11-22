@@ -351,7 +351,9 @@ def test_factory_never_enables_execute_on_non_windows(env):
 def test_creation_time_iso_tolerance_and_filetime_conversion():
     from response.backends.local import same_time
     from response.backends.windows import filetime_to_iso
-    assert same_time("2026-11-08 09:11:55.836", "2026-11-08T09:11:55.9+00:00", 1.0)
+    # Oracle tolerance dùng cùng timezone rõ ràng, không phụ thuộc máy test ở UTC hay UTC+7.
+    # Không đổi policy diễn giải datetime naive của runtime response trong issue #40.
+    assert same_time("2026-11-08 09:11:55.836+00:00", "2026-11-08T09:11:55.9+00:00", 1.0)
     assert not same_time("2026-11-08 09:11:55", "2026-11-08 09:12:55", 1.0)
     assert not same_time("rác", "2026-11-08 09:12:55", 1.0)
     assert filetime_to_iso(116444736000000000).startswith("1970-01-01T00:00:00")

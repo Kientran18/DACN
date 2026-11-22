@@ -1,0 +1,75 @@
+{
+  "synthetic": true,
+  "results": [
+    {
+      "rule_id": "DACN-DET-010",
+      "rule_version": 1,
+      "outcome": "MATCH",
+      "subject": "synthetic-subject",
+      "contributing_event_ids": [],
+      "matched_fields": {},
+      "missing_fields": [],
+      "coverage_status": "SYNTHETIC_EXAMPLE",
+      "severity": "medium",
+      "severity_reason": "synthetic example; not a confirmed threat",
+      "dedup_key": "synthetic-key",
+      "notes": []
+    },
+    {
+      "rule_id": "DACN-DET-010",
+      "rule_version": 1,
+      "outcome": "NO_MATCH",
+      "subject": "synthetic-subject",
+      "contributing_event_ids": [],
+      "matched_fields": {},
+      "missing_fields": [
+        "delete"
+      ],
+      "coverage_status": "SYNTHETIC_EXAMPLE",
+      "severity": null,
+      "severity_reason": "synthetic example; not a confirmed threat",
+      "dedup_key": "synthetic-key",
+      "notes": []
+    },
+    {
+      "rule_id": "DACN-DET-010",
+      "rule_version": 1,
+      "outcome": "INSUFFICIENT_TELEMETRY",
+      "subject": "synthetic-subject",
+      "contributing_event_ids": [],
+      "matched_fields": {},
+      "missing_fields": [
+        "delete"
+      ],
+      "coverage_status": "SYNTHETIC_EXAMPLE",
+      "severity": null,
+      "severity_reason": "synthetic example; not a confirmed threat",
+      "dedup_key": "synthetic-key",
+      "notes": []
+    },
+    {
+      "rule_id": "DACN-DET-010",
+      "rule_version": 1,
+      "outcome": "PENDING_LATE_EVENTS",
+      "subject": "synthetic-subject",
+      "contributing_event_ids": [],
+      "matched_fields": {},
+      "missing_fields": [
+        "delete"
+      ],
+      "coverage_status": "SYNTHETIC_EXAMPLE",
+      "severity": null,
+      "severity_reason": "synthetic example; not a confirmed threat",
+      "dedup_key": "synthetic-key",
+      "notes": []
+    }
+  ],
+  "error": {
+    "schema_version": "dacn-detection-error/1.0",
+    "stage": "PUBLISH",
+    "reason_code": "DB_UNAVAILABLE",
+    "run_id": "synthetic-run",
+    "retryable": true,
+    "source_event_ids": []
+  }
+}

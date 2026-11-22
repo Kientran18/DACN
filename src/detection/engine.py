@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS _detection_results (
 CURSOR_DDL = """
 CREATE TABLE IF NOT EXISTS _detection_cursor (
     id INTEGER PRIMARY KEY, ingest_ts TIMESTAMPTZ, watermark TIMESTAMPTZ, sig VARCHAR
-)"""
+);
+CREATE TABLE IF NOT EXISTS _detection_outbox (dedup_key VARCHAR PRIMARY KEY, result JSON, rule JSON)
+"""
 _TABLES = ("silver_process_events", "silver_file_events", "silver_registry_events", "silver_network_events")
 
 
@@ -56,12 +58,15 @@ class DetectionEngine:
                 self.con.execute("insert into _detection_results values (?,?,?,?,?,?,?,?,?)",
                                  [r.dedup_key, r.rule_id, r.rule_version, r.outcome, r.subject, r.severity,
                                   payload, now, now])
-            elif old == "PENDING_LATE_EVENTS" and r.outcome != old:
+            elif (old == "PENDING_LATE_EVENTS" and r.outcome != old) or (
+                    old in ("NO_MATCH", "INSUFFICIENT_TELEMETRY") and r.outcome == "MATCH"):
                 self.con.execute("update _detection_results set outcome=?, severity=?, result=?, updated_utc=? "
                                  "where dedup_key=?", [r.outcome, r.severity, payload, now, r.dedup_key])
             else:
                 continue
             have[r.dedup_key] = r.outcome
+            self.con.execute("insert or replace into _detection_outbox values (?,?,?)",
+                             [r.dedup_key, payload, json.dumps(self.rules[r.rule_id], ensure_ascii=False)])
             emitted.append(r)
         return emitted
 
@@ -83,17 +88,51 @@ class DetectionEngine:
     def _watermark(self):
         return self._max("timestamp")
 
+    def _host_watermarks(self):
+        """Không dùng đồng hồ host khác để đóng correlation window."""
+        rows = self.con.execute("select hostname,max(ts) from (" + " union all ".join(
+            f"select hostname,max(timestamp) ts from {t} group by hostname" for t in _TABLES)
+            + ") group by hostname").fetchall()
+        return dict(rows)
+
     def _sig(self) -> str:
         """Dấu vân tay rule + IOC: đổi thì quét lại lịch sử một lần (retro-hunt)."""
         h = hashlib.sha256()
         for k in sorted(self.rules):
-            h.update(f"{k}|{self.rules[k]['rule_version']}|{self.rules[k]['status']};".encode())
+            h.update(json.dumps(self.rules[k], sort_keys=True, ensure_ascii=False).encode())
         for x in sorted(self.ioc.hashes) + ["|"] + sorted(self.ioc.allow):
             h.update(x.encode())
         return h.hexdigest()
 
     # -- chạy ------------------------------------------------------------------
     def run(self) -> List[DetectionResult]:
+        """Evaluation, cursor và outbox cùng transaction; caller giữ khóa shared connection."""
+        self.con.execute("begin")
+        try:
+            results = self._run()
+            self.con.execute("commit")
+            return results
+        except BaseException:
+            self.con.execute("rollback")
+            raise
+
+    def pending_delivery(self) -> List[DetectionResult]:
+        return [DetectionResult(**json.loads(row[0])) for row in self.con.execute(
+            "select result from _detection_outbox order by dedup_key").fetchall()]
+
+    def acknowledge(self, results) -> None:
+        """Gọi trong transaction chứa AlertBuilder; crash trước commit sẽ giữ outbox."""
+        for r in results:
+            self.con.execute("delete from _detection_outbox where dedup_key=?", [r.dedup_key])
+
+    def delivery_rule(self, result):
+        """Metadata đóng băng cùng evaluation, không dùng version mới sau restart."""
+        row = self.con.execute("select rule from _detection_outbox where dedup_key=?", [result.dedup_key]).fetchone()
+        if row is None:
+            raise ValueError("delivery không tồn tại")
+        return json.loads(row[0])
+
+    def _run(self) -> List[DetectionResult]:
         """Đánh giá rule enabled trên sự kiện MỚI kể từ con trỏ (hoặc toàn bộ nếu lần đầu / rule / IOC đổi).
         Trả các kết quả mới hoặc được cập nhật.
         shortcut: con trỏ dùng ingest_timestamp (đồng hồ máy); đồng hồ lùi sẽ bỏ sót, nâng cấp bằng cột tuần tự."""
@@ -121,10 +160,17 @@ class DetectionEngine:
                             results.append(res)
             elif rule["type"] == "correlation":
                 # Chỉ nạp phần đuôi: cửa sổ của mọi create còn có thể đổi kết quả nằm sau mốc `from_ts`.
-                from_ts = None if full else min(x for x in (prev_wm, lo) if x is not None) - timedelta(seconds=rule["time_window_seconds"])
+                from_ts = None if full else min(x for x in (prev_wm, lo) if x is not None) - timedelta(
+                    seconds=rule["time_window_seconds"] + rule.get("allowed_lateness_seconds", 0))
+                if not full:
+                    pending_at = self.con.execute("select min(f.timestamp) from silver_file_events f "
+                        "join _detection_results d on f.event_id=d.subject "
+                        "where d.rule_id=? and d.outcome='PENDING_LATE_EVENTS'", [rule["rule_id"]]).fetchone()[0]
+                    if pending_at is not None:
+                        from_ts = min(from_ts, pending_at)
                 files = self._rows("silver_file_events", [11, 23, 26], ts_from=from_ts)
                 procs = self._rows("silver_process_events", [1], ts_from=from_ts)
-                results += evaluate_drop_execute_delete(rule, files, procs, self._watermark())
+                results += evaluate_drop_execute_delete(rule, files, procs, self._host_watermarks())
         emitted = self._save_all(results)
         self.con.execute("insert or replace into _detection_cursor values (1, ?, ?, ?)", [top, self._watermark(), sig])
         return emitted
