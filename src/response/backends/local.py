@@ -38,9 +38,12 @@ def _sha256(path) -> str:
 
 
 def _parse_time(v):
+    """Số: dùng nguyên. Chuỗi ISO có múi giờ: đổi theo múi giờ đó. Chuỗi KHÔNG có múi giờ (dạng Sysmon UtcTime) là UTC
+    theo định nghĩa, KHÔNG phải giờ máy (trên VM UTC+7 sẽ lệch 7 giờ và làm mọi TERMINATE_PROCESS bị từ chối)."""
     if isinstance(v, (int, float)):
         return float(v)
-    return datetime.fromisoformat(str(v).replace("Z", "+00:00").replace(" ", "T")).astimezone(timezone.utc).timestamp()
+    dt = datetime.fromisoformat(str(v).replace("Z", "+00:00").replace(" ", "T"))
+    return (dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt).timestamp()
 
 
 def same_time(a, b, tolerance_s: float = 0.0) -> bool:

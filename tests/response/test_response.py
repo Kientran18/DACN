@@ -351,9 +351,28 @@ def test_factory_never_enables_execute_on_non_windows(env):
 def test_creation_time_iso_tolerance_and_filetime_conversion():
     from response.backends.local import same_time
     from response.backends.windows import filetime_to_iso
-    # Oracle tolerance dùng cùng timezone rõ ràng, không phụ thuộc máy test ở UTC hay UTC+7.
-    # Không đổi policy diễn giải datetime naive của runtime response trong issue #40.
+    # Chuỗi thiếu múi giờ (dạng Sysmon UtcTime) là UTC; đúng ở mọi múi giờ máy (xem test_same_time_treats_naive_...).
+    assert same_time("2026-11-08 09:11:55.836", "2026-11-08T09:11:55.9+00:00", 1.0)
     assert same_time("2026-11-08 09:11:55.836+00:00", "2026-11-08T09:11:55.9+00:00", 1.0)
     assert not same_time("2026-11-08 09:11:55", "2026-11-08 09:12:55", 1.0)
     assert not same_time("rác", "2026-11-08 09:12:55", 1.0)
     assert filetime_to_iso(116444736000000000).startswith("1970-01-01T00:00:00")
+
+
+@pytest.mark.parametrize("tz", ["UTC", "Asia/Ho_Chi_Minh", "America/Los_Angeles"])
+def test_same_time_treats_naive_sysmon_string_as_utc_in_any_machine_timezone(tz, monkeypatch):
+    """T1 (audit): Sysmon UtcTime ("2026-11-08 09:11:55.836") là UTC nhưng không có múi giờ. same_time từng coi nó là giờ máy,
+    nên trên VM UTC+7 mọi TERMINATE_PROCESS bị từ chối X-IDENTITY_MISMATCH dù đúng tiến trình."""
+    import time
+    from response.backends.local import same_time
+    if not hasattr(time, "tzset"):
+        pytest.skip("cần time.tzset (POSIX)")
+    monkeypatch.setenv("TZ", tz)
+    time.tzset()
+    try:
+        assert same_time("2026-11-08 09:11:55.836", "2026-11-08T09:11:55.9+00:00", 1.0)        # oracle gốc, không +00:00
+        assert not same_time("2026-11-08 09:11:55", "2026-11-08T09:11:55+07:00", 1.0)        # offset tường minh vẫn được tôn trọng
+        assert same_time("2026-11-08 16:11:55", "2026-11-08T09:11:55+00:00", 0.0) is False     # không bị hiểu là giờ UTC+7
+    finally:
+        monkeypatch.undo()
+        time.tzset()
