@@ -120,7 +120,7 @@
 - **Mô tả:** `python -m pipeline replay --from-bronze` dựng lại Silver vào file mới (không sửa Bronze). **DoD:** kết quả replay trùng Silver gốc (so `event_id` và số hàng).
 
 ### PH3-T06 · Lớp truy vấn `[P0 · L · DA · C · DONE]`
-- **Mô tả:** hàm truy vấn tham số hóa (không ghép chuỗi SQL): sự kiện theo thời gian/host/`process_guid`/hash/đường dẫn, cây tiến trình (`v_process_tree_lineage`), cửa sổ tương quan, phân trang. **Files:** `src/pipeline/query.py`. **Phụ thuộc:** PH3-T02. **DoD:** detection và API dùng chung; không JOIN theo PID (ADR 0002).
+- **Mô tả:** hàm truy vấn tham số hóa (không ghép chuỗi SQL): sự kiện theo thời gian/host/`process_guid`/hash/đường dẫn, phân trang. (Cây tiến trình và timeline theo `process_guid` làm ở `src/alerts/timeline.py`; `Query.process_tree` dùng view `v_process_tree_lineage` và `Query.correlated` đã bỏ ngày 2026-11-18/22 vì không có nơi gọi.) **Files:** `src/pipeline/query.py`. **Phụ thuộc:** PH3-T02. **DoD:** detection và API dùng chung; không JOIN theo PID (ADR 0002).
 
 ### PH3-T07 · Ingest worker `[P0 · M · DA/SW · C · DONE]`
 - **Mô tả:** theo dõi thư mục Bronze, nạp segment mới theo thứ tự, ghi metrics (`segments_ingested`, `records_*`, `duplicates_ignored`, `lag_seconds`) vào `metrics.jsonl`, kích hoạt bước phát hiện sau mỗi batch. **Phụ thuộc:** PH3-T01..T03. **DoD:** chạy liên tục với agent giả; dừng sạch.

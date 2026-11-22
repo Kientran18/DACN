@@ -1,8 +1,8 @@
 """Lớp truy vấn tham số hóa (PH3-T06). Không ghép giá trị vào SQL; tên bảng/cột qua danh sách trắng.
-Không JOIN theo PID (ADR 0002): cây tiến trình dùng process_guid."""
+Không JOIN theo PID (ADR 0002). Cây tiến trình và timeline theo process_guid nằm ở src/alerts/timeline.py."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 _FILTERS = {
     "silver_process_events": {"hostname", "process_guid", "parent_guid", "image_path", "file_sha256", "command_line", "sysmon_event_id"},
@@ -39,10 +39,3 @@ class Query:
         sql = f"select * from {table}" + (" where " + " and ".join(where) if where else "")
         sql += " order by timestamp, event_id limit ? offset ?"
         return self._rows(sql, params + [min(max(int(limit), 1), MAX_LIMIT), max(int(offset), 0)])
-
-    def process_tree(self, root_process_guid: str, hostname: Optional[str] = None) -> List[Dict[str, Any]]:
-        sql = "select * from v_process_tree_lineage where root_process_guid = ?"
-        params: list = [root_process_guid]
-        if hostname:
-            sql += " and hostname = ?"; params.append(hostname)
-        return self._rows(sql + " order by tree_depth, timestamp", params)
