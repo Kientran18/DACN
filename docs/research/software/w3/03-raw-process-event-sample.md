@@ -1,6 +1,6 @@
 # Raw Process Event Sample (Sysmon Event 1, 5)
 
-**Trạng thái: CHƯA THU THẬP.** Chạy bước 1 và 2 của `run-poc-activities.ps1`, rồi `export-samples.ps1`. File nguồn: `samples/raw/raw_process_create_event1.xml`, `raw_process_terminate_event5.xml`.
+**Trạng thái: CHƯA THU THẬP.** Chạy bước 1 và 2 của `run-poc-activities.ps1`, rồi `export-samples.ps1`. File nguồn: `references/samples/raw/raw_process_create_event1.xml`, `raw_process_terminate_event5.xml`.
 
 ## Lệnh thu thập nhanh (Admin)
 ```powershell

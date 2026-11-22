@@ -1,6 +1,6 @@
 # Raw Network Event Sample (Sysmon Event 3, 22)
 
-**Trạng thái: CHƯA THU THẬP.** Dùng bước 5 của `run-poc-activities.ps1` (HTTPS tới `example.com`, cần Internet). File nguồn: `samples/raw/raw_network_connect_event3.xml`, `raw_dns_query_event22.xml`.
+**Trạng thái: CHƯA THU THẬP.** Dùng bước 5 của `run-poc-activities.ps1` (HTTPS tới `example.com`, cần Internet). File nguồn: `references/samples/raw/raw_network_connect_event3.xml`, `raw_dns_query_event22.xml`.
 
 ## Mẫu thật – Event 3
 ```xml

@@ -1,6 +1,6 @@
 # Collector-to-Bronze Interface Contract v1
 
-> **Đối chiếu W05 (#26/#27/#29):** Hợp đồng `bronze-event/1.0` trong file này được chọn làm **canonical Bronze proposal**, xem [hợp đồng chung, schema, ví dụ input/output và adapter](../../../architecture/w5/contracts/README.md). Các đường dẫn cũ dạng `contracts/bronze-event.schema.json` trong nội dung lịch sử phải hiểu theo path thực tế `poc/sysmon-collector/bronze-event.schema.json`; mã `bronze_contract.py` đã được đồng bộ. Data/Software **chưa ký xác nhận**; các đề xuất segment/manifest/Windows live vẫn chưa thành phần chạy production.
+> **Đối chiếu W05 (#26/#27/#29):** Hợp đồng `bronze-event/1.0` trong file này được chọn làm **canonical Bronze proposal**, xem [hợp đồng chung, schema, ví dụ input/output và adapter](../../../architecture/w5/contracts/README.md). Các đường dẫn cũ dạng `poc/sysmon-collector/bronze-event.schema.json` trong nội dung lịch sử phải hiểu theo path thực tế `poc/sysmon-collector/bronze-event.schema.json`; mã `bronze_contract.py` đã được đồng bộ. Data/Software **chưa ký xác nhận**; các đề xuất segment/manifest/Windows live vẫn chưa thành phần chạy production.
 
 
 **Issue:** W05 (#26) · **Trạng thái:** DRAFT chờ review Data và Cyber · **Phụ thuộc:** #16 (PoC), #22 (đánh giá công cụ)
@@ -38,7 +38,7 @@
 
 - **JSON Lines**, UTF-8 **không BOM**, kết thúc dòng `\n` (LF, **không CRLF**), một đối tượng/dòng, không dòng trống, không NaN/Infinity.
 - **Quy tắc ghi file trên Windows:** Python ghi ở chế độ văn bản trên Windows mặc định đổi `\n` thành `\r\n`, nên writer phải mở bằng `open(path, "w", encoding="utf-8", newline="\n")`. Đã sửa ở PoC (`--output`) và có test; kiểm bằng `verify_windows_env.py` (W05).
-- Schema: `contracts/bronze-event.schema.json` (JSON Schema 2020-12). Mã tham chiếu: `bronze_contract.py` (`build_bronze_record`, `validate_record`) **[PoC]**.
+- Schema: `poc/sysmon-collector/bronze-event.schema.json` (JSON Schema 2020-12). Mã tham chiếu: `bronze_contract.py` (`build_bronze_record`, `validate_record`) **[PoC]**.
 
 | Trường | Kiểu | Bắt buộc | Nguồn trong XML / quy tắc |
 |---|---|---|---|

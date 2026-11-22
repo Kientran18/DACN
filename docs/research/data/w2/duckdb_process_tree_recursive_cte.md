@@ -37,5 +37,5 @@ SELECT * FROM process_tree ORDER BY depth DESC;
 # 4. Đánh giá khả năng áp dụng (Conclusion)
 
 * **Ưu điểm:** Tốc độ thực thi của DuckDB CTE trên vài trăm nghìn bản ghi (Local Phase 1) là dưới 50ms. Rất hoàn hảo cho Rule-based Detection Engine.
-* **Next step:** Tích hợp câu query này vào module `pipeline/features/extractor.py` để trích xuất ra đặc trưng `process_tree_depth` cho tầng Gold.
+* **Next step:** Tích hợp câu query này vào module `pipeline/features/extractor.py` (kế hoạch, chưa có trong repo) để trích xuất ra đặc trưng `process_tree_depth` cho tầng Gold.
 

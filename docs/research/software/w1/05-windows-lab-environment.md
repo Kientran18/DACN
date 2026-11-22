@@ -21,7 +21,7 @@
 2. Cài Sysmon với `configs/sysmon/sysmon-config.xml` của repo (không dùng config tự chỉnh riêng).
 3. Cài Python theo `requirements.txt`.
 4. Chụp **snapshot "clean state"** trước khi chạy bất kỳ script POC/mô phỏng nào.
-5. Ghi lại thông tin máy (build Windows, version Sysmon, ngày tạo snapshot) vào file `docs/environment/environment-log.md`.
+5. Ghi lại thông tin máy (build Windows, version Sysmon, ngày tạo snapshot) vào file `docs/environment/environment-log.md` (kế hoạch, chưa có trong repo).
 
 ## Quy tắc dùng chung
 

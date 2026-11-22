@@ -17,14 +17,14 @@
 |---|---|---|
 | Windows Telemetry Lab Setup Notes | `docs/research/software/w3/01-windows-telemetry-lab-setup-notes.md` | Viết xong, chưa thực hành |
 | Sysmon Configuration v1 | `poc/sysmon-collector/configs/sysmon-config.xml` + `docs/research/software/w3/02-sysmon-configuration-v1.md` | Viết xong, chưa cài thử |
-| Raw Process Event Sample | `docs/03-raw-process-event-sample.md` → `samples/raw/` | **Chờ thu thập** |
-| Raw File Event Sample | `docs/04-raw-file-event-sample.md` → `samples/raw/` | **Chờ thu thập** |
-| Raw Registry Event Sample | `docs/05-raw-registry-event-sample.md` → `samples/raw/` | **Chờ thu thập** |
-| Raw Network Event Sample | `docs/06-raw-network-event-sample.md` → `samples/raw/` | **Chờ thu thập** |
+| Raw Process Event Sample | `docs/research/software/w3/03-raw-process-event-sample.md` → `references/samples/raw/` | **Chờ thu thập** |
+| Raw File Event Sample | `docs/research/software/w3/04-raw-file-event-sample.md` → `references/samples/raw/` | **Chờ thu thập** |
+| Raw Registry Event Sample | `docs/research/software/w3/05-raw-registry-event-sample.md` → `references/samples/raw/` | **Chờ thu thập** |
+| Raw Network Event Sample | `docs/research/software/w3/06-raw-network-event-sample.md` → `references/samples/raw/` | **Chờ thu thập** |
 | Minimal Event Collector PoC | `poc/sysmon-collector/sysmon_collector_poc.py` + `docs/research/software/w3/07-minimal-event-collector-poc.md` | Code xong, test giả lập đạt |
 | JSON Event Sample | `docs/research/software/w3/08-json-event-sample.md` → `references/samples/json/` | Đã có JSON thật theo bốn nhóm; xem `references/samples/json/` |
-| Collection Limitations v1 | `docs/09-collection-limitations-v1.md` | Viết xong dưới dạng giả thuyết, chờ xác minh |
-| (Task) Share samples with Cyber and Data | `docs/10-share-samples-with-cyber-and-data.md` | Có mẫu thông báo và checklist |
+| Collection Limitations v1 | `docs/research/software/w3/09-collection-limitations-v1.md` | Viết xong dưới dạng giả thuyết, chờ xác minh |
+| (Task) Share samples with Cyber and Data | `docs/research/software/w3/10-share-samples-with-cyber-and-data.md` | Có mẫu thông báo và checklist |
 
 ## Definition of Done
 

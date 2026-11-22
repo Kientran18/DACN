@@ -37,8 +37,8 @@ scripts/
   # Mức độ rủi ro khi chạy: vô hại (an toàn để chạy trên máy lab)
   # Cách rollback sau khi chạy: ...
   ```
-- Script POC **chỉ chạy trên VM lab** (xem `docs/environment/windows-lab-environment.md`), không chạy trên máy cá nhân đang phát triển code.
-- `scripts/poc/README.md` liệt kê bảng: tên script | hành vi mô phỏng | rule/feature dự kiến kích hoạt | trạng thái đã test chưa.
+- Script POC **chỉ chạy trên VM lab** (xem `docs/environment/windows-lab-environment.md` (kế hoạch, chưa có trong repo)), không chạy trên máy cá nhân đang phát triển code.
+- `scripts/poc/README.md` (kế hoạch, chưa có trong repo) liệt kê bảng: tên script | hành vi mô phỏng | rule/feature dự kiến kích hoạt | trạng thái đã test chưa.
 
 ## Lý do tách riêng `configs/` và `scripts/poc/`
 

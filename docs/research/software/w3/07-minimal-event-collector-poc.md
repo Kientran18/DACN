@@ -1,6 +1,6 @@
 # Minimal Event Collector PoC
 
-**Code:** `poc/sysmon_collector_poc.py` · **Test:** `poc/test_sysmon_collector_poc.py` · **Dữ liệu test:** `poc/fixtures/synthetic_events.xml` (giả lập, không phải mẫu thật)
+**Code:** `poc/sysmon-collector/sysmon_collector_poc.py` · **Test:** `poc/sysmon-collector/test_sysmon_collector_poc.py` · **Dữ liệu test:** `poc/sysmon-collector/configs/synthetic_events.xml` (giả lập, không phải mẫu thật)
 
 ## 1. Chức năng
 
@@ -49,5 +49,5 @@ Không có bookmark (khởi động lại sẽ đọc lại từ mới nhất), 
 
 1. Chạy live trên VM và sửa lỗi phát sinh.
 2. Chuyển sang `EvtSubscribe` + bookmark (TR-01), phát sự kiện `telemetry_dropped_events_total` khi `EventRecordID` đứt quãng.
-3. Tích hợp với `pipeline/ingestion/collector.py` của Data: thống nhất ai sở hữu code thu thập để tránh hai bản song song.
+3. Tích hợp với `pipeline/ingestion/collector.py` (kế hoạch, chưa có trong repo) của Data: thống nhất ai sở hữu code thu thập để tránh hai bản song song.
 4. Cập nhật bản đồ trường theo mẫu thật.

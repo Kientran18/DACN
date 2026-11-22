@@ -1,6 +1,6 @@
 # Raw File Event Sample (Sysmon Event 11, 26, 29, 15)
 
-**Trạng thái: CHƯA THU THẬP.** Dùng bước 3 của `run-poc-activities.ps1`. File nguồn: `samples/raw/raw_file_create_event11.xml`, `raw_file_delete_event26.xml`, `raw_file_executable_event29.xml`.
+**Trạng thái: CHƯA THU THẬP.** Dùng bước 3 của `run-poc-activities.ps1`. File nguồn: `references/samples/raw/raw_file_create_event11.xml`, `raw_file_delete_event26.xml`, `raw_file_executable_event29.xml`.
 
 ## Mẫu thật – Event 11 (dán vào đây)
 ```xml

@@ -29,7 +29,7 @@ Cấu hình phục vụ PoC: ưu tiên thấy được đủ 4 nhóm telemetry c
 
 ## 3. Quy trình thay đổi cấu hình
 
-Nhánh `config/<mô-tả>` → sửa XML → thêm dòng CHANGELOG → Pull Request (theo `docs/06-sysmon-poc-config-storage.md` Week 1). Commit: `config(sysmon-config): <mô tả>`.
+Nhánh `config/<mô-tả>` → sửa XML → thêm dòng CHANGELOG → Pull Request (theo `docs/research/software/w1/06-sysmon-poc-config-storage.md` Week 1). Commit: `config(sysmon-config): <mô tả>`.
 
 ## 4. CHANGELOG
 

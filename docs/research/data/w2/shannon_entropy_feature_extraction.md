@@ -12,7 +12,7 @@ Sysmon log ra chuỗi này, nhưng Rule-based khó dùng Regex để bắt hết
 Tạo hàm toán học tính Entropy trực tiếp trong Python Pipeline trước khi đưa vào Silver/Gold layer. Entropy càng gần 8.0 thì chuỗi càng ngẫu nhiên (dấu hiệu của mã hóa Base64 hoặc obfuscation mạnh).
 
 ## 3. POC Code (Python)
-Đoạn code sau mô phỏng hàm tính sẽ được nhúng vào `pipeline/features/extractor.py`:
+Đoạn code sau mô phỏng hàm tính sẽ được nhúng vào `pipeline/features/extractor.py` (kế hoạch, chưa có trong repo):
 
 ```python
 import math
