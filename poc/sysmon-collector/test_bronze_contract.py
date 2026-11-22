@@ -92,7 +92,7 @@ def test_coverage_report_on_synthetic_samples(tmp_path):
     assert warnings == [] and len(events) == 4
     report = cc.build_report(events, warnings)
     assert "## Sysmon event 1" in report and "## Sysmon event 13" in report
-    assert "| ParentImage | parent_image | missing_in_silver | 1/1 | 0 |" in report
+    assert "| ParentImage | parent_image | in_silver | 1/1 | 0 |" in report   # DDL v1.1 có cột parent_image (K1, audit)
     assert "Envelope (Bronze schema) violations: 0" in report
     out = tmp_path / "report.md"
     assert cc.main(["--samples", str(FIXTURE), "--out", str(out)]) == 0 and out.exists()
