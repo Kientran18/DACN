@@ -60,6 +60,21 @@ def server(tmp_path_factory):
     rules = load_rules()
     store = AlertStore(st.con)
     build_from_results(store, rules, DetectionEngine(st.con, rules=rules).run(), st.con)
+    # D1 (audit): alert có process_guid KHÔNG có Event 1 trong Silver nhưng có tiến trình con -> cây phải vẫn hiện tiến trình con
+    from datetime import datetime, timezone
+    orphan = "cccccccc-0000-0000-0000-000000000001"
+    ids = {}
+    for t, rid, row in harness.build_rows({"name": "orphan", "rows": [
+            {"id": "kid", "table": "process", "process_guid": "cccccccc-0000-0000-0000-000000000002", "parent_guid": orphan,
+             "image_path": "C:\\lab\\orphan_child.exe", "timestamp": "2025-12-31T10:00:05+00:00", "record_id": 901},
+            {"id": "f", "table": "file", "process_guid": orphan, "timestamp": "2025-12-31T10:00:06+00:00", "record_id": 902}]}):
+        st._insert(t, row)
+        ids[rid] = row["event_id"]
+    t0 = datetime(2025, 12, 31, 10, 0, tzinfo=timezone.utc)      # sớm hơn alert gốc: không đổi thứ tự "alert đầu tiên"
+    store.insert_alert(detection_dedup_key="ui-orphan", group_key="ui-orphan", first_seen_utc=t0, last_seen_utc=t0,
+                       detection_source="RULE", rule_id="DACN-DET-001", rule_version=1, rule_name="ui-orphan-parent",
+                       severity="low", severity_reason="synthetic", hostname="LAB-HOST-01", process_guid=orphan,
+                       contributing_event_ids=[ids["f"]])
     from response.actions import ActionStore
     acts = ActionStore(st.con, store)
     for a in store.list():

@@ -170,7 +170,8 @@ async function pageEvents() {
     location.hash = "#/events" + qs(p);
   } },
     h("label", {}, "Loại", h("select", { name: "kind" }, Object.keys(EV_COLS).map((k) => h("option", { value: k, text: k, selected: k === f.kind })))),
-    field("hostname", "Host"), field("process_guid", "process_guid"), field("sysmon_event_id", "Event ID", "number"), field("sha256", "SHA-256"),
+    field("hostname", "Host"), field("process_guid", "process_guid"), field("sysmon_event_id", "Event ID", "number"),
+    ["process", "file"].includes(f.kind) ? field("sha256", "SHA-256") : null,          // API chỉ lọc hash cho process/file
     f.kind === "file" ? field("file_path", "Đường dẫn tệp") : field("image_path", "Image path"),
     h("label", {}, "Từ (UTC)", h("input", { name: "since", type: "datetime-local" })), h("label", {}, "Đến (UTC)", h("input", { name: "until", type: "datetime-local" })),
     h("button", { class: "primary", type: "submit", text: "Lọc" }));
@@ -221,7 +222,7 @@ async function pageAlertDetail(id) {
   await load(box, async () => {
     const [a, hist, tl, tree, ev] = await Promise.all([api("/alerts/" + id), api("/alerts/" + id + "/history"),
       api("/alerts/" + id + "/timeline").catch((e) => ({ error: e.message })), api("/alerts/" + id + "/process-tree").catch((e) => ({ error: e.message })),
-      api("/alerts/" + id + "/evidence")]);
+      api("/alerts/" + id + "/evidence").catch((e) => ({ error: e.message }))]);
     return { a, hist, tl, tree, ev };
   }, ({ a, hist, tl, tree, ev }) => {
     box.append(h("h1", {}, badge(a.severity, sevKind(a.severity)), " " + a.rule_name));
@@ -235,9 +236,11 @@ async function pageAlertDetail(id) {
     box.append(h("h2", {}, labelled("gap", "THIẾU DỮ LIỆU"), "Giới hạn của kết luận"), h("div", { class: "card" },
       h("p", { text: "coverage_status: " + a.coverage_status }), h("p", { text: "missing_fields: " + (a.missing_fields.length ? a.missing_fields.join(", ") : "không có") })));
     // bằng chứng nguồn
-    box.append(h("h2", { text: "Bằng chứng nguồn (Silver → Bronze)" }), h("p", {}, "Trạng thái: ", badge(ev.status, ev.status === "FULL" ? "ok" : "warn")));
-    box.append(table([{ key: "event_id", label: "event_id", wrap: true }, { label: "Bronze", render: (e) => e.bronze ? e.bronze.segment + "#" + e.bronze.line_no : "—", wrap: true },
-      { key: "status", label: "Trạng thái" }, { label: "Event", render: (e) => fmt(e.silver && e.silver.sysmon_event_id) }], ev.events));
+    box.append(h("h2", { text: "Bằng chứng nguồn (Silver → Bronze)" }));
+    if (ev.error) box.append(empty("Không tải được bằng chứng: " + ev.error));
+    else box.append(h("p", {}, "Trạng thái: ", badge(ev.status, ev.status === "FULL" ? "ok" : "warn")),
+      table([{ key: "event_id", label: "event_id", wrap: true }, { label: "Bronze", render: (e) => e.bronze ? e.bronze.segment + "#" + e.bronze.line_no : "—", wrap: true },
+        { key: "status", label: "Trạng thái" }, { label: "Event", render: (e) => fmt(e.silver && e.silver.sysmon_event_id) }], ev.events));
     box.append(h("div", { class: "actions" }, h("button", { type: "button", text: "Xem raw XML (ghi audit)", disabled: !can("raw"), title: can("raw") ? "" : "vai trò không đủ quyền", onclick: () =>
       modal("Xem raw XML", h("p", { text: "Thao tác này được ghi vào audit log. Nội dung có thể chứa dữ liệu nhạy cảm." }), [closeBtn,
         { label: "Đồng ý xem", kind: "primary", fn: async () => {
@@ -256,8 +259,10 @@ async function pageAlertDetail(id) {
       const all = [...tree.ancestors].reverse().map((n) => [n, false]); if (tree.process) all.push([tree.process, true]);
       let root = h("ul"), cur = root;
       for (const [n, isCur] of all) { const li = treeNode(n, isCur), ul = h("ul"); li.append(ul); cur.append(li); cur = ul; }
+      if (!tree.process) cur.append(h("li", {}, h("span", { class: "cur", text: "▶ (thiếu Event 1 của tiến trình này trong Silver)" })));   // không bịa nút, chỉ báo phần thiếu
       for (const d of tree.descendants) cur.append(treeNode(d, false));
-      box.append(h("div", { class: "card tree" }, all.length ? root : empty("Không có dữ liệu tiến trình trong Silver.")));
+      const hasAny = all.length > 0 || tree.descendants.length > 0;
+      box.append(h("div", { class: "card tree" }, hasAny ? root : empty("Không có dữ liệu tiến trình trong Silver.")));
     }
     // trạng thái
     box.append(h("h2", { text: "Trạng thái và ghi chú" }), table([{ key: "from_status", label: "Từ" }, { key: "to_status", label: "Đến" }, { key: "actor", label: "Người" },

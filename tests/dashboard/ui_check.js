@@ -72,6 +72,31 @@ const out = {};
   out.raw_requires_confirmation = (await page.textContent("dialog[open]")).includes("ghi vào audit");
   await page.click("dialog[open] >> text=Đóng");
 
+  // D1: alert thiếu Event 1 của chính nó nhưng có tiến trình con -> cây vẫn hiện tiến trình con
+  const orphanId = await page.evaluate(async (tok) => {
+    const r = await fetch("/alerts?limit=50", { headers: { Authorization: "Bearer " + tok } });
+    return ((await r.json()).items.find((a) => a.rule_name === "ui-orphan-parent") || {}).alert_id || null;
+  }, tokApprover);
+  out.d1_orphan_alert_found = !!orphanId;
+  await page.goto(base + "/ui/#/alerts/" + orphanId);
+  await page.waitForSelector(".tree");
+  out.d1_tree_shows_descendant_when_root_missing = (await page.textContent(".tree")).includes("orphan_child.exe");
+  out.d1_tree_says_root_missing = (await page.textContent(".tree")).includes("thiếu");
+
+  // D2: /evidence lỗi thì trang chi tiết alert vẫn hiện các phần còn lại
+  await page.route("**/alerts/*/evidence*", (r) => r.fulfill({ status: 500, contentType: "application/json",
+    body: JSON.stringify({ error: { code: "E-INTERNAL", message: "lỗi nội bộ" } }) }));
+  await page.goto(base + "/ui/#/overview"); await page.waitForSelector(".grid .card");      // rời trang để dựng lại, tránh dương tính giả
+  await page.goto(base + "/ui/#/alerts/" + orphanId);
+  out.d2_detail_renders_when_evidence_fails = await page.waitForSelector("h2 .tag.obs", { timeout: 4000 }).then(() => true, () => false);
+  await page.unroute("**/alerts/*/evidence*");
+
+  // D3: ô SHA-256 chỉ có ở loại sự kiện hỗ trợ lọc theo hash (process, file)
+  const shaCount = async (kind) => { await page.goto(base + "/ui/#/events?kind=" + kind); await page.waitForSelector("form.filters");
+    return await page.locator("input[name=sha256]").count(); };
+  out.d3_sha256_filter_on_process_and_file = (await shaCount("process")) === 1 && (await shaCount("file")) === 1;
+  out.d3_no_sha256_filter_on_registry_and_network = (await shaCount("registry")) === 0 && (await shaCount("network")) === 0;
+
   // response
   await page.goto(base + "/ui/#/response");
   await page.waitForSelector(".mode-big");
