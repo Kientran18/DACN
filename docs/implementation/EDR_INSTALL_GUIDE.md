@@ -63,7 +63,8 @@ python -m edr_ctl status --config C:\dacn_edr\edr.yaml
 ```
 Mở trình duyệt tại `http://127.0.0.1:8765/ui/`, dán token. Không bind địa chỉ khác.
 Thử không cần Sysmon (file mode): `--agent-input C:\path\events.xml` thay cho `--live`; thêm cờ `--sample-data` cho `python -m core` nếu dữ liệu là mẫu để dashboard hiện biểu ngữ.
-Responder (tùy chọn): đặt biến `EDR_RESPONDER_TOKEN` (token vai trò `responder`) rồi `start`; mặc định chỉ dry-run.
+Responder (tùy chọn, cần cho AT-25/26/37): tạo token vai trò `responder` bằng `python -m api.auth --config C:\dacn_edr\edr.yaml --role responder --actor <tên>`, đặt `$env:EDR_RESPONDER_TOKEN = "<token>"` **trước** `edr_ctl start`. Thiếu biến này `edr_ctl` không khởi động responder và hành động đã duyệt không bao giờ được thực thi; mặc định vẫn chỉ dry-run.
+Xem nhật ký: `python -m edr_ctl logs --config C:\dacn_edr\edr.yaml --name agent` (hoặc `core`, `responder`).
 
 ### Dọn dữ liệu cũ (retention) - chỉ báo cáo, không xóa
 ```powershell
@@ -84,10 +85,12 @@ Remove-Item -Recurse -Force C:\dacn_edr, C:\dacn_venv                # xóa dữ
 ## 9. Kiểm thử trên Linux (không cần Windows)
 ```bash
 pip install -r requirements.txt
-python -m pytest -q            # 200+ test; một số cần node + playwright (tự bỏ qua nếu thiếu)
+python -m pytest -q            # 395 pass khi có lightgbm (đo 2026-11-22); một số test cần node + playwright (tự bỏ qua nếu thiếu)
 ```
 
 ## Giới hạn đã biết
+- Trong venv trên Windows, `python.exe` có thể là launcher sinh một tiến trình `python.exe` con; PID trong `run\*.pid` là của launcher. Khi kill thủ công dùng `taskkill /F /T /PID <pid>` rồi kiểm tra `tasklist` không còn tiến trình mồ côi. Chưa kiểm chứng (AT-34, AT-05).
+- `python -m edr_ctl start` không có `--live` và không có `--agent-input` thì chỉ chạy core (không có agent).
 - `--live` (EventLogSource) chưa từng chạy trên Windows: có thể cần chỉnh sau khi có `verify_report.json`.
 - Dừng tiến trình trên Windows: `edr_ctl` dùng tệp stop; ép kết thúc chỉ khi `--force` vì không xác minh được tên tiến trình trên Windows.
 - `edr_ctl` không cài dịch vụ Windows; đóng cửa sổ/tắt máy sẽ dừng tiến trình. Khi khởi động lại, checkpoint cho phép tiếp tục (có thể trùng, Silver dedup).

@@ -8,9 +8,9 @@
 
 - Preconditions: Windows 10 VM, Sysmon chạy, quyền đọc channel Sysmon/Operational
 - Steps:
-  1. $env:PYTHONPATH=...; python -m agent run --config C:\dacn_edr\edr.yaml --live --follow (hoặc edr_ctl start --live)
+  1. $env:PYTHONPATH=...; python -m agent run --config C:\dacn_edr\edr.yaml --live --follow (hoặc python -m edr_ctl start --config C:\dacn_edr\edr.yaml --live)
   2. Sinh sự kiện (mở notepad)
-  3. wevtutil qe ... /f:xml so với raw_xml trong Bronze
+  3. wevtutil qe Microsoft-Windows-Sysmon/Operational /c:5 /rd:true /f:xml > sysmon_export.xml; so EventRecordID và nội dung với raw_xml trong C:\dacn_edr\bronze\*.jsonl
 - Expected: raw_xml trong Bronze trùng EventRecordID/nội dung với wevtutil
 - Actual: _(điền)_
 - Status: PASS / FAIL / NOT RUN _(chọn)_
@@ -22,7 +22,7 @@
 - Preconditions: Windows, chạy agent bằng tài khoản không có quyền
 - Steps:
   1. Chạy python -m agent run --config C:\dacn_edr\edr.yaml --live bằng user thường
-  2. Xem tệp collector_errors.jsonl trong thư mục errors của Bronze (đường dẫn thực tế do agent ghi, kiểm bằng dir)
+  2. Xem C:\dacn_edr\bronze\errors\collector_errors.jsonl (kiểm bằng dir nếu khác) và C:\dacn_edr\agent\health.json (kỳ vọng trạng thái error); agent thoát mã 1 khi không dùng --follow
 - Expected: Mã lỗi C-006, agent không crash âm thầm
 - Actual: _(điền)_
 - Status: PASS / FAIL / NOT RUN _(chọn)_
@@ -33,7 +33,7 @@
 
 - Preconditions: Windows VM, agent live đang chạy
 - Steps:
-  1. taskkill /F /PID <pid của tiến trình agent> (lấy PID từ edr_ctl status)
+  1. taskkill /F /T /PID <pid của tiến trình agent> (lấy PID từ edr_ctl status; dùng /T vì python.exe trong venv Windows có thể là launcher sinh tiến trình con; xác nhận bằng tasklist rằng không còn python.exe của agent)
   2. Khởi động lại
   3. Kiểm tra recover và không mất sự kiện
 - Expected: recover_dir niêm phong .part, checkpoint tiếp tục
@@ -46,8 +46,8 @@
 
 - Preconditions: VM lab, Sysmon, script lab đã được người dùng đọc
 - Steps:
-  1. Chạy dacn_lab_scenarios.ps1 SC01-SC04
-  2. python tests/e2e/compare_expected.py
+  1. Chạy scripts\lab\dacn_lab_scenarios.ps1 -WhatIf rồi chạy thật (mặc định SC01,SC02,SC03,SC06,SC07; SC04 chạy riêng bằng -Scenario SC04)
+  2. python tests/e2e/compare_expected.py --manifest %TEMP%\dacn_lab\lab_run_<runid>.json --silver <bản sao của C:\dacn_edr\silver\endpoint_silver.duckdb> --bronze C:\dacn_edr\bronze --ioc %TEMP%\dacn_lab\ioc_candidate_<runid>.yaml --out report.md
 - Expected: Báo cáo so khớp scenarios.yaml
 - Actual: _(điền)_
 - Status: PASS / FAIL / NOT RUN _(chọn)_
@@ -56,7 +56,7 @@
 
 ## AT-25 · Terminate tiến trình thử nghiệm (marker lab) khi execute + audit
 
-- Preconditions: VM, người dùng bật execute_unlocked và mode execute
+- Preconditions: VM, người dùng tự đặt mode execute và execute_unlocked true trong config\\response-policy.yaml; đã tạo token vai trò responder (python -m api.auth --role responder) và đặt $env:EDR_RESPONDER_TOKEN TRƯỚC khi edr_ctl start (thiếu biến này responder không chạy, hành động đã duyệt sẽ không được thực thi)
 - Steps:
   1. Chạy tiến trình thử nghiệm nằm trong thư mục lab (%TEMP%\dacn_lab; tên marker KHÔNG đủ)
   2. Yêu cầu và duyệt terminate (người duyệt khác người yêu cầu)
@@ -71,9 +71,10 @@
 
 - Preconditions: VM, tệp trong thư mục lab
 - Steps:
-  1. Duyệt quarantine
-  2. Restore
-  3. So sha256
+  1. Điều kiện như AT-25 (responder đã chạy)
+  2. Duyệt quarantine tệp trong %TEMP%\dacn_lab
+  3. Restore
+  4. So sha256 trước và sau (Get-FileHash)
 - Expected: Hash khớp, không ghi đè, không xóa vĩnh viễn
 - Actual: _(điền)_
 - Status: PASS / FAIL / NOT RUN _(chọn)_
@@ -96,8 +97,9 @@
 
 - Preconditions: Windows VM
 - Steps:
-  1. python -m edr_ctl start/status/stop --config C:\dacn_edr\edr.yaml (đã đặt $env:PYTHONPATH)
-  2. Kiểm tra tasklist
+  1. python -m edr_ctl start/status/stop --config C:\dacn_edr\edr.yaml --live (đã đặt $env:PYTHONPATH)
+  2. Kiểm tra tasklist trước start, sau start, sau stop (venv Windows có thể hiện 2 python.exe cho mỗi thành phần: launcher và tiến trình con)
+  3. Nếu stop báo STILL-RUNNING vì không xác minh được tiến trình thì ghi lại rồi mới dùng --force
 - Expected: Không còn tiến trình mồ côi
 - Actual: _(điền)_
 - Status: PASS / FAIL / NOT RUN _(chọn)_
@@ -130,8 +132,9 @@
 
 - Preconditions: VM, execute bật bởi người dùng
 - Steps:
-  1. SC-03
-  2. SC-08
+  1. Chạy SC03 bằng dacn_lab_scenarios.ps1
+  2. SC-08 là thao tác thủ công, không có trong script: chạy tiến trình thử nghiệm sống lâu trong %TEMP%\dacn_lab, duyệt terminate/quarantine trên Dashboard (xem EDR_DEMO_PLAN.md dòng SC-08)
+  3. Đối chiếu audit
 - Expected: Alert, duyệt, thực thi, audit
 - Actual: _(điền)_
 - Status: PASS / FAIL / NOT RUN _(chọn)_

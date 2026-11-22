@@ -11,7 +11,7 @@
 
 | Hạng mục | Kết quả (2026-11-08; chạy lại 2026-11-09 sau `36ee751`; chạy lại 2026-11-18 và 2026-11-22 sau audit) |
 |---|---|
-| Toàn bộ pytest | **395 pass, 1 skipped, 0 fail** khi có `lightgbm`; **389 pass, 2 skipped** khi không có (Linux, 2026-11-22, đo cả hai; skipped = test cần Windows thật và, khi thiếu `lightgbm`, test nạp mô hình EMBER2024). Lịch sử: 201 → 213 sau `36ee751` → 233 (2026-11-09) → 251 sau ML → 260 sau audit đợt 1 → 284 sau sửa U2–U8 → 322 sau merge issue #40 và sửa `same_time` → 395 sau audit đợt 2 (2026-11-22) |
+| Toàn bộ pytest | **410 pass, 1 skipped, 0 fail** khi có `lightgbm` (395 trước khi thêm `tests/test_install_guide_flags.py`, 13 ca); **389 pass, 2 skipped** khi không có (Linux, 2026-11-22, đo trước khi thêm 13 test, chưa đo lại; skipped = test cần Windows thật và, khi thiếu `lightgbm`, test nạp mô hình EMBER2024). Lịch sử: 201 → 213 sau `36ee751` → 233 (2026-11-09) → 251 sau ML → 260 sau audit đợt 1 → 284 sau sửa U2–U8 → 322 sau merge issue #40 và sửa `same_time` → 395 sau audit đợt 2 (2026-11-22) |
 | Nghiệm thu AT-01…43 mức L | 28 PASS · 1 PARTIAL · 0 FAIL · 14 NOT RUN (chạy lại 2026-11-22, không đổi) |
 | Hai lỗi baseline của PH1 | Đã sửa và chạy lại (`C-002`; entropy test dùng giá trị đã biết) |
 
