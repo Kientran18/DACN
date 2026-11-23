@@ -5,6 +5,7 @@ duckdb
 pytz        # duckdb cần để trả cột TIMESTAMPTZ
 PyYAML
 pywin32; sys_platform == "win32"
+tzdata; sys_platform == "win32"   # Windows không có CSDL múi giờ IANA; DuckDB cần nó để đọc TIMESTAMPTZ (đo trên VM Windows)
 fastapi
 uvicorn
 httpx      # TestClient của FastAPI
