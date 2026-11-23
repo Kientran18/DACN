@@ -58,7 +58,7 @@ def test_invalid_policy_rejected(tmp_path):
     bad = tmp_path / "p.yaml"; bad.write_text("mode: yolo\n")
     with pytest.raises(PolicyError):
         load_policy(bad, env={})
-    bad.write_text(POLICY_YAML.read_text(encoding="utf-8").replace("%TEMP%", "%NOPE%"))
+    bad.write_text(POLICY_YAML.read_text(encoding="utf-8").replace("%TEMP%", "%NOPE%"), encoding="utf-8")
     with pytest.raises(PolicyError):
         load_policy(bad, env={"PUBLIC": "P", "SystemRoot": "S", "ProgramFiles": "x", "ProgramFiles(x86)": "y"})
 
