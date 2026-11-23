@@ -35,6 +35,7 @@ class AgentRunner:
         self.written = 0
         self.last_event_at = None
         self.failed = False          # True nếu lượt chạy gần nhất dừng vì lỗi ghi (C-004)
+        self.source_failed = False   # True nếu lượt chạy gần nhất không đọc được nguồn (SourceError)
 
     def request_stop(self) -> None:
         self.stop_requested = True
@@ -75,7 +76,7 @@ class AgentRunner:
             self.errors[reason] += 1
         self._health("running")
         pending_bm, in_batch, seq = None, 0, 0
-        self.failed = False
+        self.failed, self.source_failed = False, False
         try:
             for item in self.source.iter_events(bookmark):
                 if self._should_stop():
@@ -98,6 +99,7 @@ class AgentRunner:
                     self._health("running")
         except SourceError as exc:
             self._record_error(exc.code, None, str(exc))       # tăng bộ đếm + dấu vết; không bịa nội dung (raw_xml = None)
+            self.source_failed = True                               # nguồn không đọc được: health phải báo lỗi, không phải 'idle'
         except _WriteFailure:
             self.failed = True
         finally:
@@ -113,7 +115,7 @@ class AgentRunner:
                 # bỏ segment đang mở, recover_dir ở lượt sau seal phần hợp lệ; lượt sau (--follow) tự thử lại từ checkpoint.
                 self.errors["C-004"] += 1
                 self.writer.abort()
-            self._health("error" if self.failed else ("stopped" if final else "idle"))
+            self._health("error" if self.failed or self.source_failed else ("stopped" if final else "idle"))
 
     def _commit(self, bookmark: str) -> None:
         try:

@@ -155,6 +155,21 @@ def test_cli_exits_nonzero_on_write_failure_but_zero_when_healthy(tmp_path, monk
     assert cli.main(["run", "--input", str(SYN)]) == 1
 
 
+def test_source_error_sets_health_error_not_idle(tmp_path):
+    """VM Windows: nguồn live lỗi A-002 ở mọi lượt poll nhưng health vẫn 'idle' và dashboard báo agent bình thường."""
+    from agent.sources.base import SourceError
+
+    class Broken:
+        def iter_events(self, bm):
+            raise SourceError("A-002", "error: (87, 'EvtSubscribe', 'The parameter is incorrect.')")
+            yield  # pragma: no cover
+
+    r = AgentRunner(Broken(), BronzeWriter(tmp_path / "b"), Checkpoint(tmp_path / "cp.json"), tmp_path / "health.json")
+    r.run(final=False)
+    h = json.loads((tmp_path / "health.json").read_text(encoding="utf-8"))
+    assert h["state"] == "error" and h["errors_by_code"]["A-002"] == 1
+
+
 def test_file_and_live_modes_do_not_share_a_checkpoint(tmp_path, monkeypatch):
     """VM Windows: chạy file mode (bookmark '2') rồi --live -> agent đưa '2' vào EvtCreateBookmark. Mỗi nguồn cần checkpoint riêng."""
     import agent.__main__ as am
