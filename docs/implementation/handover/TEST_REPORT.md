@@ -11,7 +11,7 @@
 
 | Hạng mục | Kết quả (2026-11-08; chạy lại 2026-11-09 sau `36ee751`; chạy lại 2026-11-18 và 2026-11-22 sau audit) |
 |---|---|
-| Toàn bộ pytest | **412 pass, 1 skipped, 0 fail** khi có `lightgbm` (395 trước khi thêm `tests/test_install_guide_flags.py`, 15 ca); **389 pass, 2 skipped** khi không có (Linux, 2026-11-22, đo trước khi thêm 15 test, chưa đo lại; skipped = test cần Windows thật và, khi thiếu `lightgbm`, test nạp mô hình EMBER2024). Lịch sử: 201 → 213 sau `36ee751` → 233 (2026-11-09) → 251 sau ML → 260 sau audit đợt 1 → 284 sau sửa U2–U8 → 322 sau merge issue #40 và sửa `same_time` → 395 sau audit đợt 2 (2026-11-22) |
+| Toàn bộ pytest | **419 pass, 1 skipped, 0 fail** khi có `lightgbm` (395 trước khi thêm `tests/test_install_guide_flags.py`, 15 ca); **389 pass, 2 skipped** khi không có (Linux, 2026-11-22, đo trước khi thêm 15 test, chưa đo lại; skipped = test cần Windows thật và, khi thiếu `lightgbm`, test nạp mô hình EMBER2024). Lịch sử: 201 → 213 sau `36ee751` → 233 (2026-11-09) → 251 sau ML → 260 sau audit đợt 1 → 284 sau sửa U2–U8 → 322 sau merge issue #40 và sửa `same_time` → 395 sau audit đợt 2 (2026-11-22) |
 | Nghiệm thu AT-01…43 mức L | 28 PASS · 1 PARTIAL · 0 FAIL · 14 NOT RUN (chạy lại 2026-11-22, không đổi) |
 | Hai lỗi baseline của PH1 | Đã sửa và chạy lại (`C-002`; entropy test dùng giá trị đã biết) |
 
@@ -44,3 +44,5 @@ python scripts/acceptance/run_acceptance.py
 ## Kết quả trên Windows (2026-11-23)
 
 Windows 10 (Python 3.14, múi giờ máy Asia/Bangkok), người test chạy `python -m pytest -q` lần đầu: 269 pass, 89 fail, 35 error, 13 skipped, 18 phút 5 giây. Nguyên nhân đã xác định từ log: thiếu `tzdata` (DuckDB không đọc được TIMESTAMPTZ; khoảng 94 ca), tệp chính sách đọc không chỉ định mã hóa trong test, `stdout` của `validator_poc.py` không in được tiếng Việt qua ống dẫn, thu hồi token phụ thuộc mtime thô, test ghi đè `SystemRoot`/tạo symlink/dò cờ CLI không chạy được trên Windows. Đã sửa trên Linux (412 pass); chưa chạy lại trên Windows.
+
+**Lần chạy 2 trên Windows (2026-11-23, sau khi thêm `tzdata` và sửa):** 382 pass, 12 fail, 14 skipped, 4 phút 59 giây (lần 1: 18 phút). Toàn bộ lỗi múi giờ đã hết, xác nhận nguyên nhân là thiếu `tzdata`. 12 ca còn lại: `--help` của `edr_ctl`, `agent`, `core`, `pipeline.retention`, `static_scorer` bị `UnicodeEncodeError` khi stdout là ống dẫn (cp1252) và một test ghi tệp chính sách thiếu `encoding`. Đã sửa trên Linux (419 pass, 1 skipped): `common/console.py::force_utf8_stdio` gọi ở đầu `main()` của 7 CLI; chưa chạy lại trên Windows.
