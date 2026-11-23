@@ -106,7 +106,10 @@ def test_symlink_thoat_thu_muc_bi_chan(env):
     tmp, models, allowed = env
     out = tmp / "outside.exe"
     out.write_bytes(make_pe())
-    (allowed / "link.exe").symlink_to(out)
+    try:
+        (allowed / "link.exe").symlink_to(out)
+    except (OSError, NotImplementedError):      # Windows không có quyền SeCreateSymbolicLink (WinError 1314)
+        pytest.skip("không tạo được symlink trên máy này")
     assert scorer(models, allowed).score_file(allowed / "link.exe").reason == "DIR_NOT_ALLOWED"
 
 
