@@ -1,5 +1,6 @@
 """Mọi cờ --xxx trong lệnh `python -m <module>` của EDR_INSTALL_GUIDE.md và WINDOWS_ACCEPTANCE_CHECKLIST.md
 phải tồn tại trong CLI thật (tránh hướng dẫn lệch code). Không chứng minh chạy được trên Windows."""
+import os
 import re
 import subprocess
 import sys
@@ -14,8 +15,8 @@ MODULES = {"edr_ctl": ["edr_ctl"], "agent": ["agent", "run"], "api.auth": ["api.
 
 
 def _help(mod_args):
-    env = {"PYTHONPATH": f"{ROOT/'src'}:{ROOT/'src'/'pipeline'}:{ROOT/'poc'/'sysmon-collector'}", "PATH": "/usr/bin:/bin"}
-    r = subprocess.run([sys.executable, "-m", *mod_args, "--help"], capture_output=True, text=True, env=env, cwd=ROOT, check=False)
+    env = {**os.environ, "PYTHONPATH": os.pathsep.join(str(ROOT / p) for p in ("src", "src/pipeline", "poc/sysmon-collector"))}
+    r = subprocess.run([sys.executable, "-m", *mod_args, "--help"], capture_output=True, text=True, encoding="utf-8", env=env, cwd=ROOT, check=False)
     return r.stdout
 
 
