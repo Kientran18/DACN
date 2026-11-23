@@ -89,6 +89,7 @@ python -m pytest -q            # 395 pass khi có lightgbm (đo 2026-11-22); m�
 ```
 
 ## Giới hạn đã biết
+- Windows cần gói `tzdata` (đã thêm vào `requirements.txt`); thiếu nó, DuckDB báo 'Time zone ... is not available to Python\'s zoneinfo' ở mọi truy vấn có TIMESTAMPTZ. Người dùng đã cài từ phiên bản cũ của `requirements.txt` cần chạy lại `pip install -r requirements.txt`. Đo trên một VM Windows 10, Python 3.14.
 - Trong venv trên Windows, `python.exe` có thể là launcher sinh một tiến trình `python.exe` con; PID trong `run\*.pid` là của launcher. Khi kill thủ công dùng `taskkill /F /T /PID <pid>` rồi kiểm tra `tasklist` không còn tiến trình mồ côi. Chưa kiểm chứng (AT-34, AT-05).
 - `python -m edr_ctl start` không có `--live` và không có `--agent-input` thì chỉ chạy core (không có agent).
 - `--live` (EventLogSource) chưa từng chạy trên Windows: có thể cần chỉnh sau khi có `verify_report.json`.
