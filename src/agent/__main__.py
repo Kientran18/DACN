@@ -34,7 +34,7 @@ def main(argv=None) -> int:
         src, mode = FileEventSource(a.input), "file"
     else:
         ap.error("cần --input hoặc --live")
-    runner = AgentRunner(src, BronzeWriter(cfg.bronze_dir), Checkpoint(cfg.home / "agent" / "checkpoint.json"),
+    runner = AgentRunner(src, BronzeWriter(cfg.bronze_dir), Checkpoint(cfg.home / "agent" / f"checkpoint_{mode}.json"),
                          cfg.home / "agent" / "health.json", mode=mode, stop_file=cfg.home / "run" / "agent.stop")
     signal.signal(signal.SIGINT, lambda *_: runner.request_stop())
     runner.run(final=not a.follow)

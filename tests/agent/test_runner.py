@@ -153,3 +153,26 @@ def test_cli_exits_nonzero_on_write_failure_but_zero_when_healthy(tmp_path, monk
     monkeypatch.setenv("EDR_HOME", str(tmp_path / "home2"))
     monkeypatch.setattr(cli, "BronzeWriter", lambda d: _FailingWriter(d, fail_append_at=2))
     assert cli.main(["run", "--input", str(SYN)]) == 1
+
+
+def test_file_and_live_modes_do_not_share_a_checkpoint(tmp_path, monkeypatch):
+    """VM Windows: chạy file mode (bookmark '2') rồi --live -> agent đưa '2' vào EvtCreateBookmark. Mỗi nguồn cần checkpoint riêng."""
+    import agent.__main__ as am
+    import agent.sources.eventlog as el
+    import yaml
+    seen = {}
+
+    class FakeLive:
+        def iter_events(self, bm):
+            seen["bm"] = bm
+            return iter(())
+
+    monkeypatch.setattr(el, "EventLogSource", FakeLive)
+    cfg = tmp_path / "edr.yaml"
+    cfg.write_text(yaml.safe_dump({"home": str(tmp_path / "home")}), encoding="utf-8")
+    xml = tmp_path / "e.xml"
+    xml.write_text(Path("references/samples/raw/raw_process_create_event1.xml").read_text(encoding="utf-8"), encoding="utf-8")
+    assert am.main(["run", "--config", str(cfg), "--input", str(xml)]) == 0
+    am.main(["run", "--config", str(cfg), "--live"])
+    assert seen["bm"] is None
+
