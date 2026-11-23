@@ -32,7 +32,9 @@ def test_start_ingest_alert_stop(tmp_path):
     xml = tmp_path / "events.xml"; xml.write_text("\n".join(sx.full_scenario()), encoding="utf-8")
     (home / "ioc").mkdir(); (home / "ioc" / "ioc.yaml").write_text(yaml.safe_dump({"ioc_hashes": [{"sha256": sx.IOC_SHA, "source": "e2e-synthetic"}]}))
     env = {**os.environ, "PYTHONPATH": os.pathsep.join(str(ROOT / p) for p in ("src", "src/pipeline", "poc/sysmon-collector")),
-           "TEMP": "/tmp/x", "PUBLIC": "/tmp/p", "SystemRoot": "/tmp/s", "ProgramFiles": "/tmp/pf", "ProgramFiles(x86)": "/tmp/pf86"}
+           "TEMP": "/tmp/x", "PUBLIC": "/tmp/p", "ProgramFiles": "/tmp/pf", "ProgramFiles(x86)": "/tmp/pf86"}
+    if sys.platform != "win32":                      # Windows: đổi SystemRoot làm hỏng winsock (WinError 10106) trong tiến trình con
+        env["SystemRoot"] = "/tmp/s"
     env.pop("EDR_RESPONDER_TOKEN", None)
     ctl = [sys.executable, "-m", "edr_ctl", "--config", str(cfg)]
     run = lambda *a: subprocess.run([*ctl, *a], capture_output=True, text=True, cwd=ROOT, env=env, timeout=60)
