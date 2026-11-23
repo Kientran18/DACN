@@ -111,6 +111,10 @@ notepad.exe
 ```powershell
 Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" -MaxEvents 5 | Format-List TimeCreated, Id
 ```
+**Nếu báo `The service Sysmon64 is already registered`:** Sysmon đã cài từ trước với cấu hình khác, cấu hình của repo **chưa được áp dụng**. Áp cấu hình của repo bằng (Administrator):
+```powershell
+C:\Sysmon\Sysmon64.exe -c C:\DACN\poc\sysmon-collector\configs\sysmon-config.xml
+```
 **Kết quả mong đợi:** `Get-Service` hiện `Running`; có sự kiện mới `Id: 1` lúc mở Notepad.
 **Cần thu thập:** ảnh `B06_sysmon_service.png` (service Running) và `B06_sysmon_events.png` (danh sách sự kiện). Nếu `-i` báo lỗi cấu hình, chụp ảnh lỗi và ghi lại.
 
@@ -122,7 +126,7 @@ copy C:\DACN\config\edr.example.yaml C:\dacn_edr\edr.yaml
 python -m api.auth --config C:\dacn_edr\edr.yaml --role analyst --actor tester_a
 python -m api.auth --config C:\dacn_edr\edr.yaml --role approver --actor tester_b
 ```
-Hai lệnh cuối in ra **token** (chỉ hiện một lần). **Chép vào ghi chú riêng của bạn, KHÔNG gửi, KHÔNG để lộ trong ảnh.**
+Hai lệnh cuối in ra **token** (chỉ hiện một lần). **Chép vào ghi chú riêng của bạn, KHÔNG gửi, KHÔNG để lộ trong ảnh.** Lưu ý: `Start-Transcript` ghi cả token vào tệp transcript; xóa dòng token khỏi transcript trước khi gửi, hoặc dừng transcript (`Stop-Transcript`) trước khi chạy hai lệnh này.
 
 Chạy thử bằng một tệp mẫu:
 ```powershell

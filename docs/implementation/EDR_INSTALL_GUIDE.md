@@ -36,7 +36,7 @@ Cài Sysmon do Microsoft Sysinternals phát hành (tải thủ công, kiểm tra
 ```powershell
 Sysmon64.exe -accepteula -i C:\DACN\poc\sysmon-collector\configs\sysmon-config.xml
 ```
-Cấu hình này chưa được xác thực trên máy thật (ghi trong chính tệp); chạy `Sysmon64.exe -s` để đối chiếu schema trước.
+Cấu hình này chưa được xác thực trên máy thật (ghi trong chính tệp); chạy `Sysmon64.exe -s` để đối chiếu schema trước. Nếu Sysmon đã cài sẵn (báo `already registered`), `-i` **không** áp cấu hình của repo; dùng `Sysmon64.exe -c <tệp cấu hình>` (ghi nhận trên VM, Sysmon v15.22, schema 4.91; tệp cấu hình của repo dùng schema 4.90 và được chấp nhận).
 
 ## 4. Kiểm tra môi trường (chỉ đọc) **[W]**
 ```powershell
