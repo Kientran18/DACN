@@ -19,6 +19,8 @@ from .service import CoreService
 
 
 def main(argv=None) -> int:
+    from common.console import force_utf8_stdio
+    force_utf8_stdio()
     ap = argparse.ArgumentParser(prog="core")
     ap.add_argument("--config", type=Path)
     ap.add_argument("--policy", type=Path, default=Path("config/response-policy.yaml"))

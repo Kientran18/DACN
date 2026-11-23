@@ -81,6 +81,8 @@ def create_token(path: Path, role: str, actor: str) -> str:
 
 
 def main(argv=None) -> int:
+    from common.console import force_utf8_stdio
+    force_utf8_stdio()
     import argparse
     from common.config import load_config
     ap = argparse.ArgumentParser(prog="api.auth")

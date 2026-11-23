@@ -15,6 +15,8 @@ from .sources.file_source import FileEventSource
 
 
 def main(argv=None) -> int:
+    from common.console import force_utf8_stdio
+    force_utf8_stdio()
     ap = argparse.ArgumentParser(prog="agent")
     sub = ap.add_subparsers(dest="cmd", required=True)
     run = sub.add_parser("run")

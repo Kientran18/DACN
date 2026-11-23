@@ -56,6 +56,8 @@ def plan_retention(bronze_dir: Path, con, *, raw_days: int, now: Optional[dateti
 
 
 def main(argv=None) -> int:
+    from common.console import force_utf8_stdio
+    force_utf8_stdio()
     from common.config import load_config
     from pipeline.silver_store import SilverStore
     ap = argparse.ArgumentParser(prog="pipeline.retention")

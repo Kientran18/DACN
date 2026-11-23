@@ -164,6 +164,8 @@ class EdrCtl:
 
 
 def main(argv=None) -> int:
+    from common.console import force_utf8_stdio
+    force_utf8_stdio()
     from common.config import load_config
     ap = argparse.ArgumentParser(prog="edr_ctl")
     ap.add_argument("cmd", choices=["start", "stop", "status", "logs"])

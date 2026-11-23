@@ -17,6 +17,8 @@ from .responder import Responder
 
 
 def main(argv=None) -> int:
+    from common.console import force_utf8_stdio
+    force_utf8_stdio()
     ap = argparse.ArgumentParser(prog="response")
     ap.add_argument("--config", type=Path)
     ap.add_argument("--policy", type=Path, default=Path("config/response-policy.yaml"))

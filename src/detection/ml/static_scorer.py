@@ -170,6 +170,8 @@ class StaticScorer:
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
+    from common.console import force_utf8_stdio
+    force_utf8_stdio()
     ap = argparse.ArgumentParser(description="Chấm điểm PE tĩnh theo yêu cầu (NHÁP, không kích hoạt response)")
     ap.add_argument("file")
     ap.add_argument("--allow-dir", action="append", default=[], help="thư mục được phép đọc (lặp lại được); mặc định từ chối tất cả")
