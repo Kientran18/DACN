@@ -45,8 +45,8 @@ def main(argv=None) -> int:
         runner.run(final=False)
     if a.follow:
         runner.mark_stopped()      # chỉ ghi "stopped" khi thoát thật
-    elif runner.failed:
-        return 1                   # lỗi ghi đĩa (C-004): báo cho người gọi; --follow tự thử lại ở lượt sau
+    elif runner.failed or runner.source_failed:
+        return 1                   # lỗi ghi đĩa (C-004) hoặc nguồn không đọc được (C-006, A-002): báo cho người gọi; --follow tự thử lại
     return 0
 
 
