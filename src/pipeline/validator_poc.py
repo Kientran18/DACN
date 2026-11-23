@@ -13,6 +13,7 @@ import ipaddress
 import json
 import math
 import re
+import sys
 import uuid
 from collections import Counter
 from dataclasses import dataclass
@@ -875,6 +876,8 @@ def run_duckdb_verification(engine: SilverValidatorEngine) -> None:
 
 
 def main() -> None:
+    if hasattr(sys.stdout, "reconfigure"):      # Windows: stdout là ống dẫn mã hóa theo codepage, không in được tiếng Việt
+        sys.stdout.reconfigure(encoding="utf-8")
     engine = SilverValidatorEngine()
 
     # Tự động tìm 4 file JSON mẫu thật trong thư mục hiện tại hoặc references/samples/json (chạy từ thư mục gốc repo)
