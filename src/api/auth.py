@@ -32,7 +32,8 @@ class TokenStore:
     @staticmethod
     def _stamp(path):
         try:
-            return Path(path).stat().st_mtime_ns if path else None
+            st = Path(path).stat() if path else None
+            return (st.st_mtime_ns, st.st_size) if st else None      # Windows: mtime thô, thêm kích thước để không bỏ lỡ thu hồi
         except OSError:
             return None
 

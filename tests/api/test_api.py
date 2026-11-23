@@ -389,3 +389,18 @@ def test_token_file_changes_apply_without_restart(tmp_path):
     assert ts.lookup(t2) is None                           # thu hồi bằng cách xóa dòng
     f.write_text("{bad")                                   # tệp ghi dở: giữ danh sách cũ, không sập
     assert ts.lookup(t2) is None and any(e["actor"] == "a" for e in ts.entries.values())
+
+
+def test_token_revocation_is_seen_even_when_mtime_is_unchanged(tmp_path):
+    """Windows có độ phân giải mtime thô: ghi hai lần liên tiếp có thể cho cùng mtime_ns. Thu hồi token không được phụ thuộc mtime."""
+    import os
+    from api.auth import TokenStore, create_token
+    f = tmp_path / "t.json"
+    create_token(f, "analyst", "a")
+    ts = TokenStore.load(f)
+    t2 = create_token(f, "viewer", "v")
+    assert ts.lookup(t2)["actor"] == "v"
+    mtime = f.stat().st_mtime_ns
+    f.write_text(json.dumps({h: e for h, e in json.loads(f.read_text()).items() if e["actor"] != "v"}), encoding="utf-8")
+    os.utime(f, ns=(mtime, mtime))                 # mô phỏng cùng mtime
+    assert ts.lookup(t2) is None
