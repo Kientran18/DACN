@@ -8,6 +8,7 @@ import types
 import pytest
 
 from agent.sources import eventlog
+from agent.sources.base import SourceError
 
 
 class _FakeW:
@@ -47,3 +48,13 @@ def test_next_on_subscription_does_not_block(fake):
     nxt = [c for c in fake.calls if c[0] == "EvtNext"][-1]
     assert 0 in nxt[1][2:] or nxt[2].get("Timeout") == 0, nxt      # timeout 0 như B-02 đã đo trên VM
 
+
+def test_source_error_message_keeps_winerror_details():
+    class Boom:
+        def query(self, *a):
+            e = Exception(87, "EvtSubscribe", "The parameter is incorrect.")
+            e.winerror = 87
+            raise e
+    with pytest.raises(SourceError) as e:
+        list(eventlog.EventLogSource(api=Boom()).iter_events("<BookmarkList/>"))
+    assert e.value.code == "A-002" and "87" in str(e.value) and "EvtSubscribe" in str(e.value)

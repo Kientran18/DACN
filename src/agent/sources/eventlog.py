@@ -62,7 +62,7 @@ class EventLogSource:
             raise SourceError("A-001", "pywin32 không khả dụng") from exc
         except Exception as exc:  # pywintypes.error: mã 5 = ACCESS_DENIED
             code = "C-006" if getattr(exc, "winerror", None) == 5 or "denied" in str(exc).lower() else "A-002"
-            raise SourceError(code, type(exc).__name__) from exc
+            raise SourceError(code, f"{type(exc).__name__}: {exc}") from exc     # giữ mã winerror và tên hàm
         while True:
             events = api.next(handle, self.batch)
             if not events:
