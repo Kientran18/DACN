@@ -19,16 +19,25 @@ class _Api:
     def __init__(self):
         import win32evtlog  # type: ignore
         self.w = win32evtlog
+        self._subs = {}      # handle subscription -> event báo hiệu (giữ tham chiếu cho tới khi handle hết dùng)
 
     def query(self, channel, bookmark_xml):
         w = self.w
         if bookmark_xml:
+            # Mô hình kéo (không Callback) BẮT BUỘC SignalEvent; thiếu nó EvtSubscribe báo lỗi 87 (đo trên VM Windows 10,
+            # verify_windows_env B-03). Cùng cách gọi với B-02 đã khởi tạo được trên VM.
+            import win32event  # type: ignore
+            signal = win32event.CreateEvent(None, 0, 0, None)
             bm = w.EvtCreateBookmark(bookmark_xml)
-            return w.EvtSubscribe(channel, w.EvtSubscribeStartAfterBookmark, Bookmark=bm), bm
+            h = w.EvtSubscribe(channel, w.EvtSubscribeStartAfterBookmark, SignalEvent=signal, Query="*", Bookmark=bm)
+            self._subs = {h: signal}
+            return h, bm
         h = w.EvtQuery(channel, w.EvtQueryChannelPath | w.EvtQueryForwardDirection, "*")
         return h, w.EvtCreateBookmark(None)
 
     def next(self, handle, n):
+        if handle in self._subs:
+            return self.w.EvtNext(handle, n, 0)      # timeout 0: không chặn khi chưa có sự kiện mới (B-02 trên VM)
         return self.w.EvtNext(handle, n)
 
     def render_xml(self, ev):

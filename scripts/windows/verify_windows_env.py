@@ -147,8 +147,8 @@ def check_channel_readable() -> List[Dict[str, Any]]:
 
 def check_bookmark_api(probe_timeout_s: float = 3.0) -> List[Dict[str, Any]]:
     """Thử bookmark và đăng ký sự kiện tương lai. Ghi nguyên văn lỗi nếu API khác dự kiến.
-    B-03 bắt chước ĐÚNG cách agent (src/agent/sources/eventlog.py) gọi EvtSubscribe: StartAfterBookmark + Bookmark, không
-    SignalEvent, bookmark dựng lại từ XML. B-02 (có SignalEvent) chỉ là thông tin thêm. B-04 chỉ ĐO, không đổi cấu hình."""
+    B-03 bắt chước ĐÚNG cách agent (src/agent/sources/eventlog.py) gọi EvtSubscribe: StartAfterBookmark + SignalEvent + Query="*"
+    + Bookmark dựng lại từ XML (lần chạy VM 2026-11-23: thiếu SignalEvent -> lỗi 87). B-04 chỉ ĐO EvtNext(timeout=0) như agent."""
     if not IS_WINDOWS:
         return _skip("B-01")
     out: List[Dict[str, Any]] = []
@@ -185,9 +185,13 @@ def check_bookmark_api(probe_timeout_s: float = 3.0) -> List[Dict[str, Any]]:
             out.append(result("B-02", "FAIL", f"EvtSubscribe (có SignalEvent) lỗi: {type(exc).__name__}: {exc}"))
     sub2 = None
     try:
+        if win32event is None:
+            raise ImportError("thiếu win32event: agent cần nó để tạo SignalEvent")
         rebuilt = win32evtlog.EvtCreateBookmark(bm_xml)         # như agent khi khởi động lại: dựng bookmark từ XML đã lưu
-        sub2 = win32evtlog.EvtSubscribe(SYSMON_CHANNEL, win32evtlog.EvtSubscribeStartAfterBookmark, Bookmark=rebuilt)
-        out.append(result("B-03", "PASS", "EvtSubscribe giống agent (StartAfterBookmark + Bookmark dựng từ XML, không SignalEvent) khởi tạo được",
+        sig2 = win32event.CreateEvent(None, 0, 0, None)
+        sub2 = win32evtlog.EvtSubscribe(SYSMON_CHANNEL, win32evtlog.EvtSubscribeStartAfterBookmark,
+                                        SignalEvent=sig2, Query="*", Bookmark=rebuilt)
+        out.append(result("B-03", "PASS", "EvtSubscribe giống agent (StartAfterBookmark + SignalEvent + Bookmark dựng từ XML) khởi tạo được",
                           {"handle_created": sub2 is not None}))
     except Exception as exc:  # noqa: BLE001
         out.append(result("B-03", "FAIL", f"EvtSubscribe giống agent lỗi: {type(exc).__name__}: {exc}"))
@@ -197,14 +201,14 @@ def check_bookmark_api(probe_timeout_s: float = 3.0) -> List[Dict[str, Any]]:
 
 
 def _probe_default_next_timeout(win32evtlog, handle, timeout_s: float) -> Dict[str, Any]:
-    """B-04: agent gọi EvtNext(handle, n) không Timeout. Đo xem lời gọi đó có CHẶN trên handle EvtSubscribe khi chưa có sự kiện mới
+    """B-04: agent gọi EvtNext(handle, n, 0) trên handle EvtSubscribe. Đo xem lời gọi đó có CHẶN khi chưa có sự kiện mới
     (nếu chặn, vòng --follow của agent không bao giờ quay lại kiểm tệp STOP). Chạy trong thread nền, quá hạn thì chỉ báo, không treo script."""
     import threading
     done: Dict[str, Any] = {}
 
     def call() -> None:
         try:
-            done["events"] = len(win32evtlog.EvtNext(handle, 1))
+            done["events"] = len(win32evtlog.EvtNext(handle, 1, 0))
         except Exception as exc:  # noqa: BLE001
             done["error"] = f"{type(exc).__name__}: {exc}"
 
@@ -212,9 +216,9 @@ def _probe_default_next_timeout(win32evtlog, handle, timeout_s: float) -> Dict[s
     t.start()
     t.join(timeout_s)
     if t.is_alive():
-        return result("B-04", "INFO", f"EvtNext(handle, n) mặc định CHẶN quá {timeout_s}s trên handle EvtSubscribe khi chưa có sự kiện mới: "
+        return result("B-04", "INFO", f"EvtNext(handle, n, 0) CHẶN quá {timeout_s}s trên handle EvtSubscribe khi chưa có sự kiện mới: "
                       "agent --follow có thể không quay lại kiểm tệp STOP (cần Timeout/SignalEvent)", {"blocked": True, "timeout_s": timeout_s})
-    return result("B-04", "INFO", "EvtNext(handle, n) mặc định không chặn trên handle EvtSubscribe khi chưa có sự kiện mới", {"blocked": False, **done})
+    return result("B-04", "INFO", "EvtNext(handle, n, 0) không chặn trên handle EvtSubscribe khi chưa có sự kiện mới", {"blocked": False, **done})
 
 
 def check_channel_size() -> List[Dict[str, Any]]:

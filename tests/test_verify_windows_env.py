@@ -75,7 +75,7 @@ class _FakeEvtLog:
 
     def EvtQuery(self, *a, **k): return "query-handle"
     def EvtNext(self, handle, count, timeout=None, flags=0):
-        if handle == "sub-handle" and timeout is None and self.block:
+        if handle == "sub-handle" and self.block:
             self.release.wait(10)                      # mô phỏng EvtNext chặn vô hạn trên subscription không có sự kiện
             return ()
         return ("ev",) if handle == "query-handle" else ()
@@ -83,7 +83,8 @@ class _FakeEvtLog:
     def EvtCreateBookmark(self, xml=None): return ("bookmark", xml)
     def EvtUpdateBookmark(self, bm, ev): pass
     def EvtSubscribe(self, channel, flags, **kw):
-        self.subscribe_calls.append((flags, kw)); return "sub-handle"
+        self.subscribe_calls.append((flags, kw))
+        return "sub-handle" if flags == self.EvtSubscribeStartAfterBookmark else "future-handle"
 
 
 def _run_bookmark_checks(vwe, monkeypatch, fake, *, win32event=None):
@@ -97,20 +98,27 @@ def _run_bookmark_checks(vwe, monkeypatch, fake, *, win32event=None):
 
 
 def test_b03_mimics_agent_call_and_missing_win32event_is_not_a_nameerror(vwe, monkeypatch):
-    """W1/W2 (audit): B-03 phải gọi EvtSubscribe ĐÚNG như agent (EventLogSource: StartAfterBookmark + Bookmark, KHÔNG SignalEvent,
-    bookmark dựng lại từ XML như khi khởi động lại). Thiếu win32event chỉ ảnh hưởng kiểm tra có SignalEvent, không được thành NameError."""
+    """B-03 phải gọi EvtSubscribe ĐÚNG như agent (EventLogSource: StartAfterBookmark + SignalEvent + Query + Bookmark dựng lại từ XML).
+    VM Windows 2026-11-23: bản cũ (không SignalEvent) báo lỗi 87. Thiếu win32event: B-02 SKIP, B-03 FAIL rõ lý do, không NameError."""
     fake = _FakeEvtLog()
-    res = _run_bookmark_checks(vwe, monkeypatch, fake, win32event=None)
-    assert res["B-03"]["status"] == "PASS" and "NameError" not in json.dumps(res, ensure_ascii=False)
+    res = _run_bookmark_checks(vwe, monkeypatch, fake, win32event=_FakeWin32Event())
+    assert res["B-03"]["status"] == "PASS"
     start_after = [kw for flags, kw in fake.subscribe_calls if flags == fake.EvtSubscribeStartAfterBookmark]
-    assert start_after and all(set(kw) == {"Bookmark"} for kw in start_after), fake.subscribe_calls   # giống agent: không SignalEvent/Query
+    assert start_after and set(start_after[0]) == {"SignalEvent", "Query", "Bookmark"}, fake.subscribe_calls
     assert start_after[0]["Bookmark"] == ("bookmark", "<BookmarkList/>")                              # dựng lại từ XML bookmark
-    assert res["B-02"]["status"] == "SKIP" and "win32event" in res["B-02"]["message"]
+    res2 = _run_bookmark_checks(vwe, monkeypatch, _FakeEvtLog(), win32event=None)
+    assert "NameError" not in json.dumps(res2, ensure_ascii=False)
+    assert res2["B-02"]["status"] == "SKIP" and res2["B-03"]["status"] == "FAIL" and "win32event" in res2["B-03"]["message"]
+
+
+class _FakeWin32Event:
+    @staticmethod
+    def CreateEvent(*a): return "signal"
 
 
 @pytest.mark.parametrize("blocks,expect", [(False, "không chặn"), (True, "CHẶN")])
-def test_b04_reports_whether_default_evtnext_blocks_on_subscription(vwe, monkeypatch, blocks, expect):
-    """Agent gọi EvtNext(handle, n) không Timeout; trên handle EvtSubscribe nếu mặc định là chờ vô hạn thì --follow
-    không bao giờ quay lại kiểm tệp STOP. Script chỉ ĐO (thread có giới hạn thời gian), không đổi gì."""
-    res = _run_bookmark_checks(vwe, monkeypatch, _FakeEvtLog(block_on_default_timeout=blocks))
+def test_b04_reports_whether_evtnext_with_timeout_zero_blocks_on_subscription(vwe, monkeypatch, blocks, expect):
+    """Agent gọi EvtNext(handle, n, 0) trên handle EvtSubscribe; nếu lời gọi đó vẫn chặn thì --follow không quay lại kiểm tệp STOP.
+    Script chỉ ĐO (thread có giới hạn thời gian), không đổi gì."""
+    res = _run_bookmark_checks(vwe, monkeypatch, _FakeEvtLog(block_on_default_timeout=blocks), win32event=_FakeWin32Event())
     assert res["B-04"]["status"] == "INFO" and expect in res["B-04"]["message"]
