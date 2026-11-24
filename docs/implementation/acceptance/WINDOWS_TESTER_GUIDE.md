@@ -49,6 +49,20 @@ git --version
 
 **Cần thu thập:** ảnh hoặc `transcript_buoc02.txt` có đầu ra trên (che tên máy nếu có).
 
+## 2b. Nếu chạy lại từ đầu trên máy đã thử trước đó
+
+Khôi phục snapshot `clean` là cách sạch nhất. Nếu không có snapshot, trong PowerShell (activate venv, đặt `PYTHONPATH`, `cd C:\DACN`):
+```powershell
+python -m edr_ctl stop --config C:\dacn_edr\edr.yaml
+cd C:\DACN
+git pull
+pip install -r requirements.txt
+Remove-Item -Recurse -Force C:\dacn_edr
+```
+`Remove-Item` xóa dữ liệu, checkpoint và **token cũ** của lần thử trước (bắt buộc nếu token đã lộ trong transcript). Rồi làm tiếp từ bước 4 (bỏ qua `git clone` ở bước 3 vì `C:\DACN` đã có).
+
+**Lưu ý Windows PowerShell 5.1:** `type`/`Get-Content` đọc tệp UTF-8 không BOM theo mã ANSI nên tiếng Việt hiện thành ký tự lạ (ví dụ `C:\dacn_edr\edr.yaml`). Tệp không hỏng; xem đúng bằng `Get-Content -Encoding UTF8 <tệp>` hoặc Notepad.
+
 ## 3. Lấy mã nguồn và cài thư viện
 
 ```powershell
@@ -166,8 +180,8 @@ Dừng hệ thống (`python -m edr_ctl stop --config C:\dacn_edr\edr.yaml`). M�
 cd C:\DACN
 python -m agent run --config C:\dacn_edr\edr.yaml --live
 echo "Ma thoat: $LASTEXITCODE"
-type C:\dacn_edr\bronze\errors\collector_errors.jsonl
-type C:\dacn_edr\agent\health.json
+Get-Content -Encoding UTF8 C:\dacn_edr\bronze\errors\collector_errors.jsonl -Tail 5
+Get-Content -Encoding UTF8 C:\dacn_edr\agent\health.json
 ```
 **Mong đợi:** lỗi mã `C-006`, agent không treo âm thầm, mã thoát khác 0, `health.json` ở trạng thái lỗi. Nếu tài khoản của bạn vẫn đọc được log (ví dụ thuộc nhóm Event Log Readers), ghi rõ "đọc được, không tái hiện được C-006".
 **Cần thu thập:** ảnh `B08_c006.png` (đầu ra gồm mã thoát và nội dung hai tệp trên).
@@ -187,7 +201,7 @@ python -m edr_ctl start --config C:\dacn_edr\edr.yaml --live
 python -m edr_ctl status --config C:\dacn_edr\edr.yaml
 dir C:\dacn_edr\bronze
 ```
-**Mong đợi:** sau `taskkill` không còn `python.exe` của agent; khi khởi động lại, agent chạy tiếp và không có tệp `.part` mồ côi bất thường.
+**Mong đợi:** mỗi thành phần có **hai** `python.exe` (tiến trình launcher của venv, khoảng 3 MB, và tiến trình con chạy thật); `taskkill /T` báo `SUCCESS` cho cả hai (đã thấy trên VM 2026-11-23). Sau `taskkill` không còn `python.exe` của agent; khi khởi động lại, agent chạy tiếp và không có tệp `.part` mồ côi bất thường.
 **Cần thu thập:** ảnh `B08_tasklist_truoc_sau.png` (hai lần `tasklist`, kể cả có hai `python.exe` cho một thành phần hay không); ảnh `B08_sau_restart.png`; thư mục `C:\dacn_edr\bronze\` (liệt kê `dir` trước và sau).
 
 ## 9. Dừng sạch, không để lại tiến trình (AT-34)
@@ -204,6 +218,8 @@ Nếu `stop` báo `STILL-RUNNING`, **ghi lại nguyên văn** rồi mới thử 
 ## 10. Kịch bản mô phỏng an toàn (AT-16, AT-38, AT-39)
 
 > Đọc nhanh tệp `C:\DACN\scripts\lab\dacn_lab_scenarios.ps1` trước (script chỉ ghi trong `%TEMP%\dacn_lab\` và khóa `HKCU\Software\EDR_PoC`, không tải mạng, không tắt Defender). **Khôi phục snapshot `clean` nếu muốn chạy lại từ đầu.**
+
+Nếu script báo hàng loạt lỗi `Missing closing '}'` và chữ tiếng Việt hiện thành ký tự lạ: bản script cũ thiếu BOM UTF-8 nên Windows PowerShell 5.1 đọc sai; chạy `git pull` để lấy bản đã sửa.
 
 Khởi động hệ thống live (xem bước 8.1) rồi chạy:
 
