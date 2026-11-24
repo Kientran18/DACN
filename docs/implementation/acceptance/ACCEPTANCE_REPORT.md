@@ -5,9 +5,9 @@
 
 ## Môi trường chạy
 
-- Thời điểm (UTC): 2026-11-22T08:27:03Z · thời lượng: 34.6 s
-- Commit: `16f2714` (cây làm việc có thay đổi chưa commit)
-- Python 3.13.18 · Linux 6.18.44-fc-v726
+- Thời điểm (UTC): 2026-11-24T02:24:53Z · thời lượng: 34.1 s
+- Commit: `88a84a4` (cây làm việc có thay đổi chưa commit)
+- Python 3.13.18 · Linux 6.18.44-fc-v819
 - Thư viện: pytest 9.1.1, duckdb 2.0.0, fastapi 0.164.0, uvicorn 0.54.0, httpx 0.28.1, pydantic 2.13.5, PyYAML 6.0.3, jsonschema 4.26.0
 - Mức bằng chứng: L (Linux, dữ liệu synthetic/giả lập); W (Windows) chưa chạy
 
@@ -199,7 +199,7 @@ PARTIAL = test đạt nhưng catalog ghi rõ phần Expected chưa được ph�
 
 - **Mục tiêu:** SC-01..SC-04 phát hiện trên VM, ghi nguồn phát hiện (EDR/Defender)
 - **Preconditions:** VM lab, Sysmon, script lab đã được người dùng đọc
-- **Steps:** 1. Chạy scripts\lab\dacn_lab_scenarios.ps1 -WhatIf rồi chạy thật (mặc định SC01,SC02,SC03,SC06,SC07; SC04 chạy riêng bằng -Scenario SC04); 2. python tests/e2e/compare_expected.py --manifest %TEMP%\dacn_lab\lab_run_<runid>.json --silver <bản sao của C:\dacn_edr\silver\endpoint_silver.duckdb> --bronze C:\dacn_edr\bronze --ioc %TEMP%\dacn_lab\ioc_candidate_<runid>.yaml --out report.md
+- **Steps:** 1. Chạy scripts\lab\dacn_lab_scenarios.ps1 -WhatIf rồi chạy thật (mặc định SC01,SC02,SC03,SC06,SC07; SC04 chạy riêng bằng -Scenario SC04); 2. python tests/e2e/compare_expected.py --manifest $env:TEMP\dacn_lab\lab_run_<runid>.json --silver <bản sao của C:\dacn_edr\silver\endpoint_silver.duckdb> --bronze C:\dacn_edr\bronze --ioc $env:TEMP\dacn_lab\ioc_candidate_<runid>.yaml --out report.md
 - **Expected:** Báo cáo so khớp scenarios.yaml
 - **Actual:** Cần Windows 10 VM thật; Claude không chạy được.
 - **Known limitations:** Chỉ trên tập kịch bản đã chạy

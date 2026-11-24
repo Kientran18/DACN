@@ -41,3 +41,10 @@ def test_match_is_exact_or_prefix_by_param_not_substring():
     assert ra.match("tests/a.py::test_x[1]", "tests/a.py::test_x")
     assert ra.match("tests/a.py::test_x", "tests/a.py")
     assert not ra.match("tests/a.py::test_xy", "tests/a.py::test_x")
+
+
+def test_doc_link_check_ignores_code_blocks_and_inline_code():
+    """AT-41 báo FAIL giả: `[int]($_.WorkingSet64/1MB)` trong khối lệnh PowerShell bị đọc như liên kết Markdown."""
+    text = ("Xem [hướng dẫn](EDR_INSTALL_GUIDE.md).\n```powershell\nSelect @{e={[int]($_.WorkingSet64/1MB)}}\n```\n"
+            "và `[x](khong-phai-lien-ket.md)` trong code.\n")
+    assert ra.relative_links(text) == ["EDR_INSTALL_GUIDE.md"]

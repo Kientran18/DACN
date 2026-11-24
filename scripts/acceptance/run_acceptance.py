@@ -42,14 +42,23 @@ class _Collect:
         self.durations[nid] = self.durations.get(nid, 0.0) + report.duration
 
 
+def relative_links(text: str) -> list[str]:
+    """Liên kết Markdown tương đối, bỏ qua khối code ``` và code nội dòng (lệnh PowerShell như `[int]($_.X/1MB)` không phải liên kết)."""
+    text = re.sub(r"```.*?```", "", text, flags=re.S)
+    text = re.sub(r"`[^`\n]*`", "", text)
+    out = []
+    for m in re.finditer(r"\[[^\]]*\]\(([^)\s]+)\)", text):
+        tgt = m.group(1)
+        if not tgt.startswith(("http://", "https://", "mailto:", "#")):
+            out.append(tgt)
+    return out
+
+
 def check_doc_links() -> tuple[bool, str]:
     bad: list[str] = []
     n = 0
     for md in sorted((ROOT / "docs" / "implementation").rglob("*.md")):
-        for m in re.finditer(r"\[[^\]]*\]\(([^)\s]+)\)", md.read_text(encoding="utf-8")):
-            tgt = m.group(1)
-            if tgt.startswith(("http://", "https://", "mailto:", "#")):
-                continue
+        for tgt in relative_links(md.read_text(encoding="utf-8")):
             n += 1
             p = (md.parent / tgt.split("#")[0]).resolve()
             if not p.exists():
