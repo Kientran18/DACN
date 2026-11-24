@@ -136,3 +136,19 @@ def test_compare_gives_clear_error_when_live_db_cannot_be_copied(tmp_path, monke
     import pytest
     with pytest.raises(RuntimeError, match="sao chép"):
         ce.compare(manifest(), db, ioc=ioc)
+
+
+def test_cli_prints_vietnamese_report_through_a_cp1252_pipe(tmp_path):
+    """Windows: không có --out thì báo cáo tiếng Việt in ra stdout; qua ống dẫn (cp1252) không được UnicodeEncodeError."""
+    import json
+    import os
+    import subprocess
+    db, ioc = build(tmp_path)
+    m = tmp_path / "m.json"
+    m.write_text(json.dumps(manifest()), encoding="utf-8")
+    root = HERE.parents[1]
+    env = {**os.environ, "PYTHONIOENCODING": "cp1252",
+           "PYTHONPATH": os.pathsep.join(str(root / p) for p in ("src", "src/pipeline", "poc/sysmon-collector"))}
+    r = subprocess.run([sys.executable, str(HERE / "compare_expected.py"), "--manifest", str(m), "--silver", str(db),
+                        "--ioc", str(ioc)], capture_output=True, env=env, cwd=root, timeout=120, check=False)
+    assert r.returncode in (0, 1) and "suy rộng" in r.stdout.decode("utf-8"), r.stderr.decode("utf-8", "replace")[-400:]

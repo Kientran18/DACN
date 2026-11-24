@@ -155,6 +155,9 @@ def to_markdown(rows: List[dict], run_id: str) -> str:
 
 
 def main(argv=None) -> int:
+    for s in (sys.stdout, sys.stderr):        # Windows: stdout qua ống dẫn dùng cp1252, không in được báo cáo tiếng Việt
+        if hasattr(s, "reconfigure"):
+            s.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser()
     ap.add_argument("--manifest", type=Path, required=True)
     ap.add_argument("--silver", type=Path, required=True)
