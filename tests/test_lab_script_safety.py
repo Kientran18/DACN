@@ -55,3 +55,14 @@ def test_ioc_candidate_is_kept_for_the_comparison_step():
     sc04 = CODE[CODE.index("Invoke-Scenario 'SC04'"):CODE.index("Invoke-Scenario 'SC05'")]
     assert "ioc_candidate_" in sc04
     assert "$Created.Add($cand)" not in CODE, "ioc_candidate bị đưa vào danh sách dọn"
+
+
+def test_powershell_scripts_with_non_ascii_have_utf8_bom():
+    """Windows PowerShell 5.1 đọc .ps1 KHÔNG có BOM theo codepage ANSI (cp1252): chữ tiếng Việt UTF-8 bị đọc sai, một số byte
+    thành dấu nháy và script vỡ cú pháp (đo trên VM Windows 10, bước 10: 'Missing closing }'). Tệp có ký tự ngoài ASCII phải có BOM."""
+    import subprocess
+    root = Path(__file__).resolve().parents[1]
+    files = subprocess.run(["git", "ls-files", "*.ps1", "*.psm1", "*.psd1"], cwd=root, capture_output=True, text=True,
+                           check=True).stdout.split()
+    bad = [f for f in files if any(c > 127 for c in (root / f).read_bytes()) and not (root / f).read_bytes().startswith(b"\xef\xbb\xbf")]
+    assert files and not bad, bad

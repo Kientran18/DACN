@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Kịch bản mô phỏng AN TOÀN cho DACN EDR (PH5-T02). CHỈ chạy trên Windows 10 VM lab có snapshot sạch.
 .DESCRIPTION
