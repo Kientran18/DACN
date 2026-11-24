@@ -47,7 +47,7 @@
 - Preconditions: VM lab, Sysmon, script lab đã được người dùng đọc
 - Steps:
   1. Chạy scripts\lab\dacn_lab_scenarios.ps1 -WhatIf rồi chạy thật (mặc định SC01,SC02,SC03,SC06,SC07; SC04 chạy riêng bằng -Scenario SC04)
-  2. python tests/e2e/compare_expected.py --manifest %TEMP%\dacn_lab\lab_run_<runid>.json --silver <bản sao của C:\dacn_edr\silver\endpoint_silver.duckdb> --bronze C:\dacn_edr\bronze --ioc %TEMP%\dacn_lab\ioc_candidate_<runid>.yaml --out report.md
+  2. python tests/e2e/compare_expected.py --manifest $env:TEMP\dacn_lab\lab_run_<runid>.json --silver <bản sao của C:\dacn_edr\silver\endpoint_silver.duckdb> --bronze C:\dacn_edr\bronze --ioc $env:TEMP\dacn_lab\ioc_candidate_<runid>.yaml --out report.md
 - Expected: Báo cáo so khớp scenarios.yaml
 - Actual: _(điền)_
 - Status: PASS / FAIL / NOT RUN _(chọn)_
