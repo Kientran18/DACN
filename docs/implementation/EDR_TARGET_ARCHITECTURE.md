@@ -155,6 +155,11 @@ tests/         common/ agent/ pipeline/ detection/ alerts/ response/ api/ dashbo
 
 `MLDetector` (Protocol) nhận `FeatureVector` có `feature_schema_version`, trả `AnomalyResult(score, explanation, model_version, source_event_ids)`. Engine hợp nhất kết quả rule/IOC/ML trong `RiskAggregator` (P1). `NullDetector` là mặc định. Mô hình được nạp từ artifact có hash; sai schema thì từ chối. ML **không** kích hoạt response và không nằm trên critical path MVP. Xem [AI_TRAINING_GUIDE.md](AI_TRAINING_GUIDE.md).
 
+**Cập nhật 2026-11-25 (đã hiện thực, test trên Linux với dữ liệu synthetic):**
+- `RiskAggregator` được hiện thực dưới tên `src/risk/` (`RiskService`). Module **tính lại khi truy vấn, không lưu**; gộp `alerts` (RULE/CORRELATION/IOC/STATIC) và `_ml_signals` (ML_STATIC/ML_BEHAVIOR); `coverage_gaps` và nguồn chưa chấm chỉ được liệt kê. Cấu hình có phiên bản ở `config/risk-scoring.yaml` (heuristic chưa hiệu chỉnh). Kết quả có qua API chỉ đọc `/risk/*` và dashboard. Chi tiết: [RISK_SCORING.md](RISK_SCORING.md).
+- Có hai nguồn ML tùy chọn, **tắt mặc định** (`config/ml-detectors.yaml`): `ML_STATIC` (bọc `static_scorer`, EMBER2024 nháp) và `ML_BEHAVIOR` (độ hiếm hành vi, feature contract `dacn-behavior-rarity/1`). Kết quả ghi vào bảng nội bộ `_ml_signals` (không thuộc DDL). `CoreService` chạy hai nguồn này sau khi alert đã commit; lỗi ML không làm hỏng vòng phát hiện. Chi tiết: [ML_SIGNALS.md](ML_SIGNALS.md).
+- Điểm ML và điểm rủi ro **không** tạo alert và **không** kích hoạt response; có kiểm tra tĩnh bằng AST trong test.
+
 ## 12. Ranh giới bảo mật chính (tóm tắt, chi tiết theo `dacn-security-threat-modeling`)
 
 | Ranh giới | Rủi ro | Biện pháp trong thiết kế |
@@ -185,7 +190,9 @@ Nhãn: **Implemented** = có code; **Tested (L)** = có test tự động trên 
 | Dashboard tĩnh | `src/dashboard/` | Có | Có (Playwright/Chromium) | Không | Thiếu kiểm tra tự động loading và kết quả response |
 | Core service, launcher `edr_ctl`, responder tách tiến trình | `src/core/`, `src/edr_ctl.py`, `src/response/__main__.py` | Có | Có (tiến trình thật trên Linux) | Không | |
 | Script lab SC01–SC07, so khớp kỳ vọng | `scripts/lab/`, `tests/e2e/` | Có | Phân tích tĩnh + so khớp trên XML synthetic | **Chưa chạy** | PowerShell chưa từng được chạy |
-| Gold/Feature, ML (chỉ có `ModelLoader` và giao diện) | — | Không | — | — | **Designed/Future**; ML interface có, tắt mặc định; chưa có mô hình |
+| Gold/Feature | — | Không | — | — | **Designed/Future** |
+| Tín hiệu ML (ML_STATIC bọc EMBER2024 nháp, ML_BEHAVIOR độ hiếm) — bổ sung 2026-11-25 | `src/detection/ml/` | Có | Có (synthetic, extractor/predictor giả) | Không | Tắt mặc định; không có số liệu chất lượng của DACN; `thrember` thật chưa chạy |
+| Điểm rủi ro tổng hợp — bổ sung 2026-11-25 | `src/risk/`, `config/risk-scoring.yaml`, `/risk/*`, tab Rủi ro | Có | Có (pytest + Playwright) | Không | Heuristic chưa hiệu chỉnh; không kích hoạt response |
 | Dịch vụ Windows, watchdog, cập nhật có chữ ký, retention xóa thật (chỉ có dry-run: `src/pipeline/retention.py`) | — | Không | — | — | Future |
 
 Kết luận: chuỗi Telemetry → Pipeline → Detection → Alert → Investigation → Safe Response → Dashboard **chạy thông trên Linux với dữ liệu synthetic**. Chưa được chứng minh trên Windows 10 VM; điều kiện nghiệm thu MVP ([EDR_ACCEPTANCE_MATRIX.md](EDR_ACCEPTANCE_MATRIX.md)) chưa đạt.

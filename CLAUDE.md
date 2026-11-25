@@ -22,7 +22,7 @@ DACN là đồ án về bảo mật endpoint (EPP/EDR) cho **Windows 10/11**, tr
 - Thực hiện các hành động phản ứng có kiểm soát: Terminate Process, Quarantine File, Block Hash, Add Whitelist.
 - Cung cấp giao diện quản lý trực quan (Dashboard).
 
-Các chức năng AI/ML (anomaly detection, risk scoring) mới có giao diện và bộ nạp mô hình (tắt mặc định). Có hai mô hình PE tĩnh EMBER2024 ở trạng thái **nháp** (xem 3.1), nhưng chưa nối vào Detection Engine; chưa có mô hình hành vi nào.
+Các chức năng AI/ML (anomaly detection, risk scoring) mới có giao diện và bộ nạp mô hình (tắt mặc định). Có hai mô hình PE tĩnh EMBER2024 ở trạng thái **nháp** (xem 3.1); từ 2026-11-25 chúng được nối vào luồng như tín hiệu `ML_STATIC` tùy chọn, kèm một detector độ hiếm hành vi `ML_BEHAVIOR`. Cả hai tắt mặc định, chỉ góp vào điểm rủi ro tổng hợp, không tạo alert và không có số liệu chất lượng của DACN.
 
 Phạm vi Giai đoạn 1 (đồ án chuyên ngành, 12 tuần) được ghi tại `docs/scope/phase-1-scope.md` và `docs/decisions/week-1-decisions.md`. Giai đoạn 2 (luận văn) tập trung hiện thực, tích hợp và đánh giá.
 
@@ -47,6 +47,8 @@ Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết qu�
 | Core service và launcher | `src/core/`, `src/edr_ctl.py` | Chạy nhiều tiến trình thật trên Linux; chưa trên Windows |
 | Script lab (SC01–SC07) và kiểm tra môi trường Windows | `scripts/lab/`, `scripts/windows/` | Chỉ kiểm tra tĩnh; **chưa chạy trên Windows** |
 | Mô hình ML PE tĩnh EMBER2024 (Dot_Net, Win64; **nháp**, `DRAFT_CHUA_DUYET`) và bộ chấm điểm tĩnh nháp chạy theo yêu cầu | `models/ember2024/`, `scripts/ml/train_ember2024.py`, `src/detection/ml/loader.py`, `src/detection/ml/static_scorer.py`, `requirements-ml.txt`, `docs/implementation/ML_EMBER2024_MODELS.md` | Có test nạp qua loader (`tests/detection/test_ember2024_models.py`, cần `lightgbm`, thiếu thì bỏ qua) và test bộ chấm điểm với PE synthetic, extractor/predictor giả (`tests/detection/test_static_scorer.py`). Số liệu (AUC test 0,998 và 0,999) chỉ đo trên EMBER2024, **không phải chất lượng phát hiện của DACN**; chưa nối vào Detection Engine, bộ chấm điểm chưa chạy với `thrember` thật (`thrember` không có trên PyPI), chưa có ngưỡng, kết quả chưa phải `DetectionResult`, chưa duyệt Cyber/Data. Phụ thuộc ML ở `requirements-ml.txt` (tùy chọn). Điểm ML không kích hoạt response. `static_scorer.py` (ML) và `static_analysis/` (hash/entropy/pattern) là hai module tĩnh riêng, chưa phối hợp với nhau |
+| Điểm rủi ro tổng hợp (2026-11-25): gộp RULE/CORRELATION/IOC/STATIC (`DACN-STATIC-001`)/ML theo tiến trình (`hostname`, `process_guid`) hoặc theo host trong cửa sổ thời gian dữ liệu; giải thích từng thành phần, ghi `not_evaluated` và `data_gaps`; tính khi truy vấn, không lưu; API chỉ đọc `/risk/*`, `/alerts/{id}/risk`; dashboard có tab Rủi ro | `src/risk/`, `config/risk-scoring.yaml`, `docs/implementation/RISK_SCORING.md` | Có test (`tests/risk/`, `tests/api/test_risk_api.py`, Playwright) trên Linux với dữ liệu synthetic. Trọng số là **heuristic chưa hiệu chỉnh** (loader khóa `status: heuristic_uncalibrated`); chưa được Cyber/Data duyệt; chưa chạy trên Windows. **Không kích hoạt response** (kiểm tra tĩnh bằng AST) |
+| Tín hiệu ML tùy chọn (2026-11-25, **tắt mặc định**): `ML_STATIC` (bọc `static_scorer`, chỉ chấm ảnh trong `allowed_dirs`, hash lệch → `INSUFFICIENT_TELEMETRY`) và `ML_BEHAVIOR` (độ hiếm hành vi, feature contract `dacn-behavior-rarity/1`, CLI train/score tách cửa sổ, baseline JSON chỉ chứa sha256 của giá trị); lưu ở bảng nội bộ `_ml_signals` (không thuộc DDL); `runner.py` chạy trong `CoreService` khi bật | `src/detection/ml/` (`signals.py`, `static_signal.py`, `behavior.py`, `runner.py`), `config/ml-detectors.yaml`, `docs/implementation/ML_SIGNALS.md` | Có test với dữ liệu synthetic, extractor và predictor giả. **Không có số liệu chất lượng** (chưa có dữ liệu có nhãn); chỉ góp tối đa 24/100 vào điểm rủi ro; không tạo alert, không response; chưa chạy trên Windows; không thêm phụ thuộc |
 | Nghiệm thu | `tests/acceptance/at_catalog.yaml`, `scripts/acceptance/run_acceptance.py`, `docs/implementation/acceptance/` | 43 AT: 28 PASS, 1 PARTIAL, 0 FAIL, 14 NOT RUN (mức W chưa chạy; chạy lại 2026-11-18) |
 
 **Chưa được chứng minh / chưa có:**
@@ -54,8 +56,11 @@ Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết qu�
 - Chất lượng phát hiện, hiệu năng (CPU/RAM/độ trễ) trên VM 2 GB.
 - Retention xóa thật (mới có dry-run), Windows service, Gold/Feature.
 - Static analysis: chạy trên Windows 10 VM với Sysmon live, chữ ký số/offline trust provider, giao diện dashboard cho `/static/*`, nối kết quả ML với kết quả static.
-- ML: chạy bộ chấm điểm tĩnh với `thrember` thật, nối vào Detection Engine, ngưỡng đo trên tệp lành tính của VM, mô hình Win32, mô hình hành vi (Silver/Gold); mọi phép đo ML trên Windows.
+- ML: chạy bộ chấm điểm tĩnh với `thrember` thật, ngưỡng đo trên tệp lành tính của VM, mô hình Win32, train `ML_BEHAVIOR` trên baseline thật của VM, mô hình trên Gold/feature; mọi phép đo ML trên Windows; mọi số liệu chất lượng ML của DACN.
+- Điểm rủi ro: hiệu chỉnh trọng số và ngưỡng trên kịch bản lab và tải lành tính; Cyber duyệt cách gộp severity; hiệu năng khi có nhiều alert.
 - Phê duyệt liên nhóm: DDL v1.2, schema `DetectionResult`, hostname D-07, tên event type (Q-X3), số hiệu DET-101, mã lỗi `R-*`/`A-*`, ADR 0004/0007, các schema/contract W06–W07 (`docs/architecture/w6/contracts/`, `docs/architecture/w7/contracts/`), bảng `static_candidates` và số hiệu `DACN-STATIC-001`.
+
+**Kết quả test mới nhất (2026-11-25, Linux, Python 3.13, có `lightgbm`, sau khi thêm điểm rủi ro và tín hiệu ML):** `python -m pytest -q` → **489 pass, 1 skipped, 0 fail** (thêm 61 test). `ruff check --select F` còn 3 lỗi có từ trước (`tests/static_analysis/test_workflow.py`, hai notebook Kaggle). `run_acceptance.py` chưa chạy lại.
 
 **Kết quả test (2026-11-22, Linux, sau audit đợt 2 và merge #40):** `python -m pytest -q` → 428 pass, 1 skipped, 0 fail khi có `lightgbm` (395 trước khi thêm test cờ CLI của hướng dẫn và các test sửa lỗi Windows) (test skipped cần Windows thật, marker `windows`); 389 pass, 2 skipped khi không có `lightgbm` (đo trước khi thêm 15 test, chưa đo lại) (thêm test nạp mô hình EMBER2024 bị bỏ qua). Cả hai con số đều đã đo, ở hai thời điểm khác nhau. **Windows 10, Python 3.14, một VM, hai lần chạy:** lần 1 (trước khi sửa) 269 pass, 89 fail, 35 error, nguyên nhân chủ yếu thiếu `tzdata`; lần 2: 382 pass, 12 fail; **lần 3: 401 pass, 14 skipped, 0 fail** (12 phút). File mode qua `edr_ctl` chạy được và dashboard hiển thị. Agent live lần đầu FAIL (checkpoint dùng chung, `EvtSubscribe` thiếu `SignalEvent`); **sau khi sửa (2026-11-24): agent live đọc được Sysmon thật**, AT-03/04/05/34 quan sát đạt trên VM (thủ công, một lần). Script lab lỗi encoding trên PowerShell 5.1, đã sửa (BOM) nhưng **chưa chạy lại**; kịch bản lab, phát hiện trên dữ liệu thật và response chưa kiểm chứng. Chạy lại trước khi tin cậy.
 
@@ -112,6 +117,11 @@ PYTHONPATH=src python -m edr_ctl --config <edr.yaml> stop
 python poc/sysmon-collector/sysmon_collector_poc.py --mode file \
   --input references/samples/raw/raw_process_create_event1.xml --output /tmp/out.json
 
+# Detector độ hiếm hành vi (NHÁP, tắt mặc định; dừng core trước vì DuckDB một writer)
+PYTHONPATH=src python -m detection.ml.behavior train --db <silver.duckdb> --since <ISO+TZ> --until <ISO+TZ> --out <dir> --model-version <v>
+PYTHONPATH=src python -m detection.ml.behavior score --db <silver.duckdb> --model-dir <dir>
+# Core với cấu hình ML khác mặc định: thêm --ml-config <tệp> cho python -m core
+
 # Báo cáo độ phủ field
 python poc/sysmon-collector/contract_check.py --samples references/samples --out coverage_report.md
 ```
@@ -127,7 +137,7 @@ Các file Python không phải là package. Chúng import lẫn nhau bằng tên
 - `test_canonical_bronze_contract.py` import `bronze_contract`, `bronze_to_silver_adapter` và `validator_poc` bằng tên trần.
 - `tests/test_validator_poc_w5.py` và `test_canonical_bronze_contract.py` tự chèn `src/pipeline` vào `sys.path`.
 
-Các package trong `src/` (`agent`, `pipeline`, `detection`, `alerts`, `response`, `static_analysis`, `api`, `core`, `common`) là package thật nhưng không cài đặt. `api.auth`, `edr_ctl` và `detection.ml.static_scorer` chạy được với `PYTHONPATH=src`; `agent`, `pipeline`, `core`, `api`, `response` còn import `bronze_contract`, `validator_poc`… nên cần `PYTHONPATH` gồm `src`, `src/pipeline` và `poc/sysmon-collector` (như `EDR_INSTALL_GUIDE.md` mục 2; `edr_ctl start` tự đặt cho tiến trình con). Test đã được `pytest.ini`/`conftest.py` cấu hình sẵn.
+Các package trong `src/` (`agent`, `pipeline`, `detection`, `alerts`, `response`, `static_analysis`, `risk`, `api`, `core`, `common`) là package thật nhưng không cài đặt. `api.auth`, `edr_ctl` và `detection.ml.static_scorer` chạy được với `PYTHONPATH=src`; `agent`, `pipeline`, `core`, `api`, `response` còn import `bronze_contract`, `validator_poc`… nên cần `PYTHONPATH` gồm `src`, `src/pipeline` và `poc/sysmon-collector` (như `EDR_INSTALL_GUIDE.md` mục 2; `edr_ctl start` tự đặt cho tiến trình con). Test đã được `pytest.ini`/`conftest.py` cấu hình sẵn.
 
 Chạy test từ thư mục gốc repository bằng `python -m pytest` để rootdir của pytest đưa `poc/sysmon-collector` vào đường dẫn. Chạy script từ thư mục khác sẽ làm hỏng các import này.
 

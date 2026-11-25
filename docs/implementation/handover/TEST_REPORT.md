@@ -15,6 +15,8 @@
 | Nghiệm thu AT-01…43 mức L | 28 PASS · 1 PARTIAL · 0 FAIL · 14 NOT RUN (chạy lại 2026-11-22, không đổi) |
 | Hai lỗi baseline của PH1 | Đã sửa và chạy lại (`C-002`; entropy test dùng giá trị đã biết) |
 
+**Bổ sung 2026-11-25 (điểm rủi ro tổng hợp và tín hiệu ML):** `python -m pytest -q` → **489 pass, 1 skipped, 0 fail** (Linux, Python 3.13, có `lightgbm`, 2026-11-25 ~09:46 UTC). Số test tăng 61 so với 428: `tests/risk/` (25), `tests/api/test_risk_api.py` (10), `tests/detection/test_ml_signals.py` (8), `test_behavior_rarity.py` (9), `test_ml_runner.py` (9). Kiểm tra Playwright `tests/dashboard/ui_check.js` có thêm các mục cho cột và trang rủi ro. Chưa đo lại khi không có `lightgbm`. `run_acceptance.py` chưa chạy lại; danh mục AT chưa có mục cho điểm rủi ro hay ML. `ruff check --select F` báo 3 lỗi **có từ trước** (`tests/static_analysis/test_workflow.py` và hai notebook trong `scripts/ml/kaggle/`), không thuộc thay đổi này. Kết quả chỉ trên dữ liệu synthetic; **không chứng minh** chất lượng phát hiện, hiệu chỉnh trọng số hay hoạt động trên Windows.
+
 PARTIAL: AT-31 (thiếu kiểm tra loading), AT-32 (thiếu kiểm tra kết quả response trên màn chi tiết), AT-41 (mới kiểm liên kết nội bộ), AT-43 (chưa có detector giả). NOT RUN: các AT mức W (AT-03/04/05/16/25/26/33/34…40).
 
 ## 3. Lỗi thật phát hiện nhờ kiểm thử

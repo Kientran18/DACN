@@ -63,7 +63,7 @@ Test: `tests/detection/test_ember2024_models.py` (cần `lightgbm`; thiếu thì
 
 ## 5. Chưa có và chưa được duyệt
 
-- **Bộ chấm điểm tĩnh:** đã có bản NHÁP chạy theo yêu cầu ở `src/detection/ml/static_scorer.py` (mục 5.1). Chưa nối vào Detection Engine, chưa lưu kết quả, chưa có đường trích đặc trưng thật được chạy (xem `thrember` bên dưới).
+- **Bộ chấm điểm tĩnh:** đã có bản NHÁP chạy theo yêu cầu ở `src/detection/ml/static_scorer.py` (mục 5.1). **Từ 2026-11-25**, bộ chấm điểm được nối vào luồng như nguồn tín hiệu tùy chọn `ML_STATIC` (`src/detection/ml/static_signal.py`, tắt mặc định). Kết quả lưu ở `_ml_signals` và chỉ góp vào điểm rủi ro, không tạo `DetectionResult` hay alert ([ML_SIGNALS.md](ML_SIGNALS.md)). Đường trích đặc trưng thật (`thrember`) vẫn chưa được chạy.
 - **Ngưỡng cho DACN** đo trên tệp lành tính của VM; thời gian mỗi tệp và RAM trên VM 2 GB chưa đo. Mọi số đo trên Windows chưa có.
 - Win32, mô hình khác (APK, ELF, PDF) chưa huấn luyện.
 - `DetectionResult`, hợp đồng dữ liệu của điểm ML và phạm vi "static scoring" cần Cyber/Data duyệt.
@@ -79,7 +79,7 @@ Test: `tests/detection/test_ember2024_models.py` (cần `lightgbm`; thiếu thì
 - Không chấm được ⇒ `INSUFFICIENT_TELEMETRY` kèm `reason` (`DIR_NOT_ALLOWED`, `FILE_UNREADABLE`, `FILE_TOO_LARGE`, `NOT_PE`, `NO_MODEL_FOR_KIND`, `MODEL_REJECTED`, `DEPENDENCY_MISSING`, `FEATURE_EXTRACTION_FAILED`, `FEATURE_DIM_MISMATCH`, `SCORING_FAILED`); không điền điểm giả.
 - Kết quả là dataclass nội bộ `StaticScoreResult`, **chưa phải `DetectionResult`**; `triggers_response` luôn `False`; `threshold` mặc định `None` (chưa có ngưỡng cho DACN).
 - Test: `tests/detection/test_static_scorer.py` dùng PE synthetic, bộ trích đặc trưng và predictor giả (không cần `lightgbm`/`thrember`). Chưa kiểm chứng đường `thrember` thật và chưa đo thời gian/RAM trên VM.
-- Chưa quyết định (cần Cyber/Data duyệt): dạng `DetectionResult`, kích hoạt theo sự kiện hay theo yêu cầu, nơi lưu điểm.
+- Đã hiện thực tạm (2026-11-25, chờ Cyber/Data duyệt): chấm theo sự kiện Event 1 có ảnh nằm trong `allowed_dirs`, điểm lưu ở bảng nội bộ `_ml_signals` và **không** tạo `DetectionResult`. Có chuyển sang `DetectionResult` hay alert hay không vẫn chưa quyết định.
 
 ## 6. Nguồn và giấy phép
 

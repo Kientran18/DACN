@@ -25,6 +25,10 @@ W07 bổ sung `/static/analyses`, `/static/candidates` (+ detail/history/transit
 
 `/livez` (công khai) `/me` `/stats` `/health` `/endpoint` `/events` `/detections` `/alerts` `/alerts/{id}` `/alerts/{id}/history` `/alerts/{id}/transition` `/alerts/{id}/evidence` `/alerts/{id}/timeline` `/alerts/{id}/process-tree` `/coverage-gaps` `/incidents` (+ `/incidents/{id}/alerts`, `/incidents/{id}/notes`) `/rules` `/rules/{id}` `/response/actions` (+ `approve`, `reject`, `claim`, `result`) `/response/audit`.
 
+Rủi ro tổng hợp (2026-11-25, **chỉ đọc**, vai trò có quyền `read`): `GET /risk/config` (phiên bản, sha256, giá trị cấu hình, ML bật/tắt), `GET /risk/subjects?kind=process|host&min_level=&limit=&offset=`, `GET /risk/process?hostname=&process_guid=`, `GET /risk/host?hostname=&until=` (cửa sổ theo thời gian dữ liệu), `GET /alerts/{id}/risk`. Kết quả gồm `score`, `level`, từng thành phần (cơ chế, nguồn, điểm gốc, trọng số, hệ số allowlist, lý do), `not_evaluated`, `data_gaps`, `triggers_response: false`. Trọng số là heuristic chưa hiệu chỉnh; điểm không kích hoạt response. Thiết kế: [`RISK_SCORING.md`](../implementation/RISK_SCORING.md).
+
+`openapi.json` được sinh lại ngày 2026-11-25 (trước đó thiếu các endpoint `/static/*`).
+
 `POST /response/actions` nhận `action_type` ∈ `TERMINATE_PROCESS`, `QUARANTINE_FILE`, `RESTORE_FILE`, `ADD_WHITELIST`, `REMOVE_WHITELIST` (khớp `ACTION_TYPES` của policy); policy vẫn kiểm mục tiêu ngay khi yêu cầu (`422 E-POLICY`).
 
 ## Lỗi
