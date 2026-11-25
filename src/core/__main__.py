@@ -12,6 +12,7 @@ from api.app import create_app
 from api.auth import TokenStore
 from common.config import load_config
 from detection.loader import load_rules
+from detection.ml.runner import MLRunner, load_ml_config
 from pipeline.silver_store import SilverStore
 from response.policy import load_policy
 
@@ -26,6 +27,8 @@ def main(argv=None) -> int:
     ap.add_argument("--policy", type=Path, default=Path("config/response-policy.yaml"))
     ap.add_argument("--sample-data", action="store_true", help="gắn nhãn DỮ LIỆU MẪU trên dashboard")
     ap.add_argument("--poll-seconds", type=float, default=2.0)
+    ap.add_argument("--ml-config", type=Path, default=None,
+                    help="cấu hình tín hiệu ML (mặc định config/ml-detectors.yaml: TẮT tất cả); chỉ góp điểm rủi ro")
     a = ap.parse_args(argv)
     cfg = load_config(a.config)
     tokens = TokenStore.load(cfg.tokens_path)
@@ -34,9 +37,12 @@ def main(argv=None) -> int:
     store = SilverStore(cfg.silver_db)
     rules = load_rules()
     lock = threading.RLock()
-    svc = CoreService(store, cfg.bronze_dir, cfg.home / "metrics.jsonl", rules, cfg.home / "ioc" / "ioc.yaml", lock)
+    ml = MLRunner.from_config(load_ml_config(a.ml_config))
+    svc = CoreService(store, cfg.bronze_dir, cfg.home / "metrics.jsonl", rules, cfg.home / "ioc" / "ioc.yaml", lock,
+                      ml_runner=ml if any(ml.enabled().values()) else None)
     app = create_app(cfg, tokens, store=store, rules=rules, policy=load_policy(a.policy), bronze_dir=cfg.bronze_dir,
-                     data_label="SAMPLE" if a.sample_data else "UNSPECIFIED", lock=lock, core_status=svc.status)
+                     data_label="SAMPLE" if a.sample_data else "UNSPECIFIED", lock=lock, core_status=svc.status,
+                     ml_enabled=ml.enabled())
     server = uvicorn.Server(uvicorn.Config(app, host=cfg.api_host, port=cfg.api_port, log_level="warning"))
     stop_file = cfg.home / "run" / "core.stop"
 

@@ -1,0 +1,12 @@
+# Cấu hình các nguồn tín hiệu AI/ML (src/detection/ml/runner.py). MẶC ĐỊNH TẮT TẤT CẢ.
+# Tín hiệu ML chỉ góp vào điểm rủi ro (config/risk-scoring.yaml); KHÔNG tạo alert, KHÔNG kích hoạt response.
+# Mô hình đều là NHÁP chưa được Cyber/Data duyệt; không có số liệu chất lượng phát hiện trên dữ liệu của DACN.
+version: 1
+static_pe:                     # EMBER2024 (Dot_Net, Win64) qua detection.ml.static_scorer; cần lightgbm + thrember
+  enabled: false
+  allowed_dirs: []             # chỉ chấm ảnh tiến trình nằm trong các thư mục này (ví dụ thư mục lab); rỗng = không chấm gì
+  models_root: models/ember2024
+  max_bytes: 67108864          # giá trị tạm, chưa đo trên VM
+behavior:                      # detector độ hiếm (detection.ml.behavior); cần train trước trên baseline của chính VM
+  enabled: false
+  model_dir: null
