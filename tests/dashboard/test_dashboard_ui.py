@@ -108,7 +108,7 @@ def test_dashboard_ui_checks(server):
     booleans = {k: v for k, v in res.items() if isinstance(v, bool) or k == "no_external_requests"}
     failed = {k: v for k, v in booleans.items() if v is not True}
     assert not failed, (failed, res)
-    assert res["events_rows"] >= 1 and res["alerts_rows"] >= 1 and res["rules_rows"] >= 4
+    assert res["events_rows"] >= 1 and res["alerts_rows"] >= 1 and res["rules_rows"] >= 4 and res["risk_rows"] >= 1
     keep = os.environ.get("DACN_UI_SHOTS")
     if keep:
         shutil.copytree(shots, keep, dirs_exist_ok=True)

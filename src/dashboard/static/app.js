@@ -34,6 +34,29 @@ function utc(v) {                         // luôn hiển thị UTC rõ ràng
 }
 const badge = (text, kind) => h("span", { class: "badge " + (kind || ""), text });
 const sevKind = (s) => ({ critical: "bad", high: "bad", medium: "warn", low: "ok" }[s] || "");
+const riskBadge = (r) => r ? h("span", { class: "badge risk-badge " + sevKind(r.level), text: r.level + " · " + r.score }) : h("span", { class: "muted", text: "—" });
+const riskKey = (host, guid) => host + "|" + guid;
+async function riskMap() {            // điểm theo (host, process_guid); lỗi thì bảng alert vẫn hiện, cột rủi ro để "—"
+  try { const d = await api("/risk/subjects?kind=process&limit=500"); const m = {}; for (const i of d.items) m[riskKey(i.subject.hostname, i.subject.process_guid)] = i; return m; }
+  catch (e) { if (e.status === 401) throw e; return {}; }
+}
+function riskPanel(r) {               // giải thích đầy đủ: thành phần, nguồn, trọng số, lý do, phần chưa đánh giá, khoảng trống dữ liệu
+  const subj = r.subject.kind === "process" ? "tiến trình " + r.subject.process_guid + " @ " + r.subject.hostname
+    : "host " + r.subject.hostname + " (cửa sổ " + r.subject.window_seconds + " giây đến " + utc(r.subject.window_end) + ")";
+  return h("div", { id: "risk-panel", class: "card" },
+    h("p", {}, riskBadge(r), " ", h("span", { text: "Chủ thể: " + subj })),
+    h("p", { class: "muted", text: "Cấu hình v" + r.config.version + " (" + r.config.status + ") — heuristic chưa hiệu chỉnh trên dữ liệu có nhãn; điểm chỉ để ưu tiên điều tra, không kích hoạt response. Độ đầy đủ: " + r.completeness }),
+    h("p", { class: "muted", text: "Công thức: " + r.formula + " · thưởng đa dạng: " + r.diversity_bonus }),
+    h("h3", { text: "Thành phần" }),
+    r.components.length ? table([{ key: "category", label: "Cơ chế" }, { key: "label", label: "Nguồn", wrap: true },
+      { label: "Điểm gốc", render: (c) => fmt(c.base_points) }, { label: "Trọng số", render: (c) => fmt(c.weight) },
+      { label: "Điểm", render: (c) => c.included ? fmt(c.points) : badge("không tính", "warn") }, { key: "reason", label: "Lý do", wrap: true }], r.components)
+      : empty("Không có tín hiệu nào được tính cho chủ thể này."),
+    h("h3", { text: "Chưa đánh giá" }),
+    r.not_evaluated.length ? h("ul", {}, r.not_evaluated.map((x) => h("li", { text: x.source + ": " + x.reason }))) : h("p", { class: "muted", text: "không có" }),
+    h("h3", { text: "Khoảng trống dữ liệu (không cộng điểm)" }),
+    r.data_gaps.length ? h("ul", {}, r.data_gaps.map((g) => h("li", { text: g.rule_id + " thiếu " + (g.missing_fields || []).join(", ") + " (" + g.coverage_status + ")" }))) : h("p", { class: "muted", text: "không có" }));
+}
 
 // ---------- API ----------
 class ApiErr extends Error { constructor(status, code, msg) { super(msg); this.status = status; this.code = code; } }
@@ -123,10 +146,10 @@ async function pageOverview() {
   view.append(h("h1", { text: "Tổng quan" }));
   const box = h("div"); view.append(box);
   await load(box, async () => {
-    const [health, stats, latest] = await Promise.all([api("/health"), api("/stats"), api("/alerts?limit=5")]);
+    const [health, stats, latest, risks] = await Promise.all([api("/health"), api("/stats"), api("/alerts?limit=5"), riskMap()]);
     state.health = health; paintHeader();
-    return { health, stats, latest, at: new Date() };
-  }, ({ health, stats, latest, at }) => {
+    return { health, stats, latest, risks, at: new Date() };
+  }, ({ health, stats, latest, risks, at }) => {
     const ag = health.agent, pl = health.pipeline, en = health.engine;
     box.append(h("p", { class: "muted", text: "Cập nhật lúc " + utc(at) + " · nguồn dữ liệu: " + (health.data_label === "SAMPLE" ? "MẪU (synthetic)" : "chưa xác nhận") }));
     box.append(h("div", { class: "grid" },
@@ -148,7 +171,7 @@ async function pageOverview() {
     box.append(total === 0 ? empty("Chưa có alert nào. (Chưa có dữ liệu phù hợp rule, hoặc chưa chạy engine.)")
       : h("div", { class: "bars" }, ["critical", "high", "medium", "low"].filter((s) => sev[s]).map((s) =>
         h("div", { class: "row" }, h("span", { text: s }), h("div", { class: "bar", style: "width:" + Math.round((sev[s] / total) * 100) + "%" }), h("span", { text: sev[s] })))));
-    box.append(h("h2", { text: "Alert mới nhất" }), latest.items.length === 0 ? empty("Không có alert.") : alertTable(latest.items));
+    box.append(h("h2", { text: "Alert mới nhất" }), latest.items.length === 0 ? empty("Không có alert.") : alertTable(latest.items, risks));
   });
 }
 
@@ -192,9 +215,10 @@ async function pageEvents() {
 }
 
 // ---------- trang: alerts ----------
-function alertTable(items) {
+function alertTable(items, risks) {
   return table([
     { label: "Mức", render: (a) => badge(a.severity, sevKind(a.severity)) },
+    { label: "Rủi ro", render: (a) => riskBadge(risks && a.process_guid ? risks[riskKey(a.hostname, a.process_guid)] : null) },
     { label: "Rule", render: (a) => a.rule_id + " v" + a.rule_version }, { key: "rule_name", label: "Tên", wrap: true },
     { label: "Trạng thái", render: (a) => badge(a.status) }, { key: "hostname", label: "Host" },
     { label: "Lần đầu", render: (a) => utc(a.first_seen_utc) }, { key: "occurrence_count", label: "Số lần" }, { key: "coverage_status", label: "Độ phủ" },
@@ -207,8 +231,8 @@ async function pageAlerts() {
   const form = h("form", { class: "filters", onsubmit: (e) => { e.preventDefault(); location.hash = "#/alerts" + qs({ status: sel.value }); } },
     h("label", {}, "Trạng thái", sel), h("button", { class: "primary", type: "submit", text: "Lọc" }));
   const box = h("div"); view.append(form, box);
-  await load(box, () => api("/alerts" + qs({ status: f.status, limit: 50 })), (d) =>
-    box.append(d.items.length ? alertTable(d.items) : empty(f.status ? "Không có alert ở trạng thái " + f.status + "." : "Chưa có alert nào.")));
+  await load(box, async () => { const [d, risks] = await Promise.all([api("/alerts" + qs({ status: f.status, limit: 50 })), riskMap()]); return { d, risks }; }, ({ d, risks }) =>
+    box.append(d.items.length ? alertTable(d.items, risks) : empty(f.status ? "Không có alert ở trạng thái " + f.status + "." : "Chưa có alert nào.")));
 }
 
 // ---------- trang: chi tiết alert / điều tra ----------
@@ -235,6 +259,10 @@ async function pageAlertDetail(id) {
       h("dt", { text: "MITRE" }), h("dd", { text: a.mitre_technique_ids ? a.mitre_technique_ids.join(", ") + " (gán theo rule; chưa kiểm chứng trên endpoint thật)" : "không gán (rule không có căn cứ)" })));
     box.append(h("h2", {}, labelled("gap", "THIẾU DỮ LIỆU"), "Giới hạn của kết luận"), h("div", { class: "card" },
       h("p", { text: "coverage_status: " + a.coverage_status }), h("p", { text: "missing_fields: " + (a.missing_fields.length ? a.missing_fields.join(", ") : "không có") })));
+    // rủi ro tổng hợp (tải riêng: lỗi không làm hỏng trang)
+    box.append(h("h2", {}, labelled("inf", "SUY LUẬN"), "Rủi ro tổng hợp từ nhiều cơ chế"));
+    const riskBox = h("div"); box.append(riskBox);
+    load(riskBox, () => api("/alerts/" + id + "/risk"), (r) => riskBox.append(riskPanel(r)));
     // bằng chứng nguồn
     box.append(h("h2", { text: "Bằng chứng nguồn (Silver → Bronze)" }));
     if (ev.error) box.append(empty("Không tải được bằng chứng: " + ev.error));
@@ -331,6 +359,25 @@ async function pageResponse() {
   });
 }
 
+// ---------- trang: rủi ro ----------
+async function pageRisk() {
+  view.append(h("h1", { text: "Rủi ro tổng hợp" }));
+  view.append(h("p", { class: "muted", text: "Gộp rule/correlation, IOC, static analysis và tín hiệu ML (nếu bật) thành một mức rủi ro theo chủ thể. Trọng số là heuristic chưa hiệu chỉnh; điểm chỉ để sắp xếp ưu tiên điều tra, không kích hoạt response." }));
+  const cfgBox = h("div"), procBox = h("div", { id: "risk-process" }), hostBox = h("div", { id: "risk-host" });
+  view.append(cfgBox, h("h2", { text: "Theo tiến trình (process_guid)" }), procBox, h("h2", { text: "Theo host (cửa sổ thời gian dữ liệu)" }), hostBox);
+  load(cfgBox, () => api("/risk/config"), (c) => cfgBox.append(h("p", { class: "muted", text: "Cấu hình v" + c.version + " · " + c.status + " · sha256 " + c.sha256.slice(0, 12) + "… · ML: " +
+    Object.entries(c.ml_enabled).map(([k, v]) => k + "=" + (v ? "bật" : "tắt")).join(", ") })));
+  const show = (r) => modal("Chi tiết rủi ro", riskPanel(r), [closeBtn]);
+  const cols = (kind) => [{ label: "Rủi ro", render: riskBadge }, { label: "Host", render: (r) => r.subject.hostname },
+    kind === "process" ? { label: "process_guid", wrap: true, render: (r) => r.subject.process_guid } : { label: "Cửa sổ đến", render: (r) => utc(r.subject.window_end) },
+    { label: "Cơ chế", render: (r) => Object.keys(r.categories).join(", ") || "—" }, { label: "Thành phần", render: (r) => String(r.components.length) },
+    { key: "completeness", label: "Độ đầy đủ" }];
+  await Promise.all([
+    load(procBox, () => api("/risk/subjects?kind=process&limit=100"), (d) => procBox.append(d.items.length ? table(cols("process"), d.items, show) : empty("Chưa có chủ thể nào có tín hiệu."))),
+    load(hostBox, () => api("/risk/subjects?kind=host&limit=50"), (d) => hostBox.append(d.items.length ? table(cols("host"), d.items, show) : empty("Chưa có host nào có tín hiệu."))),
+  ]);
+}
+
 // ---------- trang: rules ----------
 async function pageRules() {
   view.append(h("h1", { text: "Rules (chỉ đọc)" }));
@@ -354,6 +401,7 @@ async function route() {
   if (path.startsWith("#/alerts/")) return pageAlertDetail(decodeURIComponent(path.slice(9)));
   if (path === "#/response") return pageResponse();
   if (path === "#/rules") return pageRules();
+  if (path === "#/risk") return pageRisk();
   view.append(empty("Không tìm thấy trang."));
 }
 async function boot() {

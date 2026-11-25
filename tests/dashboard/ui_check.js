@@ -66,6 +66,14 @@ const out = {};
   out.alert_detail_shows_response_action = (await page.textContent("#alert-response")).includes("QUARANTINE_FILE");
   await page.screenshot({ path: shotDir + "/alert_detail.png", fullPage: true });
 
+  // rủi ro tổng hợp trên chi tiết alert: có giải thích, ghi rõ heuristic và không kích hoạt response
+  await page.waitForSelector("#risk-panel table tbody tr");
+  const riskText = await page.textContent("#risk-panel");
+  out.risk_panel_says_uncalibrated = riskText.includes("heuristic chưa hiệu chỉnh");
+  out.risk_panel_says_no_response = riskText.includes("không kích hoạt response");
+  out.risk_panel_lists_ml_not_evaluated = riskText.includes("ML_STATIC") && riskText.includes("DISABLED");
+  out.risk_panel_has_component_reason = riskText.includes("severity=");
+
   // raw xml: cần xác nhận
   await page.click("text=Xem raw XML (ghi audit)");
   await page.waitForSelector("dialog[open]");
@@ -96,6 +104,27 @@ const out = {};
     return await page.locator("input[name=sha256]").count(); };
   out.d3_sha256_filter_on_process_and_file = (await shaCount("process")) === 1 && (await shaCount("file")) === 1;
   out.d3_no_sha256_filter_on_registry_and_network = (await shaCount("registry")) === 0 && (await shaCount("network")) === 0;
+
+  // trang rủi ro + cột rủi ro ở danh sách alert
+  await page.goto(base + "/ui/#/alerts");
+  await page.waitForSelector("table tbody tr .risk-badge");
+  out.alerts_table_has_risk_column = (await page.locator("table thead th:has-text('Rủi ro')").count()) === 1;
+  await page.goto(base + "/ui/#/risk");
+  await page.waitForSelector("#risk-process table tbody tr");
+  out.risk_rows = await page.locator("#risk-process table tbody tr").count();
+  out.risk_page_labels_heuristic = (await page.textContent("main")).includes("heuristic chưa hiệu chỉnh");
+  await page.locator("#risk-process table tbody tr").first().click();
+  await page.waitForSelector("dialog[open] #risk-panel");
+  out.risk_modal_has_components = (await page.textContent("dialog[open]")).includes("Thành phần");
+  await page.keyboard.press("Escape");
+  await page.screenshot({ path: shotDir + "/risk.png", fullPage: true });
+  // /alerts/{id}/risk lỗi thì trang chi tiết vẫn hiện
+  await page.route("**/alerts/*/risk", (r) => r.fulfill({ status: 500, contentType: "application/json",
+    body: JSON.stringify({ error: { code: "E-INTERNAL", message: "lỗi nội bộ" } }) }));
+  await page.goto(base + "/ui/#/overview"); await page.waitForSelector(".grid .card");
+  await page.goto(base + "/ui/#/alerts/" + orphanId);
+  out.detail_renders_when_risk_fails = await page.waitForSelector("h2 .tag.obs", { timeout: 4000 }).then(() => true, () => false);
+  await page.unroute("**/alerts/*/risk");
 
   // response
   await page.goto(base + "/ui/#/response");

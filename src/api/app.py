@@ -21,6 +21,9 @@ from pipeline.query import Query
 from response.actions import ActionError, ActionStore
 from response.executor import precheck
 from response.policy import ACTION_TYPES
+from detection.ioc import IocStore
+from risk.config import load_risk_config
+from risk.service import RiskService
 from static_analysis.service import StaticWorkflow
 from static_analysis.knowledge import KnowledgeError
 from static_analysis.review import ReviewError
@@ -121,7 +124,8 @@ CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'se
 
 def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy, bronze_dir: Path,
                health_path: Optional[Path] = None, data_label: str = "UNSPECIFIED",
-               lock: Optional[threading.RLock] = None, core_status=None, agent_poll_s: float = 2.0) -> FastAPI:
+               lock: Optional[threading.RLock] = None, core_status=None, agent_poll_s: float = 2.0,
+               risk_config=None, ml_enabled: Optional[Dict[str, bool]] = None) -> FastAPI:
     """data_label: 'SAMPLE' = dữ liệu mẫu/synthetic (UI hiện biểu ngữ nổi bật); 'UNSPECIFIED' = chưa xác nhận nguồn."""
     if data_label not in ("SAMPLE", "UNSPECIFIED"):
         raise ValueError("data_label không hợp lệ")
@@ -134,6 +138,13 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
     q = Query(con)
     static = StaticWorkflow(con, [cfg.home / "lab"], cfg.home / "static-knowledge", lock=lock)
     health_path = Path(health_path) if health_path else cfg.home / "agent" / "health.json"
+    risk_cfg = risk_config or load_risk_config()
+    ml_on = {k: bool((ml_enabled or {}).get(k, False)) for k in ("ML_STATIC", "ML_BEHAVIOR")}
+
+    def risk() -> RiskService:
+        # Nạp allowlist mỗi lần: ioc.yaml có thể đổi (ADD_WHITELIST) mà không cần khởi động lại API.
+        ioc_path = cfg.home / "ioc" / "ioc.yaml"
+        return RiskService(con, rules, risk_cfg, ioc=IocStore(ioc_path), ml_enabled=ml_on)
 
     # -- lỗi thống nhất ---------------------------------------------------------------
     @app.exception_handler(ApiError)
@@ -295,6 +306,40 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
             out = _alert_out(get_alert(alert_id))
         out["allowed_transitions"] = sorted(TRANSITIONS.get(out["status"], set()))
         return out
+
+    # -- rủi ro tổng hợp: CHỈ ĐỌC, heuristic chưa hiệu chỉnh, không bao giờ kích hoạt response ----------------
+    @app.get("/alerts/{alert_id}/risk", tags=["risk"])
+    def alert_risk(alert_id: str, _: dict = Depends(need("read"))):
+        with lock:
+            out = risk().for_alert(alert_id)
+        if out is None:
+            raise HTTPException(404, "không tìm thấy alert")
+        return out
+
+    @app.get("/risk/config", tags=["risk"])
+    def risk_config_get(_: dict = Depends(need("read"))):
+        return {**risk_cfg.summary(), "values": risk_cfg.data, "ml_enabled": ml_on}
+
+    @app.get("/risk/subjects", tags=["risk"])
+    def risk_subjects(kind: Literal["process", "host"] = "process",
+                      min_level: Optional[Literal["low", "medium", "high", "critical"]] = None,
+                      limit: int = Q(50, ge=1, le=500), offset: int = Q(0, ge=0), _: dict = Depends(need("read"))):
+        with lock:
+            return page(risk().subjects(kind, min_level=min_level, limit=limit, offset=offset), limit, offset)
+
+    @app.get("/risk/process", tags=["risk"])
+    def risk_process(hostname: str = Q(..., min_length=1, max_length=255), process_guid: str = Q(..., min_length=1, max_length=64),
+                     _: dict = Depends(need("read"))):
+        with lock:
+            return risk().process(hostname, process_guid)
+
+    @app.get("/risk/host", tags=["risk"])
+    def risk_host(hostname: str = Q(..., min_length=1, max_length=255), until: Optional[datetime] = None,
+                  _: dict = Depends(need("read"))):
+        if until is not None and until.tzinfo is None:
+            raise ApiError(422, "E-VALIDATION", "until phải có múi giờ (UTC)")
+        with lock:
+            return risk().host(hostname, until=until)
 
     @app.get("/alerts/{alert_id}/history", tags=["alerts"])
     def history(alert_id: str, _: dict = Depends(need("read"))):
