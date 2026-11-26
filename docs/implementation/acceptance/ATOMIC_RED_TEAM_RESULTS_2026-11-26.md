@@ -95,3 +95,34 @@ Suy luận: Event 13 mới của A07 nhiều khả năng là giá trị ghi vào
 chỉ liệt kê Event ID, không in đường dẫn khóa, nên chưa đối chiếu trực tiếp `target_object`.
 
 Tổng hợp lần 2: TP_EXPECTED đã chạy 1 (A06), TP 1, FN 0; FN dự kiến 1 (A07); đối chứng TN 2, FP 0. Mỗi test một lần trên một VM.
+
+## Lần 3 (2026-11-26, A07 lúc 08:38:48 UTC): sau DET-003 v3
+
+Thay đổi so với lần 2 (commit `2b6d1ae`, người dùng duyệt): DET-003 `rule_version` 3 nhận `\Policies\Explorer\Run`.
+Cấu hình Sysmon giữ như lần 2. Chỉ chạy lại A07.
+
+| ID | Technique | Kỳ vọng (v3) | Kết luận DACN | Rule MATCH | Telemetry (Event ID) | Defender |
+|---|---|---|---|---|---|---|
+| A07 | T1547.001 | DET-003 MATCH | **TP** | DET-003 | 1, 5, 11, 13, 26 | Không |
+
+Diễn biến: lần đối chiếu đầu cho `KHONG_THAY_TIEN_TRINH_GOC`. Kiểm tra cho thấy Sysmon có Event 1 khớp pid và thời điểm trong log Attire,
+agent đọc tới 08:41:48 và niêm phong segment đúng lúc dừng, còn Silver và ledger dừng ở 07:50 (sau lần 2). Phiên ngắn hơn 300 s nên
+segment chỉ được niêm phong lúc dừng và core dừng trước khi nạp. Sau khi thêm `--bronze` vào `atomic_compare.py` (commit `07d139b`),
+chạy lại công cụ trên cùng log và Bronze (không chạy lại atomic): Silver bản sao có dữ liệu tới 08:41:35 UTC, A07 là TP.
+
+Quan sát: cùng atomic A07 qua ba lần: lần 1 không có Event 13 (cấu hình cũ), lần 2 có Event 13 nhưng DET-003 v2 không MATCH,
+lần 3 DET-003 v3 MATCH. Exit code 0, Defender không phản ứng.
+
+## Tổng hợp sau ba lần (mỗi test chạy theo cấu hình mới nhất của nó)
+
+| Mục | Số | Ghi chú |
+|---|---|---|
+| Test có rule mục tiêu và tiến trình chạy được | 7 | A01, A04, A05, A06 (v2), A07 (v3), A08, A09 |
+| TP | 7 | |
+| FN | 0 | |
+| FN dự kiến (chưa có rule/telemetry) | 2 | A10, A11 |
+| Defender chặn khi tạo tiến trình, không đánh giá được | 2 | A02, A03 |
+| Đối chứng TN / FP | 2 / 0 | C01, C02 (lần 1 và lần 2) |
+
+A06 và A07 chỉ thành TP sau khi sửa rule/cấu hình dựa trên chính các test này, nên kết quả của chúng mang tính hồi quy (xác nhận bản sửa),
+không phải bằng chứng độc lập về khả năng phát hiện. Tập test do Claude chọn để khớp rule hiện có; không suy rộng.
