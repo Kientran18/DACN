@@ -42,7 +42,7 @@ EXPECTED = {
          "target_rules": ["DACN-DET-001"], "expect_telemetry": [1]},
         {"id": "A04", "technique": "T1547.001", "guid": "guid-a04", "name": "run key", "category": "TP_EXPECTED",
          "target_rules": ["DACN-DET-003"], "expect_telemetry": [1, 13]},
-        {"id": "A06", "technique": "T1547.001", "guid": "guid-a06", "name": "policies explorer run", "category": "FN_NO_RULE",
+        {"id": "A06", "technique": "T1547.001", "guid": "guid-a06", "name": "winlogon userinit", "category": "FN_NO_RULE",
          "target_rules": ["DACN-DET-003"], "expect_telemetry": [1, 13]},
         {"id": "A08", "technique": "T1053.005", "guid": "guid-a08", "name": "schtasks", "category": "TP_EXPECTED",
          "target_rules": ["DACN-DET-004"], "expect_telemetry": [1]},
@@ -72,12 +72,12 @@ def silver_rows():
         {"id": "a04r", "table": "registry", "timestamp": t("01:01"), "pid": 2002, "process_guid": g(4),
          "image_path": REG,
          "target_object": "HKU\\S-1-5-21-1\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\Atomic Red Team"},
-        # A06 lúc 10:02:00: Policies\Explorer\Run - Event 13 có nhưng DET-003 (v2) không khớp
+        # A06 lúc 10:02:00: Winlogon\Userinit - Event 13 có nhưng DET-003 (v3) không khớp
         {"id": "a06s", "table": "process", "timestamp": t("02:00"), "pid": 3001, "process_guid": g(5),
-         "parent_guid": G_RUNNER, "image_path": CMD, "command_line": "cmd.exe /c REG ADD HKCU\\...\\Policies\\Explorer\\Run"},
+         "parent_guid": G_RUNNER, "image_path": CMD, "command_line": "cmd.exe /c REG ADD HKLM\\...\\Winlogon"},
         {"id": "a06r", "table": "registry", "timestamp": t("02:01"), "pid": 3001, "process_guid": g(5),
          "image_path": CMD,
-         "target_object": "HKU\\S-1-5-21-1\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run\\x"},
+         "target_object": "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Userinit"},
         # A08 lúc 10:03:00: schtasks /Create -> DET-004
         {"id": "a08s", "table": "process", "timestamp": t("03:00"), "pid": 4001, "process_guid": g(6),
          "parent_guid": G_RUNNER, "image_path": CMD, "command_line": "cmd.exe /c SCHTASKS /Create /SC ONCE /TN spawn"},

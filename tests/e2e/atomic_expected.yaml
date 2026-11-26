@@ -71,10 +71,10 @@ tests:
     guid: a70faea1-e206-4f6f-8d9a-67379be8f6f1
     name: HKCU Policies\Explorer\Run
     elevation: admin
-    category: FN_NO_RULE
+    category: TP_EXPECTED
     target_rules: [DACN-DET-003]
     expect_telemetry: [1, 13]
-    reason: cấu hình Sysmon đã include '\Policies\Explorer\Run' (cần áp lại bằng Sysmon64 -c) nên kỳ vọng có Event 13; DET-003 v2 chưa gồm khóa này. Lần 1 (cấu hình cũ) không có Event 13
+    reason: DET-003 v3 nhận Policies\Explorer\Run; cần cấu hình Sysmon include khóa này. Lần 1 (cấu hình cũ) không có Event 13; lần 2 có Event 13 nhưng v2 không MATCH
   - id: A08
     technique: T1053.005
     guid: 42f53695-ad4a-4546-abb6-7d837f644a71

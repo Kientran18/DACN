@@ -5,7 +5,11 @@ rows:
   - {id: run, table: registry, target_object: 'HKU\S-1-5-21-1\Software\Microsoft\Windows\CurrentVersion\Run\Updater', details: 'C:\x\u.exe'}
   - {id: runonce, table: registry, target_object: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce\Setup'}
   - {id: other, table: registry, target_object: 'HKU\S-1-5-21-1\Software\Vendor\Settings\Theme'}
+  # Policies\Explorer\Run (rule_version 3): Group Policy "Run these programs at user logon", HKCU và HKLM -> MATCH
   - {id: policies, table: registry, target_object: 'HKU\S-1-5-21-1\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\x'}
+  - {id: policies_hklm, table: registry, target_object: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\atomictest'}
+  # Khóa chính sách khác dưới Policies\Explorer (DisallowRun là danh sách CẤM chạy) -> không MATCH
+  - {id: policies_disallow, table: registry, target_object: 'HKU\S-1-5-21-1\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\DisallowRun\1'}
   # RunOnceEx (rule_version 2): giá trị trong một mục con, có hoặc không có nhánh Depend -> MATCH
   - {id: runonceex_depend, table: registry, target_object: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnceEx\0001\Depend\1', details: 'C:\Path\x.dll'}
   - {id: runonceex_entry, table: registry, target_object: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnceEx\0001\Line1'}
@@ -14,4 +18,4 @@ rows:
   # Khóa có tên gần giống nhưng không phải Run/RunOnce/RunOnceEx -> không MATCH
   - {id: runnotify, table: registry, target_object: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunNotify\x'}
 expected:
-  DACN-DET-003: [MATCH, MATCH, MATCH, MATCH]
+  DACN-DET-003: [MATCH, MATCH, MATCH, MATCH, MATCH, MATCH]

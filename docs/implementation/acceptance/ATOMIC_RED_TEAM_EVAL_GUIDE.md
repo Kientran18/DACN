@@ -27,7 +27,7 @@ Nguồn sự thật: `tests/e2e/atomic_expected.yaml` (đề xuất, chờ Cyber
 | A04 | T1547.001 | Reg Key Run (HKCU) | user | DET-003 MATCH | Event 13 khóa Run |
 | A05 | T1547.001 | SystemBC Registry (HKCU Run) | user | DET-003 MATCH | Event 13 khóa Run |
 | A06 | T1547.001 | RunOnceEx (HKLM) | admin | DET-003 MATCH (từ v2) | v1 không nhận RunOnceEx (đo lần 1) |
-| A07 | T1547.001 | Policies\Explorer\Run | admin | FN dự kiến (chưa có rule) | Sysmon đã include khóa (áp lại cấu hình); DET-003 chưa gồm |
+| A07 | T1547.001 | Policies\Explorer\Run | admin | DET-003 MATCH (từ v3) | cần cấu hình Sysmon mới; v2 chưa gồm (đo lần 2) |
 | A08 | T1053.005 | SCHTASKS /Create | user | DET-004 MATCH | |
 | A09 | T1053.005 | Task base64 từ registry | user | DET-004 MATCH | |
 | A10 | T1053.005 | Register-ScheduledTask | admin | FN dự kiến (chưa có rule) | không qua schtasks.exe |
@@ -196,3 +196,9 @@ Thay đổi đã duyệt: DET-003 v2 nhận RunOnceEx; cấu hình Sysmon thêm 
    chuyển log cũ sang `C:\dacn_art\logs_run1` trước khi chạy.
 
 Lưu ý: DET-003 đổi `rule_version` nên engine đánh giá lại toàn bộ Event 13 đã có; các alert DET-003 v1 cũ có thể xuất hiện thêm bản v2.
+
+## 7. Chạy lại A07 sau DET-003 v3
+
+Cấu hình Sysmon đã áp ở mục 6 thì không cần áp lại. `git pull`, start DACN, dán khối mục 4.2, chạy `Run-One $tests[8]` (A07),
+dừng core rồi chạy `atomic_compare.py` với thư mục log mới (chuyển log lần 2 sang `C:\dacn_art\logs_run2` trước).
+Kỳ vọng: A07 là TP với DACN-DET-003. DET-003 đổi `rule_version` lên 3 nên engine đánh giá lại Event 13 cũ một lần.
