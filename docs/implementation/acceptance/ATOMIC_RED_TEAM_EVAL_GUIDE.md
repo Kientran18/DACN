@@ -109,12 +109,17 @@ function Run-One($x) {
   $id, $tech, $guid = $x
   Write-Host ("==== {0} {1} start {2}" -f $id, $tech, (Get-Date).ToUniversalTime().ToString("o")) -ForegroundColor Cyan
   if ($id -eq "A11") { Invoke-AtomicTest $tech -TestGuids $guid -GetPrereqs }
-  Invoke-AtomicTest $tech -TestGuids $guid -LoggingModule "Attire-ExecutionLogger" -ExecutionLogPath "$LOG\$id.json"
+  $stamp = (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssZ")
+  Invoke-AtomicTest $tech -TestGuids $guid -LoggingModule "Attire-ExecutionLogger" -ExecutionLogPath "$LOG\$id-$stamp.json"
   Start-Sleep -Seconds 60
   Invoke-AtomicTest $tech -TestGuids $guid -Cleanup
   Start-Sleep -Seconds 10
 }
 ```
+
+Mỗi lần chạy ghi một tệp riêng `<ID>-<thời điểm UTC>.json`: Invoke-AtomicRedTeam 2.3.0 (PSGallery) **ghi đè** tệp Attire đã có
+thay vì nối thêm (mã nguồn nhánh master mới hơn thì nối), nên dùng chung tên tệp sẽ mất log của lần chạy trước.
+Executor và tên trường Attire của 2.3.0 giống bản đã dùng để viết `atomic_compare.py` (đối chiếu mã nguồn ngày 2026-11-26).
 
 Chạy **từng test một** và quan sát (khuyến nghị cho lần đầu):
 
