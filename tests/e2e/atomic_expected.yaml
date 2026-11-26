@@ -1,0 +1,131 @@
+# Kỳ vọng cho bộ đánh giá Atomic Red Team trên một Windows 10 VM (NGUỒN SỰ THẬT cho atomic_compare.py).
+# Trạng thái: ĐỀ XUẤT của Claude, chờ người dùng/Cyber duyệt. Kỳ vọng suy ra từ rule YAML + cấu hình Sysmon của repo,
+# CHƯA phải kết quả đo. Cột Defender không nằm ở đây: người vận hành ghi theo quan sát.
+#
+# category:
+#   TP_EXPECTED      rule hiện có được kỳ vọng MATCH trên cây tiến trình của lần chạy
+#   FN_NO_RULE       telemetry có (theo cấu hình Sysmon) nhưng chưa có rule phù hợp -> FN dự kiến
+#   FN_NO_TELEMETRY  telemetry cần thiết không được thu (cấu hình Sysmon/nguồn chưa có) -> FN dự kiến
+#   CONTROL          đối chứng lành tính, không rule nào được MATCH (MATCH = FP)
+# Atomic YAML ghim theo commit dưới đây; chỉ cần YAML, không cần payload trong atomics/*/src hoặc bin.
+version: 1
+atomics_repo: https://github.com/redcanaryco/atomic-red-team
+atomics_commit: a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6
+tests:
+  - id: A01
+    technique: T1059.001
+    guid: a538de64-1c74-46ed-aa60-b995ed302598
+    name: PowerShell Command Execution (-e, payload chỉ Write-Host)
+    elevation: user
+    category: TP_EXPECTED
+    target_rules: [DACN-DET-001]
+    expect_telemetry: [1]
+    reason: command line powershell.exe chứa ' -e '; AMSI có thể chặn script nhưng Event 1 vẫn được ghi
+  - id: A02
+    technique: T1059.001
+    guid: fa050f5e-bc75-4230-af73-b6fd7852cd73
+    name: PowerShell Fileless Script Execution
+    elevation: user
+    category: TP_EXPECTED
+    target_rules: [DACN-DET-001]
+    expect_telemetry: [1]
+    reason: executor powershell đưa nguyên lệnh vào command line, có 'FromBase64String' và 'iex'
+  - id: A03
+    technique: T1059.001
+    guid: 49eb9404-5e0f-4031-a179-b40f7be385e3
+    name: PowerShell Invoke Known Malicious Cmdlets (chỉ tạo hàm giả)
+    elevation: admin
+    category: FN_NO_TELEMETRY
+    target_rules: [DACN-DET-001]
+    expect_telemetry: [1]
+    reason: chỉ có tên cmdlet trong script; cần PowerShell 4104 (chưa thu); DET-001 không có mẫu tên cmdlet
+  - id: A04
+    technique: T1547.001
+    guid: e55be3fd-3521-4610-9d1a-e210e42dcf05
+    name: Reg Key Run (HKCU)
+    elevation: user
+    category: TP_EXPECTED
+    target_rules: [DACN-DET-003]
+    expect_telemetry: [1, 13]
+    reason: reg.exe ghi giá trị vào ...\CurrentVersion\Run; Sysmon include '\CurrentVersion\Run'
+  - id: A05
+    technique: T1547.001
+    guid: 9dc7767b-30c1-4cc4-b999-50cab5e27891
+    name: SystemBC Registry (HKCU Run qua Set-ItemProperty)
+    elevation: user
+    category: TP_EXPECTED
+    target_rules: [DACN-DET-003]
+    expect_telemetry: [1, 13]
+    reason: powershell.exe ghi giá trị vào HKCU\...\CurrentVersion\Run
+  - id: A06
+    technique: T1547.001
+    guid: 554cbd88-cde1-4b56-8168-0be552eed9eb
+    name: Reg Key RunOnce (HKLM RunOnceEx)
+    elevation: admin
+    category: FN_NO_RULE
+    target_rules: [DACN-DET-003]
+    expect_telemetry: [1, 13]
+    reason: Sysmon ghi Event 13 (khớp '\CurrentVersion\Run') nhưng regex DET-003 chỉ nhận Run/RunOnce, không nhận RunOnceEx\...\Depend
+  - id: A07
+    technique: T1547.001
+    guid: a70faea1-e206-4f6f-8d9a-67379be8f6f1
+    name: HKCU Policies\Explorer\Run
+    elevation: admin
+    category: FN_NO_TELEMETRY
+    target_rules: [DACN-DET-003]
+    expect_telemetry: [1]
+    reason: cấu hình Sysmon không include '\Policies\Explorer\Run' nên không có Event 13; regex DET-003 cũng không khớp
+  - id: A08
+    technique: T1053.005
+    guid: 42f53695-ad4a-4546-abb6-7d837f644a71
+    name: Scheduled task Local (SCHTASKS /Create)
+    elevation: user
+    category: TP_EXPECTED
+    target_rules: [DACN-DET-004]
+    expect_telemetry: [1]
+    reason: schtasks.exe với ' /create' (so khớp không phân biệt hoa/thường)
+  - id: A09
+    technique: T1053.005
+    guid: e895677d-4f06-49ab-91b6-ae3742d0a2ba
+    name: Scheduled Task Executing Base64 Encoded Commands From Registry
+    elevation: user
+    category: TP_EXPECTED
+    target_rules: [DACN-DET-004]
+    expect_telemetry: [1]
+    reason: schtasks.exe /Create; chuỗi FromBase64String nằm trên schtasks nên DET-001 KHÔNG được kỳ vọng
+  - id: A10
+    technique: T1053.005
+    guid: af9fd58f-c4ac-4bf2-a9ba-224b71ff25fd
+    name: Powershell Cmdlet Scheduled Task (Register-ScheduledTask)
+    elevation: admin
+    category: FN_NO_RULE
+    target_rules: [DACN-DET-004]
+    expect_telemetry: [1]
+    reason: tạo task qua API/COM, không có schtasks.exe; chưa thu Security 4698
+  - id: A11
+    technique: T1070.004
+    guid: 861ea0b4-708a-4d17-848d-186c9c7f17e3
+    name: Delete a single file - Windows cmd
+    elevation: user
+    category: FN_NO_RULE
+    target_rules: []
+    expect_telemetry: [1, 26]
+    reason: chỉ có bước xóa; DET-010 cần chuỗi tạo-chạy-xóa; chưa có rule xóa tệp đơn lẻ. Cần -GetPrereqs trước
+  - id: C01
+    technique: T1082
+    guid: 66703791-c902-4560-8770-42b8a91f7667
+    name: System Information Discovery (systeminfo)
+    elevation: user
+    category: CONTROL
+    target_rules: []
+    expect_telemetry: [1]
+    reason: đối chứng lành tính; chưa có rule discovery
+  - id: C02
+    technique: T1059.003
+    guid: 127b4afe-2346-4192-815c-69042bec570e
+    name: Writes text to a file and displays it (echo/type)
+    elevation: user
+    category: CONTROL
+    target_rules: []
+    expect_telemetry: [1]
+    reason: đối chứng lành tính; DET-002 cần tiến trình cha Office nên không áp dụng
