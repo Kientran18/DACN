@@ -38,7 +38,8 @@ from pipeline.silver_store import SilverStore  # noqa: E402
 
 EXPECTED = Path(__file__).with_name("atomic_expected.yaml")
 CATEGORIES = ("TP_EXPECTED", "FN_NO_RULE", "FN_NO_TELEMETRY", "CONTROL")
-VERDICTS = ("TP", "FN", "FN_DU_KIEN", "MATCH_NGOAI_DU_KIEN", "TN", "FP", "KHONG_THAY_TIEN_TRINH_GOC")
+VERDICTS = ("TP", "FN", "FN_DU_KIEN", "MATCH_NGOAI_DU_KIEN", "TN", "FP", "KHONG_THAY_TIEN_TRINH_GOC",
+            "KHONG_KHOI_TAO_DUOC")
 TABLES = ("silver_process_events", "silver_file_events", "silver_registry_events", "silver_network_events")
 TOL = timedelta(seconds=5)                 # lệch đồng hồ giữa log ART và Sysmon UtcTime (cùng máy)
 CSV_DEFAULT_SPAN = timedelta(seconds=125)  # CSV chỉ có thời điểm bắt đầu; Invoke-AtomicTest timeout mặc định 120 s
@@ -156,7 +157,9 @@ def _events(con, guids: List[str]) -> Dict[str, int]:
     return out
 
 
-def _verdict(category: str, seed_found: bool, target: List[str], matched: List[str]) -> str:
+def _verdict(category: str, started: bool, seed_found: bool, target: List[str], matched: List[str]) -> str:
+    if not started:                        # log không có pid: Invoke-AtomicTest không tạo được tiến trình
+        return "KHONG_KHOI_TAO_DUOC"
     if not seed_found:
         return "KHONG_THAY_TIEN_TRINH_GOC"
     if category == "TP_EXPECTED":
@@ -192,13 +195,13 @@ def _evaluate(con, runs: List[dict], expected: dict) -> dict:
             "start": run["start"].isoformat() if run["start"] else None,
             "stop": run["stop"].isoformat() if run["stop"] else None,
             "pid": run["pid"], "exit_code": run["exit_code"], "is_timeout": run["is_timeout"],
-            "exec_failed": bool(run["is_timeout"] or (run["exit_code"] not in (None, 0))),
+            "exec_failed": bool(run["is_timeout"] or run["pid"] is None or (run["exit_code"] not in (None, 0))),
             "defender_hint": run["defender_hint"], "seed_found": seed is not None,
             "seed_image": (str(seed[2]).replace("/", "\\").rsplit("\\", 1)[-1] if seed and seed[2] else None),
             "lineage_size": len(guids), "telemetry": seen,
             "missing_telemetry": [e for e in sp.get("expect_telemetry", []) if e not in seen] if seed else [],
             "matched_rules": matched, "outcomes": {k: sorted(v) for k, v in sorted(outcomes.items())},
-            "verdict": _verdict(sp["category"], seed is not None, sp.get("target_rules") or [], matched),
+            "verdict": _verdict(sp["category"], run["pid"] is not None, seed is not None, sp.get("target_rules") or [], matched),
         })
     run_ids = {r["id"] for r in rows}
     not_run = [x["id"] for x in expected["tests"] if x["id"] not in run_ids]
@@ -260,13 +263,13 @@ def to_markdown(rep: dict) -> str:
         out.append(f"| {r['id']} | {r['attempt']} | {r['technique']} | {r['category']} | "
                    f"{', '.join(r['target_rules']) or '-'} | {', '.join(r['matched_rules']) or '-'} | **{r['verdict']}** | "
                    f"{','.join(map(str, r['telemetry'])) or '-'} | {','.join(map(str, r['missing_telemetry'])) or '-'} | "
-                   f"{r['exit_code']}{' (timeout)' if r['is_timeout'] else ''} | {'có' if r['defender_hint'] else '-'} |  |")
+                   f"{'-' if r['exit_code'] is None else r['exit_code']}{' (timeout)' if r['is_timeout'] else ''} | {'có' if r['defender_hint'] else '-'} |  |")
     out += ["", "## Theo technique (đếm số lần chạy, không phải tỷ lệ)", "",
             "| Technique | Lần chạy | TP | FN | FN dự kiến | MATCH ngoài dự kiến | FP | TN | Không thấy tiến trình gốc | "
-            "NOT RUN | Exit≠0 | Gợi ý Defender |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+            "Không khởi tạo được | NOT RUN | Exit≠0 | Gợi ý Defender |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for s in rep["by_technique"]:
         out.append(f"| {s['technique']} | {s['runs']} | {s['TP']} | {s['FN']} | {s['FN_DU_KIEN']} | "
-                   f"{s['MATCH_NGOAI_DU_KIEN']} | {s['FP']} | {s['TN']} | {s['KHONG_THAY_TIEN_TRINH_GOC']} | "
+                   f"{s['MATCH_NGOAI_DU_KIEN']} | {s['FP']} | {s['TN']} | {s['KHONG_THAY_TIEN_TRINH_GOC']} | {s['KHONG_KHOI_TAO_DUOC']} | "
                    f"{s['NOT_RUN']} | {s['EXEC_FAILED']} | {s['DEFENDER_HINT']} |")
     tp = sum(s["TP"] for s in rep["by_technique"])
     fn = sum(s["FN"] for s in rep["by_technique"])

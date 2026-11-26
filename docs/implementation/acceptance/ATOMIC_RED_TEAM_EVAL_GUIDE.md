@@ -173,7 +173,8 @@ Get-Content -Encoding UTF8 C:\dacn_results\atomic_report.md
 | FN_DU_KIEN | FN_NO_RULE/FN_NO_TELEMETRY và đúng là không có MATCH (khoảng trống đã biết) |
 | MATCH_NGOAI_DU_KIEN | kỳ vọng FN nhưng có rule MATCH: cần xem lại kỳ vọng |
 | TN / FP | đối chứng không có / có MATCH |
-| KHONG_THAY_TIEN_TRINH_GOC | không thấy Event 1 khớp pid và thời điểm (mất telemetry, core chưa nạp, hoặc tiến trình không khởi tạo được) |
+| KHONG_THAY_TIEN_TRINH_GOC | log có pid nhưng không thấy Event 1 khớp pid và thời điểm (mất telemetry hoặc core chưa nạp) |
+| KHONG_KHOI_TAO_DUOC | log không có pid: Invoke-AtomicTest không tạo được tiến trình (ví dụ `Process.Start` báo "Access is denied" khi Defender chặn). Không tính TP/FN |
 
 Exit code khác 0 và cờ "gợi ý Defender" (stderr có thông điệp kiểu AMSI) được báo riêng; kết luận Defender do người vận hành xác nhận.
 Giới hạn: không gán được tiến trình do dịch vụ khởi tạo (Task Scheduler, WMI) vì chúng không là con cháu của tiến trình gốc;

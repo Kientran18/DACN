@@ -330,3 +330,17 @@ def test_tp_requires_target_rule_not_any_rule(tmp_path):
     r = by_id(run(tmp_path, rows=rows))["A04"]
     assert r["matched_rules"] == ["DACN-DET-001"] and r["verdict"] == "FN"
     assert r["missing_telemetry"] == [13]
+
+
+def test_process_never_started_is_its_own_verdict(tmp_path):
+    """Invoke-AtomicTest báo 'Access is denied' tại Process.Start (thường do Defender chặn khi tạo tiến trình):
+    Attire ghi process-id/exit-code rỗng. Đây không phải mất telemetry của DACN và không tính TP/FN."""
+    procs = default_procs()
+    procs[0] = proc("T1059.001", "guid-a01", 17, "2026-01-01T10:00:09.000Z", "2026-01-01T10:00:09.000Z", None,
+                    exit_code=None)
+    rep = run(tmp_path, procs=procs)
+    r = by_id(rep)["A01"]
+    assert r["verdict"] == "KHONG_KHOI_TAO_DUOC" and r["exec_failed"] is True
+    s = {x["technique"]: x for x in rep["by_technique"]}["T1059.001"]
+    assert s["KHONG_KHOI_TAO_DUOC"] == 1 and s["TP"] == 0 and s["FN"] == 0
+    assert "KHONG_KHOI_TAO_DUOC" in ac.to_markdown(rep)
