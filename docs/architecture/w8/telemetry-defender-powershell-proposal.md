@@ -1,7 +1,9 @@
 # Đề xuất bổ sung telemetry Microsoft Defender và PowerShell Script Block Logging
 
-> **Trạng thái: PROPOSAL / CHỜ DUYỆT.** Tài liệu thiết kế, chưa có code. Không thay đổi contract `bronze-event/1.0`, DDL v1.1, DDL v1.2,
-> ADR, README hay kế hoạch 12 tuần. Mọi tên bảng, event type, mã lỗi, rule ID dưới đây là **đề xuất**, cần Data/Cyber/người dùng duyệt (mục 9).
+> **Trạng thái: APPROVED BY USER (2026-11-26) / CHƯA TRIỂN KHAI.** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
+> Data/Cyber; chưa có review độc lập của nhóm Data/Cyber. Chưa có code; triển khai chỉ bắt đầu khi người dùng nói "bắt đầu". Tài liệu này không
+> thay đổi contract `bronze-event/1.0`, DDL v1.1, DDL v1.2, ADR, README hay kế hoạch 12 tuần. Mọi ánh xạ field gắn nhãn **[CHƯA XÁC MINH]**
+> giữ nguyên nhãn đó cho tới khi có mẫu XML thật từ VM (mục 2.8); phê duyệt thiết kế không xác minh các field này.
 >
 > Ngày soạn: 2026-11-26. Nhánh căn cứ: `claude_implement` (commit `dc53684`). Người soạn: Claude Code theo yêu cầu thiết kế.
 >
@@ -535,6 +537,13 @@ Thứ tự đề xuất: 0 → 1 → 2 → 3 → 5 (DET-201/202, giải quyết 
 Defender đi trước PowerShell vì ít rủi ro dữ liệu nhạy cảm và trực tiếp lấp khoảng trống A02/A03/EICAR.
 
 ## 9. Quyết định cần duyệt
+
+> **Ghi nhận phê duyệt (2026-11-26):** người dùng xác nhận trong phiên thiết kế: duyệt D1–D10 theo cột "Đề xuất" bên dưới, với vai trò người duyệt
+> thay cho Data/Cyber/Software (chưa có review độc lập của các nhóm). Điều kiện kèm theo:
+> - D6: T1027 cho DACN-DET-204 chỉ gắn khi có căn cứ được ghi lại (`mitre_basis`); chưa có căn cứ thì để trống.
+> - D8: chọn P1. Số ngày retention cho kênh PowerShell **chưa chọn**: triển khai thành giá trị cấu hình, không đặt con số mặc định; hỏi người dùng khi cần.
+> - Mẫu XML thật (mục 2.8) người dùng sẽ gửi sau; các field **[CHƯA XÁC MINH]** giữ nhãn cho tới khi đối chiếu với mẫu.
+> - Phê duyệt thiết kế không phải lệnh triển khai: không sửa `src/`, contract, DDL cho tới khi người dùng nói "bắt đầu".
 
 | # | Quyết định | Người duyệt | Đề xuất |
 |---|---|---|---|
