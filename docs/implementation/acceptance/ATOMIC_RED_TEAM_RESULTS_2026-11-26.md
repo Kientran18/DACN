@@ -14,7 +14,7 @@
 | Invoke-AtomicRedTeam / powershell-yaml | 2.3.0 / 0.4.12 (PSGallery) |
 | Atomics commit | a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6 (6 YAML, SHA-256 khớp) |
 | DACN | `edr_ctl start --live`, response `dry_run`; commit trên VM chưa được ghi lại |
-| Windows build | chưa ghi lại |
+| Windows build | Windows 10 Pro, 10.0.19045 (theo output `systeminfo` của C01 lần 2) |
 
 ## Từng test
 
@@ -70,3 +70,28 @@ Suy luận (cần xác nhận thêm):
 
 Giới hạn: một VM, mỗi test một lần, tập test do Claude chọn để khớp rule hiện có (thiên lệch về phía MATCH); không đo FP trên tải lành tính
 thực tế; không đo độ trễ phát hiện. Không suy rộng thành chất lượng phát hiện chung.
+
+## Lần 2 (2026-11-26, khoảng 07:41-07:48 UTC): sau DET-003 v2 và cấu hình Sysmon mới
+
+Thay đổi so với lần 1 (commit `37173d1`, người dùng duyệt): DET-003 `rule_version` 2 nhận RunOnceEx; cấu hình Sysmon include
+`\Policies\Explorer\Run`. Cấu hình được áp bằng `Sysmon64.exe -c` (Sysmon báo `Configuration updated.`) và kiểm tra trong output
+`Sysmon64.exe -c` có cả `\CurrentVersion\Run` lẫn `\Policies\Explorer\Run`. DACN trên VM ở commit `37173d1`, `--live`, `dry_run`.
+Chỉ chạy lại C01, C02, A06, A07; log lần 1 được tách sang thư mục khác.
+
+| ID | Technique | Kỳ vọng (v2) | Kết luận DACN | Rule MATCH | Telemetry (Event ID) | Defender |
+|---|---|---|---|---|---|---|
+| C01 | T1082 | Đối chứng | TN | - | 1, 5 | Không |
+| C02 | T1059.003 | Đối chứng | TN | - | 1, 5, 11 | Không |
+| A06 | T1547.001 | DET-003 MATCH | **TP** | DET-003 | 1, 5, 12, 13 | Không |
+| A07 | T1547.001 | FN dự kiến (chưa có rule) | FN dự kiến | - | 1, 5, 11, 13, 26 | Không |
+
+Quan sát:
+- A06: cùng atomic, cùng loại telemetry (12, 13) như lần 1; lần 1 (DET-003 v1) không MATCH, lần 2 (v2) MATCH.
+- A07: lần 1 cây tiến trình không có Event 13; lần 2 có Event 13. Không có rule nào MATCH, đúng kỳ vọng vì DET-003 v2 chưa gồm
+  `\Policies\Explorer\Run`.
+- Exit code 0 cho cả 4 test; Defender không phản ứng với test nào (người vận hành kiểm tra `Get-MpThreatDetection` sau mỗi test).
+
+Suy luận: Event 13 mới của A07 nhiều khả năng là giá trị ghi vào `\Policies\Explorer\Run` (mục include vừa thêm); báo cáo công cụ
+chỉ liệt kê Event ID, không in đường dẫn khóa, nên chưa đối chiếu trực tiếp `target_object`.
+
+Tổng hợp lần 2: TP_EXPECTED đã chạy 1 (A06), TP 1, FN 0; FN dự kiến 1 (A07); đối chứng TN 2, FP 0. Mỗi test một lần trên một VM.

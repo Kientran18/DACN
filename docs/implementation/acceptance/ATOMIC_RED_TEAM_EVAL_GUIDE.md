@@ -187,9 +187,10 @@ Thay đổi đã duyệt: DET-003 v2 nhận RunOnceEx; cấu hình Sysmon thêm 
 1. Cửa sổ A: `git pull --ff-only origin claude_implement`, rồi áp cấu hình Sysmon mới (Administrator):
    ```powershell
    C:\Windows\Sysmon64.exe -c C:\DACN\poc\sysmon-collector\configs\sysmon-config.xml
-   C:\Windows\Sysmon64.exe -c | Select-String "Policies"
+   ((C:\Windows\Sysmon64.exe -c | Out-String) -replace "`0", "") -split "`n" | Select-String "Policies|CurrentVersion\\Run"
    ```
-   Dòng thứ hai phải in ra mục `\Policies\Explorer\Run`. Sau đó `edr_ctl start --live` như mục 4.1.
+   Lệnh thứ hai phải in ra cả `\CurrentVersion\Run` và `\Policies\Explorer\Run`. Không dùng thẳng `Sysmon64.exe -c | Select-String`:
+   phần liệt kê rule trong output có ký tự NUL nên Select-String không khớp (quan sát trên VM, Sysmon v15.22, 2026-11-26). Sau đó `edr_ctl start --live` như mục 4.1.
 2. Cửa sổ B: dán khối mục 4.2, rồi `Run-One $tests[0]`, `Run-One $tests[1]`, `Run-One $tests[7]` (A06), `Run-One $tests[8]` (A07).
 3. Dừng core, chạy `atomic_compare.py` với `--logs` trỏ tới **thư mục mới** (hoặc chỉ các tệp của lần này) để không lẫn lần 1, ví dụ
    chuyển log cũ sang `C:\dacn_art\logs_run1` trước khi chạy.
