@@ -1,0 +1,568 @@
+# Đề xuất bổ sung telemetry Microsoft Defender và PowerShell Script Block Logging
+
+> **Trạng thái: PROPOSAL / CHỜ DUYỆT.** Tài liệu thiết kế, chưa có code. Không thay đổi contract `bronze-event/1.0`, DDL v1.1, DDL v1.2,
+> ADR, README hay kế hoạch 12 tuần. Mọi tên bảng, event type, mã lỗi, rule ID dưới đây là **đề xuất**, cần Data/Cyber/người dùng duyệt (mục 9).
+>
+> Ngày soạn: 2026-11-26. Nhánh căn cứ: `claude_implement` (commit `dc53684`). Người soạn: Claude Code theo yêu cầu thiết kế.
+>
+> Quy ước nhãn độ tin cậy dùng trong tài liệu:
+> - **[MS-DOC]** có trong tài liệu Microsoft đã đọc ngày 2026-11-26 (URL ở mục 11).
+> - **[CODE]** kiểm tra trực tiếp trên mã nguồn repository.
+> - **[PROBE]** đã chạy script thăm dò trên dữ liệu **synthetic** trong phiên này (mục 3.1).
+> - **[CHƯA XÁC MINH]** giả thuyết; cần mẫu XML thật từ VM trước khi viết code phụ thuộc vào nó.
+
+## 1. Phạm vi và lý do
+
+### 1.1. Căn cứ từ đánh giá Atomic Red Team và EICAR
+
+Theo `docs/implementation/acceptance/ATOMIC_RED_TEAM_RESULTS_2026-11-26.md` (một VM Windows 10, mỗi test chạy một lần, Defender bật, tamper protection bật):
+
+| Quan sát | Hệ quả với DACN hiện tại |
+|---|---|
+| A02 (T1059.001, kỳ vọng DET-001) bị Defender chặn khi tạo tiến trình (`Access is denied` tại `Invoke-Process.ps1`); Defender ghi nhận mối đe dọa | Không có Sysmon Event 1 nên DACN **không thấy gì**. Bằng chứng duy nhất nằm ở log Defender, kênh DACN không đọc |
+| A03 (T1059.001, đã ghi "FN dự kiến (thiếu 4104)") cũng bị Defender chặn | DET-001 chỉ dựa command line. Nội dung script (4104) không được thu thập |
+| A09: cả Defender và DET-004 cùng phát hiện | Không có cách hiển thị "hai nguồn cùng chỉ về một tiến trình" |
+| EICAR (kịch bản SC05 trong `tests/e2e/scenarios.yaml`, `observe_only`): người dùng báo Defender phát hiện, DACN không có alert vì Sysmon Event 11 không mang hash | Đây là báo cáo của người dùng; báo cáo Atomic ở trên không ghi EICAR. Cần ghi kết quả EICAR vào tài liệu nghiệm thu khi chạy lại (mục 8.3) |
+
+Cyber W5 đã ghi khoảng trống này: `docs/research/cyber/w5/04-telemetry-gaps-and-w06-w09-backlog.md` mục W5-CY-13 (thiếu PowerShell 4104) và
+`docs/research/cyber/w5/01-detection-required-fields-and-mitre-to-data.md` (T1059.001: "Chưa có PowerShell 4104"; T1562.001/DET-007 bị chặn vì thiếu tín hiệu tamper).
+
+### 1.2. Mục tiêu
+
+1. Agent đọc thêm hai kênh: `Microsoft-Windows-Windows Defender/Operational` (Event 1116, 1117; tùy chọn 5001, 5007, 5013) và
+   `Microsoft-Windows-PowerShell/Operational` (Event 4104).
+2. Sự kiện mới đi qua cùng chuỗi Bronze sealed → adapter → validator → Silver, giữ nguyên `raw_xml`, định danh UUIDv5 và nguyên tắc fail closed.
+3. Có rule tối thiểu: "Defender đã phát hiện" (alert với nguồn Defender) và "script block PowerShell đáng ngờ".
+4. Dashboard phân biệt alert do rule DACN tự suy ra với alert phản ánh phát hiện của Defender.
+
+### 1.3. Không làm
+
+- Không tắt Defender, không thêm exclusion cho Defender, không dùng mã độc thật. EICAR là tệp kiểm thử chuẩn, không phải mã độc.
+- Không đọc thêm kênh khác (Security 4688/4624, WMI, TaskScheduler, AMSI ETW trực tiếp). Ghi nhận là backlog.
+- Không giải mã Protected Event Logging. Microsoft khuyến cáo không triển khai private key trên máy ghi log **[MS-DOC]**; DACN chạy trên chính máy đó.
+- Không tự bật Script Block Logging, không sửa registry/Group Policy của VM. Người dùng tự làm (mục 2.4).
+- Không tạo response tự động từ Defender alert, rule 4104, điểm rủi ro hay ML. Response vẫn đi qua Response Engine có duyệt và `dry_run` mặc định.
+- Không đổi cách tính `event_id`, `host_id`, không sửa DDL v1.1 hay v1.2, không ALTER bảng Silver hiện có.
+- Không coi Defender là "ground truth" để đo chất lượng rule DACN (Defender cũng có FP/FN).
+
+## 2. Thu thập (agent)
+
+### 2.1. Hiện trạng [CODE]
+
+- `src/agent/sources/eventlog.py`: hằng `CHANNEL = "Microsoft-Windows-Sysmon/Operational"`; `EventLogSource(channel=...)` đã nhận tham số `channel`
+  nhưng `src/agent/__main__.py` chỉ tạo `EventLogSource()` mặc định.
+- Checkpoint một tệp `checkpoint_{mode}.json` (live: `checkpoint_live.json`), chứa **một** bookmark XML.
+- `BronzeWriter` ghi manifest có `first_record_id`/`last_record_id`; hai trường này chỉ có nghĩa khi segment chứa **một** kênh
+  (EventRecordID đánh số riêng theo từng kênh).
+- `bronze_contract.build_bronze_record` gán cứng `"source": "SYSMON"` cho mọi bản ghi.
+
+### 2.2. Đề xuất: một reader (subscription) mỗi kênh, cùng một tiến trình agent
+
+| Phương án | Ưu | Nhược |
+|---|---|---|
+| **A. Một `EventLogSource` mỗi kênh (đề xuất)** | Lỗi quyền (C-006) ở kênh Defender không chặn Sysmon; bookmark độc lập; giữ nguyên `_Api` đã chạy trên VM | Agent phải lặp nhiều nguồn; nhiều handle |
+| B. Một subscription với XML QueryList nhiều kênh | Một handle | Một bookmark chứa nhiều kênh **[CHƯA XÁC MINH]** hành vi `EvtCreateBookmark`/`EvtUpdateBookmark` với nhiều kênh qua pywin32; lỗi một kênh làm hỏng cả truy vấn; phải viết lại `_Api` vừa ổn định |
+
+Thiết kế phương án A:
+
+- Cấu hình mới (đề xuất) trong `edr.yaml`, mặc định chỉ có Sysmon để không đổi hành vi hiện tại:
+  ```yaml
+  agent:
+    channels:
+      - {name: "Microsoft-Windows-Sysmon/Operational", source: SYSMON, enabled: true}
+      - {name: "Microsoft-Windows-Windows Defender/Operational", source: WINDOWS_DEFENDER, enabled: false,
+         xpath: "*[System[(EventID=1116 or EventID=1117 or EventID=5001 or EventID=5007 or EventID=5013)]]"}
+      - {name: "Microsoft-Windows-PowerShell/Operational", source: POWERSHELL, enabled: false,
+         xpath: "*[System[(EventID=4104)]]"}
+  ```
+  Bộ lọc XPath giảm tải: kênh PowerShell/Operational còn nhiều Event ID khác (4100, 40961…), kênh Defender có nhiều sự kiện cập nhật chữ ký.
+  `_Api.query` hiện truyền `Query="*"`; cần tham số hóa.
+- Mỗi kênh có checkpoint riêng: `agent/checkpoint_live_<slug>.json`, `slug` = tên kênh viết thường, ký tự không phải chữ/số thay bằng `_`.
+  Di chuyển tương thích: nếu tồn tại `checkpoint_live.json` cũ và chưa có tệp của Sysmon thì dùng nó cho kênh Sysmon (không mất vị trí).
+- Mỗi kênh có `BronzeWriter` riêng, cùng thư mục `bronze/`, tiền tố tên segment `seg-<slug>-<timestamp>-<n>.jsonl`.
+  `list_sealed` dùng glob `seg-*.jsonl` nên vẫn đọc được; manifest `first/last_record_id` giữ đúng nghĩa (một kênh mỗi segment).
+- Vòng lặp: round-robin, mỗi kênh tối đa `batch_size` sự kiện mỗi lượt để kênh ồn (PowerShell) không bỏ đói Sysmon.
+- `health.json`: thêm `channels: {<tên>: {state, last_event_at, events_written, errors_by_code}}`; giữ các trường cấp cao hiện có cho tương thích API.
+- Lỗi theo kênh: kênh chưa tồn tại (ví dụ máy chưa từng ghi PowerShell/Operational) hoặc thiếu quyền → `SourceError` của kênh đó, ghi
+  `collector_errors.jsonl`, health của kênh = `error`, các kênh khác chạy tiếp. Mã lỗi hiện có đủ dùng: C-006 (thiếu quyền), A-002 (lỗi khác).
+  **[CHƯA XÁC MINH]** mã winerror khi kênh không tồn tại (thường là 15007 `ERROR_EVT_CHANNEL_NOT_FOUND`); cần quan sát trên VM rồi mới quyết định có cần mã riêng.
+
+### 2.3. Quyền đọc
+
+- Hiện agent live chạy bằng Administrator (`EDR_INSTALL_GUIDE.md`).
+- Nhóm **Event Log Readers** (`S-1-5-32-573`) chỉ đọc được kênh nào có SDDL `ChannelAccess` cấp quyền cho SID này. **[CHƯA XÁC MINH]** SDDL
+  mặc định của hai kênh Defender và PowerShell trên Windows 10 VM. Người dùng kiểm tra:
+  ```powershell
+  wevtutil gl "Microsoft-Windows-Windows Defender/Operational"
+  wevtutil gl "Microsoft-Windows-PowerShell/Operational"
+  # Xem dòng channelAccess: có (A;;0x1;;;S-1-5-32-573) hoặc (A;;0x1;;;ER) không
+  ```
+  Dán lại dòng `channelAccess` (không chứa định danh máy). Không tự đổi SDDL bằng `wevtutil sl /ca` trong phiên này.
+
+### 2.4. Bật Script Block Logging (người dùng tự làm trên VM)
+
+Windows PowerShell 5.1 **[MS-DOC, about_Logging 5.1]**:
+
+- Group Policy: *Administrative Templates → Windows Components → Windows PowerShell → Turn on PowerShell Script Block Logging*.
+- Registry tương đương: khóa `HKLM\Software\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging`, giá trị `EnableScriptBlockLogging` = `1`.
+- Sự kiện ghi vào `Microsoft-Windows-PowerShell/Operational`, Event ID `4104` (`0x1008`), Level Verbose, Opcode Create, Task CommandStart.
+- PowerShell 7 dùng kênh khác (`PowerShellCore/Operational`) và policy ở nhánh *PowerShell Core* **[MS-DOC, about_Logging_Windows 7.6]**. Đề xuất
+  này chỉ phủ Windows PowerShell 5.1 (mặc định trên Windows 10). Thêm `PowerShellCore/Operational` là backlog.
+
+Lệnh mẫu cho người dùng (Administrator, chỉ trên VM lab):
+```powershell
+New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging" -Force | Out-Null
+Set-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging" -Name EnableScriptBlockLogging -Value 1
+# Kiểm tra
+Get-ItemProperty "HKLM:\Software\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging"
+```
+Không bật "invocation logging" (4105/4106): tài liệu Microsoft đã đọc không mô tả, và nó tăng khối lượng log mạnh **[CHƯA XÁC MINH]**.
+
+Ghi chú: khi chưa bật policy, Windows PowerShell 5.x vẫn có thể ghi 4104 mức Warning cho script block bị coi là đáng ngờ **[CHƯA XÁC MINH]**:
+hai trang Microsoft đã đọc không nêu hành vi này. Không dựa vào nó trong tiêu chí nghiệm thu.
+
+### 2.5. Kích thước log
+
+- Mặc định kích thước tối đa của hai kênh **[CHƯA XÁC MINH]**; người dùng xem bằng `wevtutil gl <kênh>` (dòng `maxSize`).
+- 4104 có thể rất lớn và nhiều. Nếu log quay vòng trước khi agent đọc, bookmark trỏ tới bản ghi đã mất. Đây là rủi ro mất sự kiện, không phải lỗi agent.
+  Đề xuất: người dùng tăng `maxSize` của PowerShell/Operational trên VM (ví dụ `wevtutil sl "Microsoft-Windows-PowerShell/Operational" /ms:<bytes>`),
+  giá trị chọn sau khi đo tốc độ ghi; agent ghi `coverage_gaps` khi phát hiện bước nhảy `EventRecordID` trong cùng kênh (đã có bảng v1.2).
+- Bronze: `BronzeWriter` mặc định `max_bytes = 8 MiB`/segment; một 4104 lớn vẫn nằm gọn. `event_data` lặp lại nội dung của `raw_xml`, nên dung lượng
+  Bronze cho 4104 xấp xỉ gấp đôi văn bản script. Cần đo trên VM.
+
+### 2.6. Script block bị chia nhiều phần
+
+- **[CHƯA XÁC MINH]** Các trường EventData của 4104 là `MessageNumber`, `MessageTotal`, `ScriptBlockText`, `ScriptBlockId`, `Path`. Hai trang Microsoft
+  đã đọc **không** liệt kê tên trường này; cần mẫu XML thật (mục 2.8).
+- Thiết kế (khi đã xác minh tên trường): mỗi phần là một bản ghi Bronze độc lập (định danh riêng theo `EventRecordID`). Ở Silver, mỗi phần là một dòng;
+  việc ghép (theo `hostname`, `script_block_id`, thứ tự `message_number`) làm ở view/truy vấn, không ghép ở collector. Lý do: giữ ADR 0003 (một bản ghi
+  thô = một sự kiện gốc) và tránh agent phải giữ trạng thái chưa đủ phần qua lần khởi động lại.
+- Phần thiếu: nếu sau thời hạn trễ cho phép (đề xuất dùng lại `allowed_lateness_seconds` của Detection Engine) vẫn chưa đủ `MessageTotal` phần,
+  block được coi là **không đầy đủ**; rule chạy trên phần có được và ghi `coverage_status = PARTIAL`, `missing_fields` gồm số phần thiếu.
+  Không bịa phần thiếu.
+
+### 2.7. Dữ liệu nhạy cảm trong script block
+
+Microsoft cảnh báo khi bật script logging, thông tin xác thực hoặc dữ liệu nhạy cảm mà script dùng có thể bị ghi vào log **[MS-DOC]**.
+
+Xung đột: ADR 0003 yêu cầu giữ nguyên `raw_xml`; adapter đối chiếu `raw_xml` với `event_data` (`BRONZE_RAW_MISMATCH`). Che (mask) ở collector sẽ phá cả hai.
+
+| Phương án | Mô tả | Đánh giá |
+|---|---|---|
+| **P1 (đề xuất)** | Bronze giữ nguyên (ADR 0003). Silver lưu văn bản đầy đủ. API/dashboard **mặc định che** chuỗi khớp mẫu bí mật (ví dụ `-Password`, `ConvertTo-SecureString ... -AsPlainText`, chuỗi giống token dài); vai trò `admin` xem bản gốc qua endpoint riêng, mỗi lần xem ghi `audit_log`. Retention của Bronze/Silver cho kênh PowerShell ngắn hơn mặc định (giá trị do người dùng chọn) | Giữ được bằng chứng; rủi ro lộ dữ liệu nằm trên ổ đĩa cục bộ (đã là vùng tin cậy của EDR) |
+| P2 | Silver chỉ lưu `sha256(ScriptBlockText)`, độ dài và các đặc trưng (có base64, có `iex`…); văn bản chỉ còn ở Bronze | An toàn hơn ở Silver nhưng rule phải chạy trên Bronze hoặc đặc trưng tính sẵn; điều tra khó |
+| P3 | Không thu thập 4104 | Mất mục tiêu A03 |
+
+Ghi chú: retention xóa thật của DACN mới có dry-run (`CLAUDE.md` mục 3.1), nên "retention ngắn hơn" hiện chỉ là chính sách trên giấy cho tới khi retention thật được làm.
+Không đưa văn bản script vào commit, tài liệu công khai hay báo cáo nghiệm thu.
+
+### 2.8. Mẫu XML thật cần người dùng xuất
+
+Repository hiện **không có** mẫu XML thật của hai kênh. Người dùng chạy trên VM (PowerShell Administrator), sau khi đã chạy EICAR và một lệnh PowerShell lành tính:
+
+```powershell
+wevtutil qe "Microsoft-Windows-Windows Defender/Operational" /q:"*[System[(EventID=1116 or EventID=1117)]]" /c:4 /rd:true /f:xml > defender_sample.xml
+wevtutil qe "Microsoft-Windows-Windows Defender/Operational" /q:"*[System[(EventID=5001 or EventID=5007 or EventID=5013)]]" /c:4 /rd:true /f:xml > defender_cfg_sample.xml
+wevtutil qe "Microsoft-Windows-PowerShell/Operational" /q:"*[System[(EventID=4104)]]" /c:6 /rd:true /f:xml > ps4104_sample.xml
+```
+
+Trước khi gửi: thay `<Computer>`, `UserID` (SID), tên người dùng trong đường dẫn (`C:\Users\<tên>\...`), `Detection User`/`User` và mọi chuỗi bí mật
+trong `ScriptBlockText` bằng giá trị giả nhất quán (ví dụ `SYNTH-HOST`, `S-1-5-21-0-0-0-1001`, `labuser`). Giữ nguyên tên phần tử, tên `Data Name`,
+thứ tự trường và định dạng thời gian. Có thể dùng lại công cụ khử định danh đã có (`tests/test_sanitize_samples.py` kiểm tra công cụ đó) sau khi xác nhận nó
+xử lý được hai kênh mới.
+
+Cần có ít nhất: một 1116 và một 1117 của EICAR, một 4104 một phần, một 4104 nhiều phần (chạy một script dài lành tính, ví dụ khối comment lớn), nếu có
+thì một 5007 (đổi một thiết lập Defender không làm giảm bảo vệ là không cần thiết: chỉ xuất nếu đã có sẵn trong log).
+
+## 3. Bronze
+
+### 3.1. Kết quả thăm dò trên dữ liệu synthetic [PROBE]
+
+Script tạm (scratchpad, không commit) dựng một 4104 và một 1116 giả, gọi `build_bronze_record` → `validate_record` → `to_silver_input` → `SilverValidatorEngine`:
+
+| Sự kiện | `source` | Lỗi schema | `event_type` từ adapter | Validator |
+|---|---|---|---|---|
+| 4104 synthetic | `SYSMON` (sai) | không | `SYSMON_EVENT_4104` (sai) | `ERR_UNSUPPORTED_EVENT_ID` → DLQ |
+| 1116 synthetic | `SYSMON` (sai) | không | `SYSMON_EVENT_1116` (sai) | `ERR_UNSUPPORTED_EVENT_ID` → DLQ |
+
+Kết luận: nếu chỉ trỏ agent sang kênh mới mà không sửa gì, bản ghi **không mất âm thầm** (vào DLQ) nhưng bị **gắn nhãn sai** `source: SYSMON` trong Bronze
+bất biến. Không được bật kênh mới trước khi sửa phần Bronze.
+
+### 3.2. Giữ `bronze-event/1.0` hay phiên bản mới
+
+Ràng buộc trong `bronze-event.schema.json` [CODE]:
+- `schema_version: {"const": "bronze-event/1.0"}`.
+- `source` là enum `["SYSMON", "WINDOWS_SECURITY_LOG", "PSUTIL_SNAPSHOT", "COLLECTOR_INTERNAL"]`: không có giá trị cho Defender/PowerShell.
+- Trường `sysmon_event_id` là bắt buộc; tên gắn với Sysmon nhưng nội dung chính là `System/EventID`.
+- Mô tả schema: "Consumers must ignore unknown fields (forward compatible)".
+
+| Phương án | Mô tả | Đánh giá |
+|---|---|---|
+| A. Giữ 1.0, ghi `source: SYSMON` | Không đổi gì | **Loại**: gắn nhãn sai, vi phạm Zero Data Fabrication |
+| B. Giữ 1.0, ghi `source: COLLECTOR_INTERNAL` | Không đổi schema | **Loại**: sai nghĩa của giá trị |
+| **C. `bronze-event/1.1` bổ sung (đề xuất)** | Thêm hai giá trị enum `WINDOWS_DEFENDER`, `POWERSHELL`; giữ mọi trường 1.0, giữ tên `sysmon_event_id` và ghi rõ nghĩa "System/EventID của kênh `channel`"; consumer route theo `(channel, provider.name, sysmon_event_id)` thay vì chỉ theo `sysmon_event_id` | Thay đổi bổ sung, không phá dữ liệu 1.0 đã lưu. Adapter phải chấp nhận cả `1.0` và `1.1`. Bản ghi Sysmon vẫn ghi `1.0` để segment cũ và mới giống nhau |
+| D. `bronze-event/2.0` đổi tên `sysmon_event_id` → `windows_event_id` | Tên đúng nghĩa hơn | Phá vỡ: mọi consumer và dữ liệu đã lưu; không đáng trong Giai đoạn 1 |
+
+Đề xuất C, với quy tắc: bản ghi Sysmon tiếp tục mang `schema_version: bronze-event/1.0`; bản ghi hai kênh mới mang `bronze-event/1.1`.
+Tệp schema mới `bronze-event-1.1.schema.json` đặt cạnh tệp 1.0 (không sửa tệp 1.0). Việc này cần Data/Software/Cyber duyệt chéo, giống hợp đồng 1.0 vẫn đang chờ.
+
+### 3.3. Tác động lên định danh và bảo tồn thô
+
+| Thành phần | Tác động |
+|---|---|
+| `event_id` | Không đổi: UUIDv5(`EVENT_ID_NAMESPACE`, `Computer|Channel|EventRecordID`) theo ADR 0001. Vì khóa đã có `Channel`, EventRecordID trùng số giữa các kênh không va chạm |
+| `host_id` | Không đổi: UUIDv5(`HOST_NAMESPACE`, hostname viết thường). Cùng `Computer` nên ba kênh cho cùng `host_id` **[CHƯA XÁC MINH]** `Computer` của Defender/PowerShell giống hệt Sysmon về chữ hoa/thường và dạng FQDN; nếu khác, `host_id` vẫn đúng vì đã viết thường, nhưng FQDN và tên ngắn sẽ cho hai `host_id` khác nhau |
+| `raw_xml` | Giữ nguyên byte như `EvtRender` trả về (ADR 0003) |
+| `event_data` | Tên `Data Name` gốc, không đổi tên, kể cả tên có khoảng trắng (schema cho phép mọi khóa chuỗi). **[CHƯA XÁC MINH]** Defender dùng `<Data Name=...>` hay `<UserData>`: `_parse_event_element` chỉ đọc `EventData/Data[@Name]`; nếu Defender dùng cấu trúc khác, `event_data` sẽ rỗng trong khi `raw_xml` có dữ liệu. Phải kiểm tra bằng mẫu thật |
+| Va chạm sau khi xóa log | Cơ chế `ERR_EVENT_ID_COLLISION` + `coverage_gaps` hiện có áp dụng nguyên cho kênh mới |
+| `writer_process_id` | Là tiến trình ghi sự kiện (Defender service hoặc chính `powershell.exe`), **không** mặc định là tiến trình bị giám sát. Với 4104, **[CHƯA XÁC MINH]** `System/Execution@ProcessID` chính là PID của `powershell.exe` chạy script; đây là đầu mối join với Sysmon (mục 4.6) |
+
+### 3.4. Ánh xạ field
+
+**Defender 1116/1117.** Tài liệu Microsoft liệt kê **nhãn trong message**, không nói đó là `Data Name` trong XML **[MS-DOC]**:
+
+| Event | Nhãn theo tài liệu Microsoft (đúng thứ tự trang) |
+|---|---|
+| 1116 `MALWAREPROTECTION_STATE_MALWARE_DETECTED` | Name, ID, Severity, Category, Path, Detection Origin, Detection Type, Detection Source, User, Process Name, Signature Version, Engine Version |
+| 1117 `MALWAREPROTECTION_STATE_MALWARE_ACTION_TAKEN` | Name, ID, Severity, Category, Path, Detection Origin, Detection Type, Detection Source, User, Process Name, Action, Action Status, Error Code, Error Description, Signature Version, Engine Version |
+| 5001 `MALWAREPROTECTION_RTP_DISABLED` | "Real-time protection is disabled." Không liệt kê trường |
+| 5007 `MALWAREPROTECTION_CONFIG_CHANGED` | Old value, New value |
+| 5013 | "Tamper protection blocked a change to Microsoft Defender Antivirus." Không liệt kê trường. Trang gán tên ký hiệu `MALWAREPROTECTION_SCAN_CANCELLED` trùng với 1002, không giải thích |
+
+Tên `Data Name` thật trong XML **[CHƯA XÁC MINH]**. Giả thuyết cần kiểm tra (từ hiểu biết chung, không phải tài liệu đã đọc): XML dùng tên có khoảng
+trắng như `Threat Name`, `Threat ID`, `Severity Name`, `Category Name`, `Path`, `Process Name`, `Detection User`, `Action Name`, `Detection ID`,
+`Detection Time`, và `Path` có tiền tố dạng `file:_`. **Không viết mapping cho tới khi có mẫu thật.**
+
+Cột Silver đề xuất (tên cột là đề xuất; nguồn điền chỉ là `Data Name` xác minh được):
+
+| Cột Silver | Nguồn (sau khi xác minh) | Ghi chú |
+|---|---|---|
+| `threat_name` | nhãn "Name" | Bắt buộc với 1116/1117 |
+| `threat_id` | nhãn "ID" | |
+| `severity_name` | nhãn "Severity" | Severity của Defender, **không** phải severity alert DACN |
+| `category_name` | nhãn "Category" | |
+| `target_path` | nhãn "Path" | Giữ nguyên chuỗi gốc ở `raw_data`; cột chuẩn hóa bỏ tiền tố chỉ khi định dạng đã xác minh |
+| `process_name` | nhãn "Process Name" | Có thể là "Unknown" **[CHƯA XÁC MINH]**; không suy ra PID |
+| `detection_user` | nhãn "User" | Dữ liệu định danh: che ở báo cáo |
+| `detection_source`, `detection_origin`, `detection_type` | các nhãn cùng tên | |
+| `action_name`, `action_status`, `error_code` | 1117 | NULL với 1116 |
+| `detection_id` | **[CHƯA XÁC MINH]** có trường ID phát hiện để nối 1116↔1117 | Nếu không có, nối theo (`threat_id`, `target_path`, cửa sổ thời gian) và ghi rõ là heuristic |
+| `signature_version`, `engine_version` | nhãn cùng tên | |
+| `old_value`, `new_value` | 5007 | |
+
+**PowerShell 4104** **[CHƯA XÁC MINH toàn bộ tên trường]**: `MessageNumber` → `message_number` (INTEGER), `MessageTotal` → `message_total` (INTEGER),
+`ScriptBlockText` → `script_block_text`, `ScriptBlockId` → `script_block_id` (GUID, bỏ ngoặc nếu có), `Path` → `script_path` (rỗng khi chạy tương tác).
+`System/Level` (Verbose/Warning) → `level` để phân biệt 4104 do policy và 4104 tự động mức Warning.
+
+## 4. Silver
+
+### 4.1. Nguyên tắc
+
+- DDL mới đặt trong tệp riêng `src/pipeline/sql/silver_schema_v1_3_proposal_defender_powershell.sql` (tên đề xuất), trạng thái PROPOSAL, chỉ `CREATE TABLE IF NOT EXISTS`.
+  Không sửa v1.1, không sửa v1.2. `SilverStore` sẽ áp v1.1 → v1.2 → v1.3 theo thứ tự (khi được duyệt).
+- `silver_event_lineage` (v1.2) dùng lại nguyên vẹn: khóa `event_id`, không cần đổi.
+- Không thêm cột vào bốn bảng Sysmon.
+
+### 4.2. DDL đề xuất (bản nháp, chưa chạy)
+
+```sql
+-- ĐỀ XUẤT v1.3 (PROPOSAL) — CHƯA DUYỆT. Chỉ thêm bảng; không ALTER v1.1/v1.2.
+CREATE TABLE IF NOT EXISTS silver_defender_events (
+    event_id VARCHAR(36) PRIMARY KEY,           -- UUIDv5 Computer|Channel|EventRecordID (ADR 0001)
+    timestamp TIMESTAMPTZ NOT NULL,             -- System/TimeCreated@SystemTime
+    hostname VARCHAR(64) NOT NULL,
+    channel VARCHAR(128) NOT NULL,
+    record_id BIGINT NOT NULL,
+    windows_event_id INTEGER NOT NULL,          -- 1116 | 1117 | 5001 | 5007 | 5013
+    event_type VARCHAR(48) NOT NULL,            -- xem 4.3
+    threat_name VARCHAR,                        -- NULL với 5001/5007/5013
+    threat_id VARCHAR,
+    severity_name VARCHAR,
+    category_name VARCHAR,
+    target_path VARCHAR,
+    process_name VARCHAR,
+    detection_user VARCHAR,
+    detection_source VARCHAR,
+    detection_origin VARCHAR,
+    detection_type VARCHAR,
+    action_name VARCHAR,
+    action_status VARCHAR,
+    error_code VARCHAR,
+    detection_id VARCHAR,                       -- chỉ khi xác minh có trường này
+    signature_version VARCHAR,
+    engine_version VARCHAR,
+    old_value VARCHAR,
+    new_value VARCHAR,
+    raw_data JSON NOT NULL                      -- event_data gốc, như các bảng v1.1
+);
+
+CREATE TABLE IF NOT EXISTS silver_powershell_scriptblock_events (
+    event_id VARCHAR(36) PRIMARY KEY,
+    timestamp TIMESTAMPTZ NOT NULL,
+    hostname VARCHAR(64) NOT NULL,
+    channel VARCHAR(128) NOT NULL,
+    record_id BIGINT NOT NULL,
+    windows_event_id INTEGER NOT NULL,          -- 4104
+    event_type VARCHAR(48) NOT NULL,
+    level INTEGER,                              -- System/Level
+    writer_process_id INTEGER,                  -- System/Execution@ProcessID (xem 4.6)
+    script_block_id VARCHAR(36) NOT NULL,
+    message_number INTEGER NOT NULL,
+    message_total INTEGER NOT NULL,
+    script_block_text VARCHAR NOT NULL,         -- xem chính sách 2.7
+    script_text_sha256 VARCHAR(64) NOT NULL,    -- sha256 UTF-8 của phần này (tính, không bịa)
+    script_path VARCHAR,
+    raw_data JSON NOT NULL
+);
+
+-- Block đã đủ phần; block thiếu phần không xuất hiện ở view này
+CREATE VIEW IF NOT EXISTS v_powershell_scriptblocks_complete AS
+SELECT hostname, script_block_id, min(timestamp) AS first_ts, max(timestamp) AS last_ts,
+       max(message_total) AS message_total, count(*) AS parts_seen,
+       string_agg(script_block_text, '' ORDER BY message_number) AS script_text,
+       list(event_id ORDER BY message_number) AS event_ids,
+       any_value(writer_process_id) AS writer_process_id
+FROM silver_powershell_scriptblock_events
+GROUP BY hostname, script_block_id
+HAVING count(DISTINCT message_number) = max(message_total);
+```
+
+Ghi chú: `string_agg(... ORDER BY ...)`, `list(... ORDER BY ...)` và `CREATE VIEW IF NOT EXISTS` cần kiểm tra trên phiên bản DuckDB đang ghim trong `requirements.txt`
+trước khi chốt. `writer_process_id` chỉ lấy `any_value` khi mọi phần cùng PID; nếu khác (không mong đợi) phải để rule ghi `PARTIAL`.
+
+### 4.3. Tên event type mới (liên quan Q-X3)
+
+Q-X3 (tên event type giữa collector và validator) vẫn mở. Đề xuất **không** thêm vào `STATIC_EVENT_TYPES` của collector hay `EVENT_ID_TO_TYPE_DEFAULT`
+của validator (cả hai khóa theo Sysmon ID và sẽ trùng số nếu Sysmon sau này có ID lớn). Thay vào đó dùng bảng ánh xạ theo `(channel, event_id)`:
+
+| Kênh | ID | event_type đề xuất |
+|---|---|---|
+| Defender | 1116 | `DEFENDER_MALWARE_DETECTED` |
+| Defender | 1117 | `DEFENDER_MALWARE_ACTION` |
+| Defender | 5001 | `DEFENDER_RTP_DISABLED` |
+| Defender | 5007 | `DEFENDER_CONFIG_CHANGED` |
+| Defender | 5013 | `DEFENDER_TAMPER_BLOCKED` |
+| PowerShell | 4104 | `POWERSHELL_SCRIPT_BLOCK` |
+
+Một bảng ánh xạ duy nhất, nằm ở module dùng chung, để tránh tạo thêm "hai bộ tên".
+
+### 4.4. Route, validator và mã lỗi
+
+`SilverValidatorEngine` là bản sao thiết kế Data W05 và kiểm tra `sysmon_event_id in SUPPORTED_SYSMON_IDS` từ sớm. Đề xuất **không** nhồi kênh mới vào engine đó.
+Thêm validator riêng (ví dụ `src/pipeline/validator_windows_channels.py`) và để `SilverStore.ingest_segment` chọn validator theo `record["channel"]`:
+
+- Kênh Sysmon → `SilverValidatorEngine` như hiện tại (không đổi hành vi).
+- Kênh Defender/PowerShell → validator mới.
+- Kênh khác → DLQ `ERR_UNSUPPORTED_CHANNEL` (mới).
+
+Thứ tự kiểm tra của validator mới (giống tinh thần W05): khóa tự nhiên → `record_id` → `(channel, event_id)` được hỗ trợ → thời gian hợp lệ → trường bắt buộc theo loại → route.
+
+| Mã lỗi đề xuất | Khi nào | Tầng |
+|---|---|---|
+| `ERR_UNSUPPORTED_CHANNEL` | Kênh không có validator | route |
+| `ERR_UNSUPPORTED_EVENT_ID` (dùng lại) | Kênh đã hỗ trợ nhưng ID ngoài danh sách (ví dụ 4100) | validator |
+| `ERR_DEFENDER_MISSING_THREAT` | 1116/1117 thiếu "Name" hoặc "ID" | validator |
+| `ERR_PS_MISSING_SCRIPTBLOCK_FIELD` | 4104 thiếu `ScriptBlockId`, `MessageNumber`, `MessageTotal` hoặc `ScriptBlockText` | validator |
+| `ERR_PS_INVALID_PART_NUMBER` | `MessageNumber`/`MessageTotal` không phải số nguyên dương, hoặc `MessageNumber > MessageTotal` | validator |
+| `ERR_TYPE_COERCION_FAILED`, `ERR_INVALID_TIMESTAMP`, `ERR_MISSING_NATURAL_KEY`, `ERR_INVALID_RECORD_ID` (dùng lại) | như W05 | validator |
+
+Adapter: `to_silver_input` hiện gọi `poc._event_type(sysmon_event_id, ...)`; với kênh mới phải dùng bảng 4.3. Kiểm tra định danh và `BRONZE_RAW_MISMATCH` giữ nguyên.
+Validator schema của adapter phải nhận cả 1.0 và 1.1.
+
+Không điền giá trị thiếu: 5001 không có threat → các cột threat là NULL (hợp lệ, không phải lỗi). 1116 thiếu threat name → DLQ.
+
+### 4.5. Dedup
+
+- Theo `event_id` (PRIMARY KEY + `on conflict do nothing`), như hiện tại. Phát lại segment không tạo dòng mới.
+- Không dedup ngữ nghĩa ở Silver (ví dụ Defender ghi lại cùng một mối đe dọa nhiều lần): việc gộp thuộc tầng alert (`group_key`).
+- 4104 cùng `script_block_id` ở **nhiều lần chạy** **[CHƯA XÁC MINH]** có thể dùng lại ID khi cùng một script block được cache; không giả định duy nhất toàn cục.
+  View 4.2 gom theo (`hostname`, `script_block_id`); nếu thấy nhiều hơn `message_total` dòng cho cùng ID, coi là "nhiều lần thực thi" và tách theo thời gian ở tầng detection.
+
+### 4.6. Liên kết với tiến trình Sysmon
+
+| Nguồn | Có gì | Cách join với `silver_process_events.process_guid` | Giới hạn |
+|---|---|---|---|
+| 4104 | `System/Execution@ProcessID` **[CHƯA XÁC MINH là PID của powershell.exe]** | Tìm Sysmon Event 1 cùng `hostname`, `pid = writer_process_id`, `image_path` kết thúc bằng `powershell.exe`, `timestamp(E1) <= timestamp(4104)`, lấy bản gần nhất; nếu có Sysmon Event 5 cùng PID trước 4104 thì loại ứng viên | PID tái sử dụng; agent khởi động muộn không có Event 1; đồng hồ hai kênh cùng máy nên lệch nhỏ nhưng không bằng 0. Kết quả join ghi `link_method = PID_TIME`, `link_confidence` là nhãn (`UNIQUE`/`AMBIGUOUS`/`NONE`), **không** phải số |
+| Defender 1116/1117 | `Process Name` (đường dẫn hoặc "Unknown") **[CHƯA XÁC MINH]**, không có PID theo tài liệu | Theo `image_path` = `process_name` (không phân biệt hoa thường) trong cửa sổ thời gian đề xuất ±N giây trước sự kiện Defender, cùng `hostname` | Nhiều tiến trình cùng image → mơ hồ; "Unknown" → không join. Với A02/A03 tiến trình bị chặn khi tạo nên **không có** Event 1; alert Defender đứng một mình là đúng |
+| Defender `Path` | Tệp bị phát hiện | Join với `silver_file_events.target_filename` (Event 11) để tìm `process_guid` tiến trình tạo tệp | Bỏ tiền tố `file:_` chỉ khi định dạng đã xác minh |
+
+Kết quả join tính khi truy vấn (giống `process_context.py`), không ghi đè dữ liệu Silver. Rule dùng join phải xử lý `AMBIGUOUS` bằng cách liệt kê mọi ứng viên, không chọn đại.
+
+## 5. Detection, điểm rủi ro, hiển thị
+
+### 5.1. Thay đổi rule model
+
+`loader.py` từ chối rule có `sysmon_event_ids` không nằm trong `SILVER_TABLE_FOR_EVENT` [CODE]. Đề xuất thêm khóa tùy chọn
+`source_events: [{channel: <tên kênh>, event_ids: [...]}]` cho rule kênh mới, song song `sysmon_event_ids` (rule cũ không đổi). Rule chỉ được khai một trong hai.
+`schema.py` thêm ánh xạ `(channel, event_id) → bảng Silver`. `DetectionResult` không đổi trường.
+
+### 5.2. Rule đề xuất
+
+| Rule ID đề xuất | Tên | Logic | Severity đề xuất | MITRE | Căn cứ MITRE |
+|---|---|---|---|---|---|
+| `DACN-DET-201` | Defender phát hiện mối đe dọa | Mỗi 1116 hợp lệ (gộp 1117 cùng phát hiện vào `contributing_event_ids` nếu nối được) | Ánh xạ từ `severity_name` của Defender, bảng ánh xạ do Cyber duyệt; mặc định `medium` nếu chưa có ánh xạ | Không gắn | Tên mối đe dọa của Defender không cho technique một cách tin cậy; gắn theo tên là đoán |
+| `DACN-DET-202` | Defender real-time protection bị tắt / cấu hình bị đổi / tamper bị chặn | 5001, 5007, 5013 | 5001: `high`; 5007: `low`; 5013: `medium` (đề xuất, Cyber duyệt) | T1562.001 | Cyber W5 `01-...md` đã gắn T1562.001 (Disable or Modify Tools) cho DET-007. 5007 đơn lẻ thường là thay đổi lành tính (ví dụ cập nhật), nên severity thấp |
+| `DACN-DET-203` | Script block PowerShell có dấu hiệu đáng ngờ | Trên block đã ghép (view 4.2) hoặc trên từng phần nếu block chưa đủ (`PARTIAL`): `contains_any` các mẫu như `frombase64string`, `invoke-expression`, `iex(`, `downloadstring`, `net.webclient`, `-bxor`, `reflection.assembly]::load`, `virtualalloc` | `medium` | T1059.001 | Giống DET-001 (`docs/research/cyber/w5/01-...md`); danh sách mẫu do Cyber duyệt |
+| `DACN-DET-204` | Script block có chuỗi base64 dài giải mã ra lệnh PowerShell đáng ngờ | Tìm chuỗi base64 dài ≥ L ký tự, giải mã (UTF-16LE và UTF-8, giới hạn kích thước), áp lại mẫu DET-203 lên kết quả; `matched_fields` ghi đoạn khớp đã che | `medium` | T1027 (đề xuất), T1059.001 | T1027 cần Cyber xác nhận căn cứ; chưa có trong tài liệu Cyber W5 |
+
+Rule ID dải `2xx` là đề xuất để không đụng `DET-001..010` (Cyber) và `DET-101`. Tất cả bắt đầu `validation_status: synthetic_only`, `status: enabled`
+chỉ sau khi người dùng duyệt. DET-201 không "xác nhận" phát hiện của Defender là đúng; mô tả rule ghi rõ "phản ánh phát hiện của Defender".
+
+Giới hạn đã biết: script bị làm rối ở mức chuỗi nối/biến sẽ né DET-203; giải mã base64 có chi phí và nguy cơ bom giải nén thì không áp dụng (không giải nén),
+nhưng phải giới hạn độ dài đầu vào; DET-204 có FP với script quản trị nhúng dữ liệu base64.
+
+DET-007 (đang blocked vì thiếu tín hiệu tamper): DET-202 chỉ phủ một phần (tamper của Defender), không mở khóa DET-007 (tamper của chính DACN/Sysmon).
+
+### 5.3. Điểm rủi ro
+
+`src/risk/config.py` khóa danh sách `CATEGORIES`. Đề xuất thêm category `EXTERNAL_AV` cho alert DET-201/202 (nguồn bên ngoài DACN), giữ DET-203/204 ở `RULE`.
+Thay đổi `config/risk-scoring.yaml` (tăng `version`, ghi `changelog`, vẫn `status: heuristic_uncalibrated`):
+
+```yaml
+weights: {..., EXTERNAL_AV: 1.0}
+category_caps: {..., EXTERNAL_AV: 60}
+```
+
+`EXTERNAL_AV` được tính vào `diversity_bonus` như một cơ chế độc lập (Defender không dùng dữ liệu của DACN). Giá trị là heuristic, chưa hiệu chỉnh.
+**Điểm rủi ro và ML tiếp tục không kích hoạt response** (kiểm tra AST hiện có phải giữ pass).
+
+### 5.4. Alert và dashboard
+
+- `alerts.detection_source` (v1.2) là `VARCHAR(32)`, hiện nhận `RULE | IOC | ML`. Đề xuất thêm giá trị `EXTERNAL_DEFENDER` cho DET-201/202; không cần ALTER.
+  Đây vẫn là thay đổi ý nghĩa contract alert → cần Data duyệt.
+- Dashboard: cột/nhãn "Nguồn phát hiện" với hai giá trị hiển thị **DACN** (RULE/IOC/CORRELATION/STATIC) và **Defender** (EXTERNAL_DEFENDER); bộ lọc theo nguồn;
+  trong chi tiết alert, khi một tiến trình có cả alert DACN và Defender thì hiển thị cả hai (A09 là ví dụ).
+- Chi tiết alert DET-203/204: văn bản script mặc định đã che (mục 2.7).
+- Một phiên Claude khác đang sửa `src/api` và `src/dashboard` (process tree); phần dashboard làm sau cùng và phải merge với thay đổi đó.
+
+## 6. Kiểm thử
+
+### 6.1. Fixture synthetic
+
+Đặt ở `tests/fixtures/windows_channels/` (đề xuất), mỗi tệp có comment đầu `<!-- SYNTHETIC: ... không phải dữ liệu thật -->`, `Computer` = `SYNTH-HOST`.
+Tên `Data Name` trong fixture đầu tiên phải **sao từ mẫu thật đã khử định danh** (mục 2.8); trước khi có mẫu, fixture chỉ dùng cho test không phụ thuộc tên trường
+(định danh, route theo kênh, nhãn `source`).
+
+| Fixture | Mục đích |
+|---|---|
+| `defender_1116_eicar.synthetic.xml`, `defender_1117_eicar.synthetic.xml` | luồng chuẩn, nối 1116↔1117 |
+| `defender_5001.synthetic.xml`, `defender_5007.synthetic.xml`, `defender_5013.synthetic.xml` | DET-202 |
+| `defender_1116_missing_threat.synthetic.xml` | `ERR_DEFENDER_MISSING_THREAT` |
+| `ps4104_single.synthetic.xml`, `ps4104_three_parts.synthetic.xml`, `ps4104_missing_part.synthetic.xml`, `ps4104_bad_partno.synthetic.xml` | ghép, PARTIAL, `ERR_PS_INVALID_PART_NUMBER` |
+| `ps4104_base64.synthetic.xml` | DET-204, chuỗi base64 của lệnh lành tính chứa từ khóa |
+| `ps4104_secret.synthetic.xml` | kiểm tra che bí mật ở API (chuỗi giả `SYNTHETIC-NOT-A-SECRET`) |
+| `mixed_channels_same_record_id.synthetic.xml` | ba kênh cùng `EventRecordID` → ba `event_id` khác nhau |
+
+### 6.2. Test cần viết (khi triển khai)
+
+- Agent: một nguồn mỗi kênh, checkpoint riêng, di chuyển `checkpoint_live.json` cũ, một kênh lỗi C-006 không chặn kênh khác, round-robin không bỏ đói,
+  tiền tố segment, manifest một kênh, health theo kênh. Dùng `_Api` giả như test hiện có.
+- Bronze: `source` đúng theo kênh; bản ghi Sysmon vẫn `bronze-event/1.0` và byte-identical với hiện tại (hồi quy); schema 1.1 hợp lệ; adapter nhận 1.0 và 1.1;
+  định danh không đổi so với công thức ADR 0001.
+- Silver: route theo kênh, từng mã lỗi mới, dedup khi phát lại segment, view ghép block, lineage.
+- Detection: DET-201..204 MATCH/NO_MATCH/INSUFFICIENT_TELEMETRY/PARTIAL; `source_events` trong loader; loader vẫn từ chối rule sai.
+- Join tiến trình: UNIQUE/AMBIGUOUS/NONE với PID tái sử dụng.
+- Risk: category `EXTERNAL_AV`, `diversity_bonus`, kiểm tra AST "không response" vẫn pass.
+- API: che bí mật mặc định, endpoint xem bản gốc chỉ cho `admin` và ghi audit.
+- Toàn bộ `python -m pytest -q` phải giữ 513 test hiện có pass (con số đo ngày 2026-11-26; chạy lại trước khi so).
+
+### 6.3. Kế hoạch trên VM (người dùng chạy, Claude không chạy)
+
+Điều kiện: một Windows 10 VM, Defender bật (real-time và tamper protection như lần Atomic), Sysmon đang chạy, Script Block Logging đã bật (mục 2.4).
+
+1. Xuất mẫu XML (mục 2.8), khử định danh, gửi lại. **Đây là cổng chặn trước khi viết mapping.**
+2. Sau khi có bản triển khai: `edr_ctl start --live` với ba kênh bật. Kiểm tra `health.json` có ba kênh `running`.
+3. EICAR (SC05): tạo tệp kiểm thử EICAR theo hướng dẫn hiện có. Kỳ vọng: 1116 (và có thể 1117) trong Silver; DET-201 MATCH; dashboard hiển thị nguồn Defender.
+   Ghi thêm Sysmon Event 11 có/không.
+4. Atomic A02, A03 (cùng commit ghim như lần trước, dùng `atomic_compare.py`). Kỳ vọng tối thiểu: Defender bắt → DET-201 MATCH. A03: nếu Defender chặn
+   trước khi script chạy thì **có thể không có** 4104; ghi đúng như quan sát, không coi là FN của DET-203.
+5. Đối chứng lành tính: chạy vài lệnh PowerShell quản trị thường ngày; ghi số alert DET-203/204 (FP quan sát, không phải tỷ lệ).
+6. Restart agent giữa chừng; kiểm tra không mất/trùng ngoài at-least-once theo từng kênh.
+
+### 6.4. Tiêu chí nghiệm thu đề xuất
+
+- Không bản ghi nào của kênh mới mang `source: SYSMON`.
+- Mọi bản ghi kênh mới vào Silver hoặc DLQ với mã lỗi cụ thể; không mất âm thầm (đếm Bronze = Silver + DLQ + trùng).
+- EICAR trên VM: có alert DET-201 truy vết được về `raw_xml` của 1116.
+- 4104 nhiều phần ghép đúng thứ tự; block thiếu phần → `PARTIAL`, không bịa.
+- Văn bản script không lộ qua API ở vai trò `viewer`/`analyst` khi khớp mẫu bí mật.
+- Không có response nào được tạo tự động.
+
+### 6.5. Đề xuất bổ sung `at_catalog.yaml` (chưa sửa tệp)
+
+| AT đề xuất | level | Mục tiêu |
+|---|---|---|
+| AT-44 | L | Bản ghi Defender/PowerShell synthetic → Bronze `bronze-event/1.1`, `source` đúng, định danh theo ADR 0001 |
+| AT-45 | L | Route theo kênh, mã lỗi mới, dedup, view ghép 4104 |
+| AT-46 | L | DET-201..204 trên fixture; không response |
+| AT-47 | W | Agent đọc ba kênh trên VM, checkpoint riêng, một kênh thiếu quyền không chặn Sysmon |
+| AT-48 | W | EICAR → 1116 → alert DET-201 → truy vết `raw_xml` |
+| AT-49 | W | 4104 thật (một phần và nhiều phần) vào Silver đúng; che bí mật ở API |
+
+## 7. Rủi ro
+
+| Rủi ro | Ảnh hưởng | Giảm thiểu |
+|---|---|---|
+| Tên trường XML khác giả thuyết | Mapping sai, DLQ hàng loạt | Cổng chặn mục 2.8; validator fail closed vào DLQ, không bịa |
+| Defender dùng `UserData` thay `EventData` | `event_data` rỗng, adapter vẫn "khớp" vì cả hai rỗng | Thêm kiểm tra: kênh Defender mà `event_data` rỗng → DLQ, không vào Silver |
+| Lộ bí mật qua 4104 | Dữ liệu nhạy cảm trên đĩa/API | Mục 2.7; không đưa script vào tài liệu/commit |
+| Khối lượng 4104 lớn trên VM 2 GB | CPU/đĩa, log quay vòng | XPath lọc, tăng `maxSize`, đo trên VM trước khi bật mặc định; mặc định `enabled: false` |
+| Join PID sai | Gắn alert vào sai tiến trình | Nhãn `AMBIGUOUS`, liệt kê ứng viên, không chọn đại |
+| Coi Defender là sự thật | Đánh giá rule DACN sai | Tách nguồn trên dashboard; không dùng Defender làm nhãn đo chất lượng |
+| Xung đột với phiên khác sửa `src/api`, `src/dashboard` | Merge khó | Làm dashboard sau cùng, `git fetch` trước khi push |
+| Contract 1.0 vẫn chưa được duyệt chéo mà đã có 1.1 | Hai phiên bản chờ duyệt cùng lúc | Duyệt 1.1 cùng gói với 1.0 |
+
+## 8. Phạm vi công việc và thứ tự triển khai
+
+Ước lượng tương đối (S < M < L), không phải số giờ.
+
+| # | Hạng mục | Cỡ | Phụ thuộc |
+|---|---|---|---|
+| 0 | Người dùng xuất mẫu XML + kiểm tra `channelAccess`, `maxSize` (mục 2.3, 2.5, 2.8) | S | — (cổng chặn) |
+| 1 | Bronze 1.1: schema mới, `build_bronze_record` gán `source` theo kênh, adapter nhận 1.0/1.1, test hồi quy Sysmon | M | duyệt quyết định D1–D2 |
+| 2 | Agent đa kênh: cấu hình, checkpoint riêng + di chuyển, writer theo kênh, XPath, health | M | 1 |
+| 3 | Silver v1.3: DDL, validator theo kênh, mã lỗi, view ghép 4104 | M | 0, 1, duyệt D3–D5 |
+| 4 | Join tiến trình (query-time) | S–M | 3 |
+| 5 | Rule model `source_events` + DET-201/202 | M | 3, duyệt D6–D7 |
+| 6 | DET-203/204 (mẫu chuỗi, giải mã base64 có giới hạn) | M | 3, 5 |
+| 7 | Risk `EXTERNAL_AV`, `risk-scoring.yaml` v2 | S | 5 |
+| 8 | API che bí mật + endpoint xem bản gốc có audit | M | 3, duyệt D8 |
+| 9 | Dashboard nguồn phát hiện | S–M | 5, 8, merge với phiên process tree |
+| 10 | Tài liệu: `EDR_INSTALL_GUIDE.md` (bật 4104, quyền), `at_catalog.yaml`, `CLAUDE.md` mục 3.1 | S | sau từng hạng mục |
+| 11 | Kiểm tra trên VM (mục 6.3), ghi kết quả | M | 2–9 |
+
+Thứ tự đề xuất: 0 → 1 → 2 → 3 → 5 (DET-201/202, giải quyết EICAR/A02 trước) → 4 → 6 → 7 → 8 → 9 → 11, tài liệu cập nhật song song.
+Defender đi trước PowerShell vì ít rủi ro dữ liệu nhạy cảm và trực tiếp lấp khoảng trống A02/A03/EICAR.
+
+## 9. Quyết định cần duyệt
+
+| # | Quyết định | Người duyệt | Đề xuất |
+|---|---|---|---|
+| D1 | `bronze-event/1.1` bổ sung enum `WINDOWS_DEFENDER`, `POWERSHELL`; Sysmon giữ 1.0 | Data + Software + Cyber | Phương án C mục 3.2 |
+| D2 | Giữ tên `sysmon_event_id` với nghĩa System/EventID cho mọi kênh | Data | Giữ (tránh 2.0) |
+| D3 | DDL v1.3 tách tệp: `silver_defender_events`, `silver_powershell_scriptblock_events`, view ghép | Data | Mục 4.2 |
+| D4 | Tên event type theo `(channel, event_id)` (mục 4.3), độc lập Q-X3 | Data + Cyber | Mục 4.3 |
+| D5 | Mã lỗi mới `ERR_UNSUPPORTED_CHANNEL`, `ERR_DEFENDER_MISSING_THREAT`, `ERR_PS_MISSING_SCRIPTBLOCK_FIELD`, `ERR_PS_INVALID_PART_NUMBER` | Data | Mục 4.4 |
+| D6 | Rule ID dải `DACN-DET-201..204`, severity, MITRE (T1562.001 cho DET-202; T1059.001; T1027 cần căn cứ) | Cyber | Mục 5.2 |
+| D7 | Khóa rule `source_events`; `detection_source = EXTERNAL_DEFENDER`; risk category `EXTERNAL_AV` | Software + Data + Cyber | Mục 5.1, 5.3, 5.4 |
+| D8 | Chính sách dữ liệu nhạy cảm 4104 (P1/P2/P3) và retention cho kênh PowerShell | Người dùng + Cyber | P1 |
+| D9 | Có thu 5001/5007/5013 trong đợt đầu không | Người dùng + Cyber | Có (rẻ, phủ một phần T1562.001) |
+| D10 | Mặc định các kênh mới `enabled: false` cho tới khi đo trên VM | Người dùng | Có |
+
+## 10. Liên quan tới các nhóm
+
+- **Software**: agent, Bronze writer, adapter, validator mới, API, dashboard.
+- **Data**: contract Bronze 1.1, DDL v1.3, event type, mã lỗi, lineage, retention.
+- **Cyber**: rule DET-201..204, MITRE, ánh xạ severity Defender, danh sách mẫu chuỗi, chính sách bí mật.
+
+## 11. Nguồn
+
+- Microsoft, *Review event logs and error codes to troubleshoot issues with Microsoft Defender Antivirus*:
+  https://learn.microsoft.com/en-us/defender-endpoint/troubleshoot-microsoft-defender-antivirus (đọc 2026-11-26).
+- Microsoft, *about_Logging* (Windows PowerShell 5.1):
+  https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_logging?view=powershell-5.1 (đọc 2026-11-26).
+- Microsoft, *about_Logging_Windows* (PowerShell 7.6):
+  https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_logging_windows (đọc 2026-11-26).
+- Repository: `docs/decisions/0001`–`0003`, `poc/sysmon-collector/bronze-event.schema.json`, `bronze_contract.py`, `bronze_to_silver_adapter.py`,
+  `src/agent/`, `src/pipeline/silver_store.py`, `src/pipeline/validator_poc.py`, `src/pipeline/sql/*_v1_2_proposal.sql`, `src/detection/`, `src/risk/`,
+  `docs/implementation/acceptance/ATOMIC_RED_TEAM_RESULTS_2026-11-26.md`, `docs/research/cyber/w5/01-...md`, `04-...md`.
