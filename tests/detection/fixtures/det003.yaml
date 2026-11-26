@@ -6,5 +6,12 @@ rows:
   - {id: runonce, table: registry, target_object: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce\Setup'}
   - {id: other, table: registry, target_object: 'HKU\S-1-5-21-1\Software\Vendor\Settings\Theme'}
   - {id: policies, table: registry, target_object: 'HKU\S-1-5-21-1\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run\x'}
+  # RunOnceEx (rule_version 2): giá trị trong một mục con, có hoặc không có nhánh Depend -> MATCH
+  - {id: runonceex_depend, table: registry, target_object: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnceEx\0001\Depend\1', details: 'C:\Path\x.dll'}
+  - {id: runonceex_entry, table: registry, target_object: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnceEx\0001\Line1'}
+  # Giá trị cấu hình nằm thẳng dưới RunOnceEx (Flags, Title) không phải mục chạy -> không MATCH
+  - {id: runonceex_flags, table: registry, target_object: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnceEx\Flags'}
+  # Khóa có tên gần giống nhưng không phải Run/RunOnce/RunOnceEx -> không MATCH
+  - {id: runnotify, table: registry, target_object: 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunNotify\x'}
 expected:
-  DACN-DET-003: [MATCH, MATCH]
+  DACN-DET-003: [MATCH, MATCH, MATCH, MATCH]

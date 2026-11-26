@@ -62,19 +62,19 @@ tests:
     guid: 554cbd88-cde1-4b56-8168-0be552eed9eb
     name: Reg Key RunOnce (HKLM RunOnceEx)
     elevation: admin
-    category: FN_NO_RULE
+    category: TP_EXPECTED
     target_rules: [DACN-DET-003]
     expect_telemetry: [1, 13]
-    reason: Sysmon ghi Event 13 (khớp '\CurrentVersion\Run') nhưng regex DET-003 chỉ nhận Run/RunOnce, không nhận RunOnceEx\...\Depend
+    reason: DET-003 v2 nhận RunOnceEx\<mục>\Depend\<giá trị>. Lần 1 (2026-11-26, DET-003 v1) có Event 12/13 nhưng không MATCH
   - id: A07
     technique: T1547.001
     guid: a70faea1-e206-4f6f-8d9a-67379be8f6f1
     name: HKCU Policies\Explorer\Run
     elevation: admin
-    category: FN_NO_TELEMETRY
+    category: FN_NO_RULE
     target_rules: [DACN-DET-003]
-    expect_telemetry: [1]
-    reason: cấu hình Sysmon không include '\Policies\Explorer\Run' nên không có Event 13; regex DET-003 cũng không khớp
+    expect_telemetry: [1, 13]
+    reason: cấu hình Sysmon đã include '\Policies\Explorer\Run' (cần áp lại bằng Sysmon64 -c) nên kỳ vọng có Event 13; DET-003 v2 chưa gồm khóa này. Lần 1 (cấu hình cũ) không có Event 13
   - id: A08
     technique: T1053.005
     guid: 42f53695-ad4a-4546-abb6-7d837f644a71

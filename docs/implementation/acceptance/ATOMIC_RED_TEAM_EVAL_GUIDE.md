@@ -26,8 +26,8 @@ Nguồn sự thật: `tests/e2e/atomic_expected.yaml` (đề xuất, chờ Cyber
 | A03 | T1059.001 | Known Malicious Cmdlets (hàm giả) | admin | FN dự kiến (thiếu telemetry) | cần PowerShell 4104 |
 | A04 | T1547.001 | Reg Key Run (HKCU) | user | DET-003 MATCH | Event 13 khóa Run |
 | A05 | T1547.001 | SystemBC Registry (HKCU Run) | user | DET-003 MATCH | Event 13 khóa Run |
-| A06 | T1547.001 | RunOnceEx (HKLM) | admin | FN dự kiến (chưa có rule) | regex DET-003 không nhận RunOnceEx |
-| A07 | T1547.001 | Policies\Explorer\Run | admin | FN dự kiến (thiếu telemetry) | Sysmon không include khóa này |
+| A06 | T1547.001 | RunOnceEx (HKLM) | admin | DET-003 MATCH (từ v2) | v1 không nhận RunOnceEx (đo lần 1) |
+| A07 | T1547.001 | Policies\Explorer\Run | admin | FN dự kiến (chưa có rule) | Sysmon đã include khóa (áp lại cấu hình); DET-003 chưa gồm |
 | A08 | T1053.005 | SCHTASKS /Create | user | DET-004 MATCH | |
 | A09 | T1053.005 | Task base64 từ registry | user | DET-004 MATCH | |
 | A10 | T1053.005 | Register-ScheduledTask | admin | FN dự kiến (chưa có rule) | không qua schtasks.exe |
@@ -179,3 +179,19 @@ Get-Content -Encoding UTF8 C:\dacn_results\atomic_report.md
 Exit code khác 0 và cờ "gợi ý Defender" (stderr có thông điệp kiểu AMSI) được báo riêng; kết luận Defender do người vận hành xác nhận.
 Giới hạn: không gán được tiến trình do dịch vụ khởi tạo (Task Scheduler, WMI) vì chúng không là con cháu của tiến trình gốc;
 Event 12/13 do `svchost.exe` ghi vào `TaskCache` không được tính cho test. Cỡ mẫu là số lần chạy trên một VM; không suy rộng.
+
+## 6. Chạy lại sau khi sửa DET-003 v2 và cấu hình Sysmon (2026-11-26)
+
+Thay đổi đã duyệt: DET-003 v2 nhận RunOnceEx; cấu hình Sysmon thêm `\Policies\Explorer\Run`. Chỉ cần chạy lại A06, A07 và hai đối chứng.
+
+1. Cửa sổ A: `git pull --ff-only origin claude_implement`, rồi áp cấu hình Sysmon mới (Administrator):
+   ```powershell
+   C:\Windows\Sysmon64.exe -c C:\DACN\poc\sysmon-collector\configs\sysmon-config.xml
+   C:\Windows\Sysmon64.exe -c | Select-String "Policies"
+   ```
+   Dòng thứ hai phải in ra mục `\Policies\Explorer\Run`. Sau đó `edr_ctl start --live` như mục 4.1.
+2. Cửa sổ B: dán khối mục 4.2, rồi `Run-One $tests[0]`, `Run-One $tests[1]`, `Run-One $tests[7]` (A06), `Run-One $tests[8]` (A07).
+3. Dừng core, chạy `atomic_compare.py` với `--logs` trỏ tới **thư mục mới** (hoặc chỉ các tệp của lần này) để không lẫn lần 1, ví dụ
+   chuyển log cũ sang `C:\dacn_art\logs_run1` trước khi chạy.
+
+Lưu ý: DET-003 đổi `rule_version` nên engine đánh giá lại toàn bộ Event 13 đã có; các alert DET-003 v1 cũ có thể xuất hiện thêm bản v2.

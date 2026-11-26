@@ -66,6 +66,8 @@
     <RuleGroup name="registry" groupRelation="or">
       <RegistryEvent onmatch="include">
         <TargetObject condition="contains">\CurrentVersion\Run</TargetObject>
+        <!-- 2026-11-26: Atomic T1547.001 #12 trên VM không có Event 13 vì thiếu mục này (người dùng duyệt thêm) -->
+        <TargetObject condition="contains">\Policies\Explorer\Run</TargetObject>
         <TargetObject condition="contains">\CurrentVersion\Winlogon\</TargetObject>
         <TargetObject condition="contains">\Image File Execution Options\</TargetObject>
         <TargetObject condition="contains">\Schedule\TaskCache\</TargetObject>
