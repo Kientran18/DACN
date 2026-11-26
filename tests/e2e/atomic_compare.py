@@ -169,8 +169,15 @@ def _verdict(category: str, started: bool, seed_found: bool, target: List[str], 
     return "MATCH_NGOAI_DU_KIEN" if matched else "FN_DU_KIEN"
 
 
+def _coverage(con) -> dict:
+    lo, hi = con.execute("select min(timestamp), max(timestamp) from silver_process_events").fetchone()
+    return {"min": lo.astimezone(timezone.utc).isoformat() if lo else None,
+            "max": hi.astimezone(timezone.utc).isoformat() if hi else None, "_max_dt": hi}
+
+
 def _evaluate(con, runs: List[dict], expected: dict) -> dict:
     spec = {x["guid"].lower(): x for x in expected["tests"]}
+    cov = _coverage(con)
     children = _children_index(con)
     results = [json.loads(r[0]) for r in con.execute("select result from _detection_results").fetchall()]
     rows, unknown, attempts = [], [], defaultdict(int)
@@ -198,6 +205,7 @@ def _evaluate(con, runs: List[dict], expected: dict) -> dict:
             "exec_failed": bool(run["is_timeout"] or run["pid"] is None or (run["exit_code"] not in (None, 0))),
             "defender_hint": run["defender_hint"], "seed_found": seed is not None,
             "seed_image": (str(seed[2]).replace("/", "\\").rsplit("\\", 1)[-1] if seed and seed[2] else None),
+            "after_silver_end": bool(run["start"] and (cov["_max_dt"] is None or run["start"] > cov["_max_dt"])),
             "lineage_size": len(guids), "telemetry": seen,
             "missing_telemetry": [e for e in sp.get("expect_telemetry", []) if e not in seen] if seed else [],
             "matched_rules": matched, "outcomes": {k: sorted(v) for k, v in sorted(outcomes.items())},
@@ -205,7 +213,8 @@ def _evaluate(con, runs: List[dict], expected: dict) -> dict:
         })
     run_ids = {r["id"] for r in rows}
     not_run = [x["id"] for x in expected["tests"] if x["id"] not in run_ids]
-    return {"atomics_commit": expected.get("atomics_commit"), "runs": rows, "not_run": not_run,
+    cov.pop("_max_dt")
+    return {"atomics_commit": expected.get("atomics_commit"), "silver_coverage": cov, "runs": rows, "not_run": not_run,
             "unknown_runs": unknown, "by_technique": _summary(rows, expected, not_run)}
 
 
@@ -227,8 +236,10 @@ def _summary(rows: List[dict], expected: dict, not_run: List[str]) -> List[dict]
     return [out[t] for t in order]
 
 
-def compare(runs: List[dict], silver: Path, expected=EXPECTED) -> dict:
-    """Luôn làm việc trên bản sao tạm của Silver: chạy DetectionEngine để kết quả cập nhật mà không ghi vào DB core."""
+def compare(runs: List[dict], silver: Path, expected=EXPECTED, bronze: Optional[Path] = None) -> dict:
+    """Luôn làm việc trên bản sao tạm của Silver: chạy DetectionEngine để kết quả cập nhật mà không ghi vào DB core.
+    bronze: thư mục Bronze; segment đã niêm phong mà core chưa nạp (ví dụ dừng core ngay sau khi agent niêm phong lúc dừng)
+    được nạp vào BẢN SAO trước khi đối chiếu. Idempotent theo ledger: segment đã nạp được bỏ qua."""
     if not isinstance(expected, dict):
         expected = yaml.safe_load(Path(expected).read_text(encoding="utf-8"))
     silver = Path(silver)
@@ -243,6 +254,8 @@ def compare(runs: List[dict], silver: Path, expected=EXPECTED) -> dict:
             raise RuntimeError("không sao chép được Silver (core còn đang chạy?): dừng core rồi chạy lại") from exc
         st = SilverStore(Path(tmp) / silver.name)
         try:
+            if bronze:
+                st.ingest_dir(Path(bronze), run_id="atomic_compare")
             DetectionEngine(st.con).run()
             return _evaluate(st.con, runs, expected)
         finally:
@@ -255,7 +268,12 @@ def to_markdown(rep: dict) -> str:
     out = ["# Đánh giá Atomic Red Team - đối chiếu với DACN", "",
            f"Atomics commit: `{rep.get('atomics_commit')}`. Gán theo cây tiến trình (pid + thời điểm -> ProcessGuid -> con cháu).",
            "Báo cáo không chứa hostname, username, IP, command line hay stdout. Cột Defender do người vận hành xác nhận "
-           "(cờ 'gợi ý' chỉ dựa trên stderr).", "",
+           "(cờ 'gợi ý' chỉ dựa trên stderr).",
+           f"Silver có dữ liệu Event 1/5 từ {rep['silver_coverage']['min']} đến {rep['silver_coverage']['max']} (UTC).", ""] + (
+           ["**Cảnh báo:** có lần chạy bắt đầu SAU dữ liệu cuối của Silver (" +
+            ", ".join(r["id"] for r in rep["runs"] if r["after_silver_end"]) +
+            "): core có thể chưa nạp Bronze. Chạy lại công cụ với `--bronze <thư mục bronze>`.", ""]
+           if any(r["after_silver_end"] for r in rep["runs"]) else []) + [
            "| ID | Lần | Technique | Loại kỳ vọng | Rule mục tiêu | Rule MATCH | Kết luận | Telemetry | Thiếu telemetry | "
            "Exit | Gợi ý Defender (stderr) | Defender (người vận hành) |",
            "|---|---|---|---|---|---|---|---|---|---|---|---|"]
@@ -288,11 +306,12 @@ def main(argv=None) -> int:
     ap.add_argument("--silver", type=Path, required=True)
     ap.add_argument("--logs", type=Path, action="append", required=True, help="tệp .json/.csv hoặc thư mục chứa chúng")
     ap.add_argument("--expected", type=Path, default=EXPECTED)
+    ap.add_argument("--bronze", type=Path, help="thư mục Bronze; nạp segment core chưa nạp vào bản sao Silver")
     ap.add_argument("--out", type=Path)
     ap.add_argument("--json", type=Path)
     a = ap.parse_args(argv)
     try:
-        rep = compare(load_runs(a.logs), a.silver, a.expected)
+        rep = compare(load_runs(a.logs), a.silver, a.expected, a.bronze)
     except (FileNotFoundError, RuntimeError) as exc:
         print(str(exc), file=sys.stderr)
         return 2

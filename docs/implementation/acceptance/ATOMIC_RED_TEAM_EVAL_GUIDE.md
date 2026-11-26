@@ -140,15 +140,15 @@ Muốn chạy hết một lượt sau khi đã quen: `foreach ($x in $tests) { R
 
 ### 4.3. Thu kết quả
 
-1. Chờ khoảng 2 phút sau test cuối để core nạp Bronze vào Silver. Tùy chọn: mở `http://127.0.0.1:8765/ui/` xem danh sách alert
+1. Agent chỉ niêm phong segment Bronze khi đủ 5000 bản ghi, 8 MB, hoặc segment đã mở 300 giây (kiểm tra khi có bản ghi mới), và khi dừng; core chỉ nạp segment đã niêm phong. Phiên ngắn hơn 5 phút thì segment chỉ được niêm phong lúc dừng và core không kịp nạp (quan sát lần 3, 2026-11-26). Vì vậy **luôn chạy công cụ với `--bronze`** (bước 3): công cụ nạp các segment còn thiếu vào bản sao Silver. Báo cáo ghi phạm vi thời gian của Silver và cảnh báo lần chạy nằm sau dữ liệu cuối. Tùy chọn: mở `http://127.0.0.1:8765/ui/` xem danh sách alert
    (nếu chụp ảnh, che hostname/username).
 2. Dừng hệ thống ở cửa sổ A: `python -m edr_ctl stop --config C:\dacn_edr\edr.yaml`.
 3. Đối chiếu (công cụ tự làm trên bản sao Silver, không sửa DB gốc):
 
 ```powershell
 New-Item -ItemType Directory C:\dacn_results -Force | Out-Null
-python tests\e2e\atomic_compare.py --silver C:\dacn_edr\silver\endpoint_silver.duckdb --logs C:\dacn_art\logs `
-  --out C:\dacn_results\atomic_report.md --json C:\dacn_results\atomic_report.json
+python tests\e2e\atomic_compare.py --silver C:\dacn_edr\silver\endpoint_silver.duckdb --bronze C:\dacn_edr\bronze `
+  --logs C:\dacn_art\logs --out C:\dacn_results\atomic_report.md --json C:\dacn_results\atomic_report.json
 Get-Content -Encoding UTF8 C:\dacn_results\atomic_report.md
 ```
 

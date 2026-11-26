@@ -344,3 +344,46 @@ def test_process_never_started_is_its_own_verdict(tmp_path):
     s = {x["technique"]: x for x in rep["by_technique"]}["T1059.001"]
     assert s["KHONG_KHOI_TAO_DUOC"] == 1 and s["TP"] == 0 and s["FN"] == 0
     assert "KHONG_KHOI_TAO_DUOC" in ac.to_markdown(rep)
+
+
+# ---------- --bronze: nạp segment đã niêm phong mà core chưa kịp nạp ----------
+
+def _bronze_with_a01(tmp_path):
+    """Segment Bronze SYNTHETIC chứa Event 1 của A01 (pid 1001, powershell -e) mà Silver chưa có."""
+    import bronze_contract as bc
+    import scenario_xml as sx
+    from agent.bronze_writer import BronzeWriter
+    d = {"RuleName": "-", "UtcTime": "2026-01-01 10:00:10.500", "ProcessGuid": sx.guid("bronze-a01"),
+         "ProcessId": "1001", "Image": PS, "CommandLine": "powershell.exe -e  JgAgAA==", "CurrentDirectory": "C:\\",
+         "User": "LAB-HOST\\LABUSER", "IntegrityLevel": "Medium", "Hashes": "SHA256=" + "A" * 64,
+         "ParentProcessGuid": sx.guid("runner"), "ParentProcessId": "1", "ParentImage": PS,
+         "ParentCommandLine": "powershell.exe"}
+    xml = sx._wrap(1, "2026-01-01T10:00:10.500Z", d)
+    w = BronzeWriter(tmp_path / "bronze")
+    w.append(bc.build_bronze_record(xml, mode="file", seq=0))
+    w.seal()
+    return tmp_path / "bronze"
+
+
+def test_bronze_option_ingests_unprocessed_segments_into_copy(tmp_path):
+    rows = [x for x in silver_rows() if x["id"] not in ("a01s", "a01c")]
+    db = build_silver(tmp_path, rows)
+    bronze = _bronze_with_a01(tmp_path)
+    runs = ac.load_runs([write_logs(tmp_path, default_procs())])
+    assert by_id(ac.compare(runs, db, EXPECTED))["A01"]["verdict"] == "KHONG_THAY_TIEN_TRINH_GOC"
+    before = db.read_bytes()
+    rep = ac.compare(runs, db, EXPECTED, bronze=bronze)
+    assert by_id(rep)["A01"]["verdict"] == "TP"
+    assert db.read_bytes() == before                                   # chỉ nạp vào bản sao
+
+
+def test_report_states_silver_coverage_and_flags_runs_after_it(tmp_path):
+    procs = default_procs() + [proc("T1070.004", "guid-a11", 4, "2026-01-01T12:00:00.000Z",
+                                    "2026-01-01T12:00:02.000Z", 9001)]
+    rep = run(tmp_path, procs=procs)
+    assert rep["silver_coverage"]["max"].startswith("2026-01-01T10:30:00")
+    a11 = by_id(rep)["A11"]
+    assert a11["verdict"] == "KHONG_THAY_TIEN_TRINH_GOC" and a11["after_silver_end"] is True
+    assert by_id(rep)["A04"]["after_silver_end"] is False
+    md = ac.to_markdown(rep)
+    assert "Silver có dữ liệu" in md and "--bronze" in md
