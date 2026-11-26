@@ -75,6 +75,35 @@ def server(tmp_path_factory):
                        detection_source="RULE", rule_id="DACN-DET-001", rule_version=1, rule_name="ui-orphan-parent",
                        severity="low", severity_reason="synthetic", hostname="LAB-HOST-01", process_guid=orphan,
                        contributing_event_ids=[ids["f"]])
+    # Màn hình cây tiến trình: chuỗi SYNTHETIC có cha thiếu Event 1 (NO_DATA), alert ở nút cháu, 27 sự kiện để phân trang
+    g = lambda i: f"abababab-0000-0000-0000-{i:012d}"      # noqa: E731
+    th = "LAB-HOST-01"
+    trows = [
+        {"id": "t1", "table": "process", "hostname": th, "process_guid": g(1), "parent_guid": g(999), "ppid": 7,
+         "parent_image": "C:\\Windows\\System32\\userinit.exe", "image_path": "C:\\Windows\\explorer.exe",
+         "timestamp": "2025-12-30T09:00:00+00:00", "record_id": 950},
+        {"id": "t2", "table": "process", "hostname": th, "process_guid": g(2), "parent_guid": g(1), "image_path": "C:\\Windows\\System32\\cmd.exe",
+         "command_line": XSS, "timestamp": "2025-12-30T09:00:01+00:00", "record_id": 951},
+        {"id": "t3", "table": "process", "hostname": th, "process_guid": g(3), "parent_guid": g(2), "image_path": "C:\\lab\\tree_sim.exe",
+         "command_line": "tree_sim.exe --synthetic", "user_name": "LAB\\user01", "integrity_level": "High", "file_sha256": "ef" * 32,
+         "timestamp": "2025-12-30T09:00:02+00:00", "record_id": 952},
+        {"id": "t4", "table": "process", "hostname": th, "process_guid": g(4), "parent_guid": g(2), "image_path": "C:\\Windows\\System32\\whoami.exe",
+         "timestamp": "2025-12-30T09:00:03+00:00", "record_id": 953},
+        {"id": "t5", "table": "process", "hostname": th, "process_guid": g(5), "parent_guid": g(2), "image_path": "C:\\Windows\\System32\\hostname.exe",
+         "timestamp": "2025-12-30T09:00:04+00:00", "record_id": 954},
+        {"id": "tdns", "table": "network", "hostname": th, "process_guid": g(3), "event_type": "DNS_QUERY", "sysmon_event_id": 22,
+         "dns_query_name": "lab.example.test", "timestamp": "2025-12-30T09:00:05+00:00", "record_id": 955},
+    ] + [{"id": f"tf{i}", "table": "file", "hostname": th, "process_guid": g(3), "file_path": f"C:\\lab\\out_{i:02d}.txt",
+          "timestamp": f"2025-12-30T09:01:{i:02d}+00:00", "record_id": 960 + i} for i in range(27)]
+    tids = {}
+    for t, rid, row in harness.build_rows({"name": "tree", "rows": trows}):
+        st._insert(t, row)
+        tids[rid] = row["event_id"]
+    t1 = datetime(2025, 12, 30, 9, 0, 2, tzinfo=timezone.utc)
+    store.insert_alert(detection_dedup_key="ui-tree", group_key="ui-tree", first_seen_utc=t1, last_seen_utc=t1,
+                       detection_source="RULE", rule_id="DACN-DET-001", rule_version=1, rule_name="ui-tree-node",
+                       severity="high", severity_reason="synthetic", hostname=th, process_guid=g(3),
+                       contributing_event_ids=[tids["t3"]])
     from response.actions import ActionStore
     acts = ActionStore(st.con, store)
     for a in store.list():
@@ -109,6 +138,7 @@ def test_dashboard_ui_checks(server):
     failed = {k: v for k, v in booleans.items() if v is not True}
     assert not failed, (failed, res)
     assert res["events_rows"] >= 1 and res["alerts_rows"] >= 1 and res["rules_rows"] >= 4 and res["risk_rows"] >= 1
+    assert res["tree_search_rows"] == 1 and res["tree_events_first_page"] == 25 and res["tree_events_more"] == 29
     keep = os.environ.get("DACN_UI_SHOTS")
     if keep:
         shutil.copytree(shots, keep, dirs_exist_ok=True)

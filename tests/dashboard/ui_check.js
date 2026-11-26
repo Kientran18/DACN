@@ -126,6 +126,81 @@ const out = {};
   out.detail_renders_when_risk_fails = await page.waitForSelector("h2 .tag.obs", { timeout: 4000 }).then(() => true, () => false);
   await page.unroute("**/alerts/*/risk");
 
+  // ---- màn hình cây tiến trình (fixture SYNTHETIC) ----
+  const G = (i) => "abababab-0000-0000-0000-" + String(i).padStart(12, "0");
+  const treeUrl = (q) => base + "/ui/#/tree?" + new URLSearchParams(q).toString();
+  const settled = (sel) => page.waitForFunction((s) => { const b = document.querySelector(s); return b && !b.querySelector(".state:not(.error)")?.textContent.includes("Đang tải") && b.children.length > 0; }, sel);
+  out.tree_nav_link = (await page.locator("nav a[href='#/tree']").count()) === 1;
+  await page.goto(base + "/ui/#/tree"); await page.waitForSelector("#tree-box .state");
+  out.tree_empty_prompt = (await page.textContent("#tree-box")).includes("Nhập Host");
+  // tìm theo image -> chọn -> cây
+  await page.goto(treeUrl({ image: "tree_sim" })); await page.waitForSelector("#tree-box table tbody tr");
+  out.tree_search_rows = await page.locator("#tree-box table tbody tr").count();
+  await page.locator("#tree-box table tbody tr").first().click();
+  await page.waitForSelector("#ptree .pnode.focus");
+  const treeText = await page.textContent("#ptree");
+  out.tree_focus_is_searched_process = (await page.textContent("#ptree .pnode.focus")).includes("tree_sim.exe");
+  out.tree_no_data_parent_shown = treeText.includes("không có dữ liệu") && (await page.locator("#ptree .pnode.nodata").count()) === 1;
+  out.tree_no_data_uses_child_parent_image = (await page.textContent("#ptree .pnode.nodata")).includes("userinit.exe");
+  out.tree_has_ancestors = treeText.includes("explorer.exe") && treeText.includes("cmd.exe");
+  out.tree_node_alert_badge = (await page.textContent("#ptree .pnode.focus")).includes("DACN-DET-001 · high");
+  out.tree_node_risk_badge = (await page.locator("#ptree .pnode.focus .risk-badge").count()) === 1;
+  out.tree_node_event_counts = (await page.textContent("#ptree .pnode.focus")).includes("file 27") && (await page.textContent("#ptree .pnode.focus")).includes("dns 1");
+  out.tree_xss_text_only = (await page.evaluate(() => window.__xss === undefined)) && (await page.locator("img[src='x']").count()) === 0 && treeText.includes("<img src=x onerror") === false;
+  // nút chi tiết của trọng tâm
+  await page.waitForSelector("#node-events table tbody tr");
+  const panel = await page.textContent("#node-panel");
+  out.tree_panel_fields = panel.includes("tree_sim.exe --synthetic") && panel.includes("High") && panel.includes("ef".repeat(32)) && panel.includes("LAB\\user01");
+  out.tree_panel_evidence_link = (await page.locator("#node-panel a.evidence-link[href^='#/alerts/']").count()) === 1;
+  out.tree_panel_no_raw = !panel.includes("raw_data\"") && panel.includes("raw_xml chỉ xem qua Evidence");
+  out.tree_events_first_page = await page.locator("#node-events table tbody tr").count();
+  await page.click("#node-events button:has-text('Xem thêm sự kiện')");
+  await page.waitForFunction(() => document.querySelectorAll("#node-events table tbody tr").length > 25);
+  out.tree_events_more = await page.locator("#node-events table tbody tr").count();
+  await page.screenshot({ path: shotDir + "/process_tree.png", fullPage: true });
+  // chọn nút NO_DATA: giải thích trung thực, không bịa trường
+  await page.click("#ptree .pnode.nodata");
+  await page.waitForSelector("#node-panel h2 .badge.warn");
+  const np = await page.textContent("#node-panel");
+  out.tree_no_data_panel_honest = np.includes("Silver không có Event 1") && np.includes("userinit.exe") && !np.includes("image_path");
+  // chọn tổ tiên cmd.exe (command line chứa payload XSS) -> chỉ là chữ
+  await page.locator("#ptree .pnode", { hasText: "cmd.exe" }).click();
+  await page.waitForSelector("#node-panel");
+  out.tree_xss_in_panel_is_text = (await page.textContent("#node-panel")).includes("<img src=x onerror") && (await page.evaluate(() => window.__xss === undefined));
+  // giới hạn số nút -> "xem thêm nhánh con"
+  await page.goto(treeUrl({ hostname: "LAB-HOST-01", process_guid: G(2), max_nodes: "4" }));
+  await page.waitForSelector("#ptree .pnode.focus");
+  out.tree_limit_badge = (await page.textContent("#tree-box")).includes("đã chạm giới hạn 4 nút");
+  out.tree_more_children_button = (await page.locator("#ptree button:has-text('Xem thêm nhánh con')").count()) >= 1;
+  // không tìm thấy
+  await page.goto(treeUrl({ hostname: "LAB-HOST-01", process_guid: G(77) }));
+  await page.waitForSelector("#tree-box .state"); await settled("#tree-box");
+  out.tree_not_found_state = (await page.textContent("#tree-box")).includes("Không tìm thấy tiến trình");
+  // loading + lỗi
+  await page.route("**/investigation/process-tree*", async (r) => { await new Promise((s) => setTimeout(s, 1200)); await r.continue(); });
+  await page.goto(treeUrl({ hostname: "LAB-HOST-01", process_guid: G(3) }));
+  await page.waitForSelector("#tree-box .state");
+  out.tree_loading_state = (await page.textContent("#tree-box .state")).includes("Đang tải");
+  await page.waitForSelector("#ptree");
+  await page.unroute("**/investigation/process-tree*");
+  await page.route("**/investigation/process-tree*", (r) => r.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: { code: "E-INTERNAL", message: "lỗi nội bộ" } }) }));
+  await page.goto(base + "/ui/#/overview"); await page.waitForSelector(".grid .card");
+  await page.goto(treeUrl({ hostname: "LAB-HOST-01", process_guid: G(3) }));
+  await page.waitForSelector("#tree-box .state.error");
+  out.tree_error_state = (await page.textContent("#tree-box .state.error")).includes("E-INTERNAL");
+  await page.unroute("**/investigation/process-tree*");
+  // từ chi tiết alert -> màn hình cây
+  const treeAlertId = await page.evaluate(async (tok) => {
+    const r = await fetch("/alerts?limit=50", { headers: { Authorization: "Bearer " + tok } });
+    return ((await r.json()).items.find((a) => a.rule_name === "ui-tree-node") || {}).alert_id || null;
+  }, tokApprover);
+  await page.goto(base + "/ui/#/alerts/" + treeAlertId);
+  await page.waitForSelector("#open-tree");
+  await page.click("#open-tree");
+  await page.waitForSelector("#ptree .pnode.focus");
+  out.tree_opened_from_alert = (await page.textContent("#ptree .pnode.focus")).includes("tree_sim.exe") && (await page.locator("#tree-box a:has-text('Quay lại alert')").count()) === 1;
+  out.tree_no_response_buttons = (await page.locator("main button:has-text('Duyệt'), main button:has-text('Gửi yêu cầu'), main button:has-text('TERMINATE')").count()) === 0;
+
   // response
   await page.goto(base + "/ui/#/response");
   await page.waitForSelector(".mode-big");
@@ -149,6 +224,9 @@ const out = {};
   await page.goto(base + "/ui/#/overview"); await page.waitForSelector(".grid .card");
   out.mobile_no_horizontal_scroll = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
   await page.screenshot({ path: shotDir + "/overview_mobile.png" });
+  await page.goto(treeUrl({ hostname: "LAB-HOST-01", process_guid: G(3) })); await page.waitForSelector("#node-events table tbody tr");
+  out.tree_mobile_no_horizontal_scroll = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+  await page.screenshot({ path: shotDir + "/process_tree_mobile.png", fullPage: true });
 
   out.no_external_requests = external.length === 0 ? true : external;
   console.log(JSON.stringify(out));

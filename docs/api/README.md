@@ -27,7 +27,14 @@ W07 bổ sung `/static/analyses`, `/static/candidates` (+ detail/history/transit
 
 Rủi ro tổng hợp (2026-11-25, **chỉ đọc**, vai trò có quyền `read`): `GET /risk/config` (phiên bản, sha256, giá trị cấu hình, ML bật/tắt), `GET /risk/subjects?kind=process|host&min_level=&limit=&offset=`, `GET /risk/process?hostname=&process_guid=`, `GET /risk/host?hostname=&until=` (cửa sổ theo thời gian dữ liệu), `GET /alerts/{id}/risk`. Kết quả gồm `score`, `level`, từng thành phần (cơ chế, nguồn, điểm gốc, trọng số, hệ số allowlist, lý do), `not_evaluated`, `data_gaps`, `triggers_response: false`. Trọng số là heuristic chưa hiệu chỉnh; điểm không kích hoạt response. Thiết kế: [`RISK_SCORING.md`](../implementation/RISK_SCORING.md).
 
-`openapi.json` được sinh lại ngày 2026-11-25 (trước đó thiếu các endpoint `/static/*`).
+Điều tra cây tiến trình (2026-11-26, **chỉ đọc**, quyền `read`: viewer/analyst/approver; responder 403). Mọi truy vấn lọc theo `hostname` và nối cha-con bằng ProcessGuid (không bằng PID); không trả `raw_data`; `since`/`until` phải có múi giờ.
+- `GET /investigation/process-tree?hostname=&process_guid=&max_depth=1..20 (8)&max_nodes=1..500 (200)&since=&until=`: `nodes` phẳng (tổ tiên xa → gần, trọng tâm, con cháu theo BFS), mỗi nút có `status` (`OBSERVED`/`NO_DATA`), `role`, `depth`, trường Event 1 (image, command line, user, integrity, pid/ppid, `file_sha256`, `hashes`, `imphash`, `start_utc`), `end_utc` (Event 5), `event_counts` (file/registry/network/dns), `alerts` (`alert_id`, `rule_id`, `severity`, `status`), `children_truncated`. Nút `NO_DATA` chỉ có `parent_image`/`parent_command_line`/`pid_from_child` lấy từ Event 1 của con (`evidence_source`), các trường khác `null`. Cờ: `coverage_status` (`FULL`/`PARTIAL_ANCESTRY`/`NOT_FOUND`), `ancestors_truncated`, `descendants_truncated`, `node_limit_reached`. Cửa sổ thời gian chỉ lọc con cháu và số sự kiện.
+- `GET /investigation/process-events?hostname=&process_guid=&kinds=process,file,registry,network,dns&since=&until=&limit=1..200&offset=`: timeline gộp các bảng Silver, có `category`, `summary`, `detail`, `has_more`.
+- `GET /investigation/process-search?hostname=&image=&sha256=&limit=`: tìm Event 1 theo image (chứa chuỗi, không phân biệt hoa thường, escape ký tự đại diện) hoặc sha256 (64 hex). Cần ít nhất một trong hai.
+
+Điểm rủi ro theo nút do dashboard lấy từ `/risk/subjects` và `/risk/process` (không tính thêm ở endpoint điều tra). raw_xml vẫn chỉ xem qua `/alerts/{id}/evidence?include_raw=true` (analyst trở lên, có audit).
+
+`openapi.json` được sinh lại ngày 2026-11-26 (thêm `/investigation/*`); trước đó ngày 2026-11-25 (thêm `/static/*`).
 
 `POST /response/actions` nhận `action_type` ∈ `TERMINATE_PROCESS`, `QUARANTINE_FILE`, `RESTORE_FILE`, `ADD_WHITELIST`, `REMOVE_WHITELIST` (khớp `ACTION_TYPES` của policy); policy vẫn kiểm mục tiêu ngay khi yêu cầu (`422 E-POLICY`).
 

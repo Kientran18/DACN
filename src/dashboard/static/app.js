@@ -282,6 +282,8 @@ async function pageAlertDetail(id) {
       { key: "event_type", label: "Loại" }, { label: "Lệch giờ (s)", render: (e) => fmt(e.skew_seconds) }], tl.events) : empty("Không có sự kiện cùng process_guid."));
     // process tree
     box.append(h("h2", { text: "Cây tiến trình" }));
+    if (a.process_guid && a.hostname) box.append(h("p", {}, h("a", { id: "open-tree", href: treeHash({ hostname: a.hostname, process_guid: a.process_guid, alert: id }),
+      text: "Mở màn hình cây tiến trình (alert, rủi ro, sự kiện theo từng nút) →" })));
     if (tree.error) box.append(empty(tree.error)); else {
       box.append(h("p", {}, "Độ phủ tổ tiên: ", badge(tree.coverage_status, tree.coverage_status === "FULL" ? "ok" : "warn")));
       const all = [...tree.ancestors].reverse().map((n) => [n, false]); if (tree.process) all.push([tree.process, true]);
@@ -316,6 +318,129 @@ async function pageAlertDetail(id) {
     });
     box.append(h("div", { class: "actions" }, h("a", { href: "#/response?alert=" + id, text: "Yêu cầu hành động response cho alert này →" })));
   });
+}
+
+// ---------- trang: cây tiến trình (điều tra, CHỈ ĐỌC) ----------
+const baseName = (p) => (p ? String(p).split(/[\\/]/).pop() : null);
+const treeHash = (o) => "#/tree" + qs(o);
+const CAT_LABEL = { file: "file", registry: "registry", network: "net", dns: "dns" };
+function nodeButton(n, risk, selected, onSelect) {
+  const nodata = n.status === "NO_DATA";
+  const title = nodata ? "không có dữ liệu (thiếu Event 1 trong Silver)" : fmt(baseName(n.image_path));
+  const counts = Object.entries(n.event_counts || {}).filter(([, v]) => v > 0).map(([k, v]) => CAT_LABEL[k] + " " + v).join(" · ");
+  const meta = nodata ? (n.parent_image ? "ParentImage theo Event 1 của tiến trình con: " + n.parent_image : "không có ParentImage")
+    : "pid " + fmt(n.pid) + " · " + utc(n.start_utc) + (n.end_utc ? " → " + utc(n.end_utc) : "");
+  return h("button", { type: "button", class: "pnode" + (n.role === "focus" ? " focus" : "") + (nodata ? " nodata" : "") + (selected ? " selected" : ""),
+    "data-guid": n.process_guid, "aria-pressed": selected ? "true" : "false", onclick: () => onSelect(n) },
+    h("div", { class: "img" }, n.role === "focus" ? "▶ " : "", title),
+    h("div", { class: "meta", text: meta }),
+    h("div", {}, nodata ? badge("NO_DATA", "warn") : null,
+      n.alerts.slice(0, 3).map((a) => h("span", { class: "badge node-alert " + sevKind(a.severity), text: a.rule_id + " · " + a.severity })),
+      n.alerts.length > 3 ? badge("+" + (n.alerts.length - 3) + " alert") : null,
+      risk ? riskBadge(risk) : null, counts ? h("span", { class: "meta", text: counts }) : null));
+}
+function nodePanel(n, tree, risk) {
+  const panel = h("div", { id: "node-panel", class: "card" });
+  const nodata = n.status === "NO_DATA";
+  panel.append(h("h2", {}, badge(n.role === "focus" ? "trọng tâm" : n.role === "ancestor" ? "tổ tiên" : "con cháu"), " ",
+    nodata ? badge("NO_DATA", "warn") : badge("OBSERVED", "ok"), " ", nodata ? "Không có dữ liệu" : fmt(baseName(n.image_path))));
+  if (nodata) panel.append(h("p", { class: "muted", text: "Silver không có Event 1 của tiến trình này. Chỉ hiện các trường Parent* có thật trong Event 1 của tiến trình con (nguồn: event_id " + fmt(n.evidence_source) + "); các trường khác để trống, không suy đoán." }));
+  const rows = nodata ? [["process_guid", n.process_guid], ["hostname", n.hostname], ["ParentImage (từ con)", n.parent_image], ["ParentCommandLine (từ con)", n.parent_command_line], ["ParentProcessId (từ con)", n.pid_from_child]]
+    : [["process_guid", n.process_guid], ["hostname", n.hostname], ["image_path", n.image_path], ["command_line", n.command_line], ["user_name", n.user_name],
+      ["integrity_level", n.integrity_level], ["pid / ppid", fmt(n.pid) + " / " + fmt(n.ppid)], ["file_sha256", n.file_sha256], ["hashes", n.hashes], ["imphash", n.imphash],
+      ["bắt đầu (Event 1)", utc(n.start_utc)], ["kết thúc (Event 5)", n.end_utc ? utc(n.end_utc) : "không có Event 5 trong Silver"], ["cwd", n.current_working_directory],
+      ["parent_guid", n.parent_guid], ["parent_image", n.parent_image], ["parent_command_line", n.parent_command_line], ["event_id (Event 1)", n.event_id]];
+  panel.append(h("dl", { class: "kv" }, rows.map(([k, v]) => [h("dt", { text: k }), h("dd", { text: fmt(v) })])));
+  panel.append(h("div", { class: "actions" },
+    n.role !== "focus" ? h("button", { type: "button", text: "Đặt làm trọng tâm", onclick: () => { location.hash = treeHash({ hostname: tree.hostname, process_guid: n.process_guid }); } }) : null,
+    h("button", { type: "button", text: "Chi tiết rủi ro", onclick: async () => {
+      try { modal("Chi tiết rủi ro", riskPanel(await api("/risk/process" + qs({ hostname: n.hostname, process_guid: n.process_guid }))), [closeBtn]); }
+      catch (e) { modal("Lỗi", h("p", { text: e.message }), [closeBtn]); } } }),
+    risk ? riskBadge(risk) : h("span", { class: "muted", text: "chưa có điểm rủi ro" })));
+  panel.append(h("h3", { text: "Alert của tiến trình" }));
+  panel.append(n.alerts.length ? table([{ label: "Mức", render: (a) => badge(a.severity, sevKind(a.severity)) }, { label: "Rule", render: (a) => a.rule_id + " v" + a.rule_version },
+    { label: "Trạng thái", render: (a) => badge(a.status) }, { label: "Bằng chứng", render: (a) => h("a", { href: "#/alerts/" + encodeURIComponent(a.alert_id), class: "evidence-link", text: "chi tiết & raw_xml →" }) }], n.alerts)
+    : h("p", { class: "muted", text: "Không có alert gắn với tiến trình này." }));
+  panel.append(h("h3", { text: "Sự kiện của tiến trình (UTC)" }), h("p", { class: "muted", text: "Không hiện raw_data/raw_xml; raw_xml chỉ xem qua Evidence của alert (kiểm soát quyền, ghi audit)." }));
+  const evBox = h("div", { id: "node-events" }); panel.append(evBox);
+  const w = tree.window || {}, limit = 25;
+  const cols = [{ label: "Thời gian", render: (e) => utc(e.timestamp) }, { label: "Loại", render: (e) => badge(e.category) }, { key: "sysmon_event_id", label: "Event" }, { key: "summary", label: "Chi tiết", wrap: true }];
+  const more = async (offset, wrap) => {
+    const d = await api("/investigation/process-events" + qs({ hostname: n.hostname, process_guid: n.process_guid, since: w.since, until: w.until, limit, offset }));
+    if (!d.items.length && offset === 0) { wrap.append(empty("Không có sự kiện của tiến trình này trong Silver" + (w.since || w.until ? " (trong cửa sổ đã chọn)." : "."))); return; }
+    wrap.append(table(cols, d.items, (e) => modal("Sự kiện (Silver)", h("pre", { text: JSON.stringify(e, null, 2) }), [closeBtn])));
+    if (d.has_more) { const b = h("button", { type: "button", class: "more", text: "Xem thêm sự kiện", onclick: async () => { b.remove(); try { await more(offset + limit, wrap); } catch (e) { wrap.append(h("div", { class: "state error", text: "Lỗi: " + e.message })); } } }); wrap.append(b); }
+  };
+  const loading = h("div", { class: "state", text: "Đang tải…" }); evBox.append(loading);
+  more(0, evBox).then(() => loading.remove(), (e) => { loading.remove(); if (e.status !== 401) evBox.append(h("div", { class: "state error", role: "alert", text: "Lỗi: " + (e.code ? e.code + " — " : "") + e.message })); });
+  return panel;
+}
+function renderTree(box, tree, risks) {
+  const covKind = tree.coverage_status === "FULL" ? "ok" : "warn";
+  box.append(h("p", {}, "Độ phủ tổ tiên: ", badge(tree.coverage_status, covKind), " · " + tree.nodes.length + " nút · host " + tree.hostname,
+    tree.node_limit_reached ? [" ", badge("đã chạm giới hạn " + tree.limits.max_nodes + " nút", "warn")] : null,
+    tree.ancestors_truncated ? [" ", badge("tổ tiên bị cắt ở độ sâu " + tree.limits.max_depth, "warn")] : null,
+    tree.descendants_truncated ? [" ", badge("con cháu bị cắt ở độ sâu " + tree.limits.max_depth, "warn")] : null,
+    tree.window && (tree.window.since || tree.window.until) ? h("span", { class: "muted", text: " · cửa sổ con cháu: " + (tree.window.since ? utc(tree.window.since) : "…") + " → " + (tree.window.until ? utc(tree.window.until) : "…") }) : null));
+  const inSet = new Set(tree.nodes.map((n) => n.process_guid)), kids = {};
+  for (const n of tree.nodes) if (n.parent_guid && inSet.has(n.parent_guid) && n.process_guid !== n.parent_guid) (kids[n.parent_guid] = kids[n.parent_guid] || []).push(n);
+  const roots = tree.nodes.filter((n) => !(n.parent_guid && inSet.has(n.parent_guid)));
+  const layout = h("div", { class: "tree-layout" }), left = h("div", { class: "ptree", id: "ptree" }), right = h("div");
+  let selected = tree.nodes.find((n) => n.role === "focus") || tree.nodes[0];
+  const riskOf = (n) => risks[riskKey(n.hostname, n.process_guid)];
+  const paint = () => {
+    const build = (n, seen) => {
+      if (seen.has(n.process_guid)) return null; seen.add(n.process_guid);
+      const li = h("li", {}, nodeButton(n, riskOf(n), n === selected, (x) => { selected = x; paint(); }));
+      if (n.children_truncated) li.append(h("button", { type: "button", class: "more", text: "Xem thêm nhánh con (mở từ nút này) →", onclick: () => { location.hash = treeHash({ hostname: tree.hostname, process_guid: n.process_guid }); } }));
+      const ch = (kids[n.process_guid] || []).map((c) => build(c, seen)).filter(Boolean);
+      if (ch.length) li.append(h("ul", {}, ch));
+      return li;
+    };
+    const seen = new Set();
+    clear(left).append(h("ul", {}, roots.map((r) => build(r, seen)).filter(Boolean)));
+    clear(right).append(nodePanel(selected, tree, riskOf(selected)));
+  };
+  layout.append(left, right); box.append(layout); paint();
+}
+async function pageTree() {
+  const f = Object.fromEntries(new URLSearchParams(location.hash.split("?")[1] || ""));
+  view.append(h("h1", { text: "Cây tiến trình" }));
+  view.append(h("p", { class: "muted", text: "Nối cha–con bằng ProcessGuid trên cùng một host (không dùng PID). Tiến trình không có Event 1 trong Silver hiện là nút “không có dữ liệu”, không suy đoán. Màn hình chỉ đọc." }));
+  const field = (name, label, attrs) => h("label", {}, label, h("input", { name, value: f[name] || "", ...(attrs || {}) }));
+  const dt = (v) => (v ? new Date(v).toISOString().slice(0, 16) : "");
+  const form = h("form", { class: "filters", id: "tree-search", onsubmit: (e) => {
+    e.preventDefault(); const d = new FormData(form), p = {};
+    for (const [k, v] of d.entries()) if (v) p[k] = k === "since" || k === "until" ? new Date(v + "Z").toISOString() : v.trim();
+    location.hash = treeHash(p);
+  } },
+    field("hostname", "Host", { maxLength: 255 }), field("process_guid", "process_guid", { maxLength: 64 }),
+    field("image", "Image chứa", { maxLength: 260 }), field("sha256", "SHA-256", { maxLength: 64 }),
+    h("label", {}, "Con cháu từ (UTC)", h("input", { name: "since", type: "datetime-local", value: dt(f.since) })),
+    h("label", {}, "đến (UTC)", h("input", { name: "until", type: "datetime-local", value: dt(f.until) })),
+    h("label", {}, "Tối đa nút", h("select", { name: "max_nodes" }, ["50", "200", "500"].map((v) => h("option", { value: v, text: v, selected: v === (f.max_nodes || "200") })))),
+    h("button", { class: "primary", type: "submit", text: "Xem" }));
+  const box = h("div", { id: "tree-box" }); view.append(form, box);
+  if (f.hostname && f.process_guid) {
+    await load(box, async () => {
+      const [tree, risks] = await Promise.all([api("/investigation/process-tree" + qs({ hostname: f.hostname, process_guid: f.process_guid, max_nodes: f.max_nodes, since: f.since, until: f.until })), riskMap()]);
+      return { tree, risks };
+    }, ({ tree, risks }) => {
+      if (f.alert) box.append(h("p", {}, h("a", { href: "#/alerts/" + encodeURIComponent(f.alert), text: "← Quay lại alert" })));
+      if (!tree.nodes.length) { box.append(empty("Không tìm thấy tiến trình " + f.process_guid + " trên host " + f.hostname + " trong Silver (không có Event 1, sự kiện hay alert).")); return; }
+      renderTree(box, tree, risks);
+    });
+  } else if (f.image || f.sha256) {
+    await load(box, () => api("/investigation/process-search" + qs({ hostname: f.hostname, image: f.image, sha256: f.sha256, limit: 50 })), (d) => {
+      box.append(...(d.items.length ? [h("p", { class: "muted", text: d.items.length + " tiến trình (Event 1) khớp — chọn một dòng để xem cây." + (d.items.length >= d.limit ? " Có thể còn kết quả khác: thu hẹp bộ lọc." : "") }),
+        table([{ label: "Bắt đầu", render: (r) => utc(r.start_utc) }, { key: "hostname", label: "Host" }, { key: "image_path", label: "Image", wrap: true },
+          { key: "command_line", label: "Command line", wrap: true }, { key: "process_guid", label: "process_guid", wrap: true }], d.items,
+          (r) => { location.hash = treeHash({ hostname: r.hostname, process_guid: r.process_guid }); })]
+        : [empty("Không có tiến trình nào khớp image/SHA-256 đã nhập.")]));
+    });
+  } else {
+    box.append(empty("Nhập Host + process_guid để xem cây, hoặc Image/SHA-256 để tìm tiến trình. Cũng có thể mở từ trang chi tiết alert."));
+  }
 }
 
 // ---------- trang: response ----------
@@ -402,6 +527,7 @@ async function route() {
   if (path === "#/response") return pageResponse();
   if (path === "#/rules") return pageRules();
   if (path === "#/risk") return pageRisk();
+  if (path === "#/tree") return pageTree();
   view.append(empty("Không tìm thấy trang."));
 }
 async function boot() {

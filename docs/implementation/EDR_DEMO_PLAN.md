@@ -55,7 +55,7 @@ Phân biệt thêm: **detection** (EDR phát hiện và cảnh báo), **preventi
 2. Khởi động hệ thống, Overview (1 phút).
 3. SC-06 (lành tính): không có alert đe dọa (1 phút).
 4. SC-01: alert PowerShell, mở bằng chứng nguồn đến `raw_xml` (3 phút).
-5. SC-03: chuỗi drop→execute→delete, timeline + cây tiến trình (3 phút).
+5. SC-03: chuỗi drop→execute→delete, timeline + cây tiến trình (3 phút). Từ chi tiết alert bấm "Mở màn hình cây tiến trình" (`#/tree`): chọn từng nút để xem command line, user, integrity, hash, sự kiện file/registry/network/DNS, alert và điểm rủi ro; nút nét đứt `NO_DATA` là tiến trình cha không có Event 1 trong Silver. Màn hình mới chỉ kiểm thử bằng dữ liệu synthetic trên Linux (2026-11-26).
 6. SC-08: duyệt terminate/quarantine ở `execute` (lab), xem audit và restore (3 phút).
 7. SC-07: trình bày trung thực trường hợp thiếu telemetry (1 phút).
 8. Tổng kết: phạm vi chứng minh và giới hạn (1 phút).

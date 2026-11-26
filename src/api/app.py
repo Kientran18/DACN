@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from alerts.evidence import resolve_evidence
+from alerts.process_view import CATEGORIES as PROC_EVENT_KINDS, process_events, process_tree_view, search_processes
 from alerts.store import TRANSITIONS, AlertStore, InvalidTransition
 from alerts.timeline import process_tree, timeline
 from pipeline.query import Query
@@ -398,6 +399,46 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
     def alert_tree(alert_id: str, _: dict = Depends(need("read"))):
         with lock:
             return process_tree(con, _guid(alert_id))
+
+    # -- điều tra: cây tiến trình theo (hostname, process_guid). CHỈ ĐỌC, không raw_data, không response --------------
+    def _tz(*vals):
+        for v in vals:
+            if v is not None and v.tzinfo is None:
+                raise ApiError(422, "E-VALIDATION", "since/until phải có múi giờ (UTC)")
+
+    @app.get("/investigation/process-tree", tags=["investigation"])
+    def inv_tree(hostname: str = Q(..., min_length=1, max_length=255), process_guid: str = Q(..., min_length=1, max_length=64),
+                 max_depth: int = Q(8, ge=1, le=20), max_nodes: int = Q(200, ge=1, le=500),
+                 since: Optional[datetime] = None, until: Optional[datetime] = None, _: dict = Depends(need("read"))):
+        _tz(since, until)
+        with lock:
+            return process_tree_view(con, hostname, process_guid, max_depth=max_depth, max_nodes=max_nodes,
+                                     since=since, until=until)
+
+    @app.get("/investigation/process-events", tags=["investigation"])
+    def inv_events(hostname: str = Q(..., min_length=1, max_length=255), process_guid: str = Q(..., min_length=1, max_length=64),
+                   kinds: Optional[str] = Q(None, max_length=64, description="danh sách phân tách bằng dấu phẩy: "
+                                            + ",".join(PROC_EVENT_KINDS)),
+                   since: Optional[datetime] = None, until: Optional[datetime] = None,
+                   limit: int = Q(50, ge=1, le=200), offset: int = Q(0, ge=0, le=1_000_000), _: dict = Depends(need("read"))):
+        _tz(since, until)
+        ks = [k.strip() for k in kinds.split(",") if k.strip()] if kinds else None
+        try:
+            with lock:
+                return process_events(con, hostname, process_guid, kinds=ks, since=since, until=until,
+                                      limit=limit, offset=offset)
+        except ValueError as exc:
+            raise ApiError(422, "E-VALIDATION", "kinds không hợp lệ") from exc
+
+    @app.get("/investigation/process-search", tags=["investigation"])
+    def inv_search(hostname: Optional[str] = Q(None, min_length=1, max_length=255),
+                   image: Optional[str] = Q(None, min_length=2, max_length=260),
+                   sha256: Optional[str] = Q(None, pattern=r"^[A-Fa-f0-9]{64}$"),
+                   limit: int = Q(50, ge=1, le=200), _: dict = Depends(need("read"))):
+        if not image and not sha256:
+            raise ApiError(422, "E-VALIDATION", "cần image hoặc sha256")
+        with lock:
+            return {"items": search_processes(con, hostname=hostname, image=image, sha256=sha256, limit=limit), "limit": limit}
 
     # -- incident -----------------------------------------------------------------------------------
     @app.post("/incidents", tags=["incidents"])
