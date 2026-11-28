@@ -1,6 +1,7 @@
 """DACN-DET-201/202 và mở rộng rule model (source_events, severity_by, context_fields, group_by_field, detection_source).
 Hạng mục 5 của docs/architecture/w8/telemetry-defender-powershell-proposal.md. Fixture SYNTHETIC dựng theo cấu trúc mẫu thật."""
 import json
+from datetime import timezone
 from pathlib import Path
 
 import pytest
@@ -169,3 +170,66 @@ def test_shipped_defender_rules_are_alert_only():
     for rid in ("DACN-DET-201", "DACN-DET-202"):
         assert rules[rid]["response_policy"] == "alert_only" and rules[rid]["detection_source"] == "EXTERNAL_DEFENDER"
     assert "mitre_technique_ids" not in rules["DACN-DET-201"]
+
+
+# ---- gom alert theo group_by_field, không theo khung 10 phút (lỗi quan sát trên VM 2026-11-28, w8 mục 12.11) -----------------
+def _at(name, ts, rid=None, det_id=None):
+    x = (FIX / name).read_text(encoding="utf-8")
+    x = x.replace(x[x.index("SystemTime='") + 12:x.index("'", x.index("SystemTime='") + 12)], ts)
+    if rid is not None:
+        x = x.replace(x[x.index("<EventRecordID>"):x.index("</EventRecordID>")], f"<EventRecordID>{rid}")
+    if det_id is not None:
+        x = x.replace("{00000000-0000-4000-8000-0000000000A1}", det_id)
+    return x
+
+
+def _alerts_for(tmp_path, xmls, order=None):
+    st = SilverStore(tmp_path / "s.duckdb")
+    st.ingest_segment(seg(tmp_path, extra_xml=xmls), "t")
+    rules = load_rules()
+    results = DetectionEngine(st.con, rules=rules).run()
+    if order:
+        results = order(results)
+    store = AlertStore(st.con)
+    out = build_from_results(store, rules, results, st.con)
+    return store, out
+
+
+def test_det201_detection_across_10_minute_boundary_stays_one_alert(tmp_path):
+    # VM: 1116 lúc 02:38:55, 1117 lúc 02:40:27 (giờ VM), cùng Detection ID -> trước khi sửa thành hai alert
+    xmls = [_at("defender_1116.synthetic.xml", "2026-11-28T10:38:55.1161180Z"),
+            _at("defender_1117.synthetic.xml", "2026-11-28T10:40:27.7369960Z")]
+    store, out = _alerts_for(tmp_path, xmls)
+    assert len(out["alerts"]) == 1 and out["suppressed"] == 1
+    a = store.get(out["alerts"][0])
+    assert len(a["contributing_event_ids"]) == 2
+    assert a["first_seen_utc"].isoformat().startswith("2026-11-28T") and a["first_seen_utc"] < a["last_seen_utc"]
+
+
+def test_det201_1117_processed_first_keeps_earliest_first_seen(tmp_path):
+    # Outbox giao theo dedup_key, không theo thời gian: 1117 có thể đến trước 1116; first_seen phải là thời điểm sớm nhất
+    xmls = [_at("defender_1116.synthetic.xml", "2026-11-28T10:38:55.0000000Z"),
+            _at("defender_1117.synthetic.xml", "2026-11-28T10:40:27.0000000Z")]
+    store, out = _alerts_for(tmp_path, xmls, order=lambda rs: sorted(rs, key=lambda r: r.matched_fields.get("context", {})
+                                                                    .get("action_name") != "Quarantine"))
+    a = store.get(out["alerts"][0])
+    assert len(out["alerts"]) == 1
+    utc = lambda v: v.astimezone(timezone.utc)      # noqa: E731
+    assert (utc(a["first_seen_utc"]).hour, utc(a["first_seen_utc"]).minute) == (10, 38)
+    assert (utc(a["last_seen_utc"]).hour, utc(a["last_seen_utc"]).minute) == (10, 40)
+
+
+def test_det201_different_detection_ids_far_apart_are_not_merged(tmp_path):
+    xmls = [_at("defender_1116.synthetic.xml", "2026-11-28T10:00:00.0000000Z"),
+            _at("defender_1116.synthetic.xml", "2026-11-28T15:00:00.0000000Z", rid=99,
+                det_id="{00000000-0000-4000-8000-0000000000B2}")]
+    _, out = _alerts_for(tmp_path, xmls)
+    assert len(out["alerts"]) == 2
+
+
+def test_det202_without_group_by_field_still_uses_time_buckets(tmp_path):
+    # DET-202 không khai group_by_field: giữ cách gom cũ (process_guid + khung 10 phút) -> 5007 cách nhau 1 giờ là hai alert
+    xmls = [_at("defender_5007.synthetic.xml", "2026-11-28T10:00:00.0000000Z"),
+            _at("defender_5007.synthetic.xml", "2026-11-28T11:00:00.0000000Z", rid=777)]
+    _, out = _alerts_for(tmp_path, xmls)
+    assert len(out["alerts"]) == 2

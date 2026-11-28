@@ -889,3 +889,18 @@ Phát hiện mới (chưa sửa, chờ người dùng quyết):
 
 Kiểm tra chưa làm: một kênh thiếu quyền (`degraded`) trên VM; nút xem bản gốc trên dashboard; 5001/5013 (không có sự kiện).
 
+### 12.12. Ngày 2026-11-28: sửa lỗi tách alert Defender (phát hiện 1 của mục 12.11, người dùng yêu cầu)
+
+| Thay đổi | Tệp |
+|---|---|
+| Khóa gom alert: rule khai `group_by_field` và sự kiện có giá trị đó → `rule_id|host|<field>=<giá trị>`, **không** chia khung `BUCKET_SECONDS`. Chỉ áp dụng cho DET-201 (`detection_id`), DET-203/204 (`script_block_id`). Thiếu giá trị, hoặc rule không khai (DET-001..101, DET-202) → giữ khóa cũ có khung 10 phút | `src/alerts/builder.py` (`_group_key`) |
+| `bump` cập nhật `first_seen_utc = least(...)`: outbox giao kết quả theo `dedup_key`, không theo thời gian, nên 1117 có thể được dựng trước 1116; trước đây alert giữ thời điểm của kết quả đến trước | `src/alerts/store.py` |
+| 4 test: dựng lại trường hợp VM (1116 lúc 10:38:55Z, 1117 lúc 10:40:27Z, cùng Detection ID → 1 alert), 1117 xử lý trước vẫn giữ first_seen sớm nhất, hai Detection ID khác nhau không gộp, DET-202 vẫn chia khung | `tests/detection/test_defender_rules.py` |
+
+Hệ quả cần biết: (i) khóa nhóm mới không khớp khóa cũ, nên alert đã tạo trước bản sửa không được gộp lại; 1117 đến sau bản sửa cho
+một phát hiện có alert cũ sẽ thành alert mới (một lần). (ii) Cùng `ScriptBlockId` xuất hiện lại sau nhiều giờ (chạy lại cùng script,
+chưa xác minh có xảy ra không) sẽ tăng `occurrence_count` của alert cũ thay vì tạo alert mới; nếu alert cũ đã đóng, lần chạy lại vẫn
+gộp vào alert đã đóng (`find_group` không lọc trạng thái, như trước). (iii) Ghi chú cột `group_key` trong DDL v1.2 đề xuất
+("rule_id|host|process_guid|bucket thời gian") không được sửa (không sửa DDL v1.1/v1.2), nên lệch với khóa mới của ba rule trên.
+Kiểm thử: `python -m pytest -q` → 660 pass, 2 skipped, 0 fail (Linux). Chưa chạy lại trên VM.
+

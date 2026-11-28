@@ -9,6 +9,19 @@ from .evidence import _silver as _first_event   # tra một sự kiện Silver t
 BUCKET_SECONDS = 600   # cửa sổ dedup nhóm: giá trị tạm, chưa hiệu chỉnh
 
 
+def _group_key(rule_id: str, rule: dict, ev: dict) -> str:
+    """Khóa gom alert.
+    - Rule khai `group_by_field` (Defender: detection_id; PowerShell: script_block_id) và sự kiện CÓ giá trị đó: gom theo định danh
+      của chính phát hiện/script block, KHÔNG chia khung thời gian. Khung cố định 10 phút từng tách 1116 (02:38:55) và 1117 (02:40:27)
+      của cùng một phát hiện Defender thành hai alert (Windows 10 VM, 2026-11-28, w8 mục 12.11).
+    - Còn lại (mặc định process_guid, hoặc thiếu giá trị group_by_field): như cũ, thêm khung BUCKET_SECONDS để không gộp vô hạn."""
+    field = rule.get("group_by_field")
+    if field and ev.get(field) is not None:
+        return f"{rule_id}|{ev['hostname']}|{field}={ev[field]}"
+    bucket = int(ev["timestamp"].timestamp() // BUCKET_SECONDS)
+    return f"{rule_id}|{ev['hostname']}|{ev.get(field or 'process_guid')}|{bucket}"
+
+
 def build_from_results(store, rules: Dict[str, dict], results: Iterable, con) -> dict:
     out = {"alerts": [], "gaps": [], "suppressed": 0, "skipped": 0}
     for r in results:
@@ -25,9 +38,7 @@ def build_from_results(store, rules: Dict[str, dict], results: Iterable, con) ->
             continue
         if store.exists_dedup(r.dedup_key):
             continue   # đã xử lý (replay-safe)
-        bucket = int(ev["timestamp"].timestamp() // BUCKET_SECONDS)
-        # Mặc định gom theo process_guid; rule kênh không có process_guid (Defender) khai group_by_field, ví dụ detection_id.
-        gkey = f"{r.rule_id}|{ev['hostname']}|{ev.get(rule.get('group_by_field', 'process_guid'))}|{bucket}"
+        gkey = _group_key(r.rule_id, rule, ev)
         existing = store.find_group(gkey)
         if existing:
             store.bump(existing, ev["timestamp"], r.contributing_event_ids)

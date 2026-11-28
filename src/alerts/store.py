@@ -132,8 +132,9 @@ class AlertStore:
     def bump(self, alert_id: str, last_seen, event_ids) -> None:
         self.con.execute(
             "update alerts set occurrence_count = occurrence_count + 1, last_seen_utc = greatest(last_seen_utc, ?),"
+            " first_seen_utc = least(first_seen_utc, ?),"       # kết quả có thể giao không theo thứ tự thời gian (outbox theo dedup_key)
             " contributing_event_ids = list_distinct(list_concat(contributing_event_ids, ?)) where alert_id=?",
-            [last_seen, list(event_ids), alert_id])
+            [last_seen, last_seen, list(event_ids), alert_id])
         self._audit("system", "ALERT_SUPPRESS_DUPLICATE", "alert", alert_id, "trùng nhóm dedup")
 
     def get(self, alert_id: str) -> Optional[Dict]:
