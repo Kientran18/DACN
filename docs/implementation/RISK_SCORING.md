@@ -63,7 +63,7 @@ Tệp `config/risk-scoring.yaml`:
 - Có `version`, `changelog` và `status: heuristic_uncalibrated`. Loader **từ chối** mọi giá trị `status` khác, để không ai đổi nhãn thành "đã hiệu chỉnh" khi chưa có số đo.
 - Kiểm tra chặt: từ chối khóa thừa hoặc thiếu, trọng số âm, ngưỡng không tăng dần (mã `RISK-CFG`).
 - Mọi kết quả kèm `config.version` và `config.sha256` (sha256 của tệp), nên truy được kết quả nào tính bằng cấu hình nào.
-- v2 (2026-11-28): thêm `EXTERNAL_AV` với trọng số 1.0 và trần 60 (bằng `RULE`), theo D7 của `docs/architecture/w8/telemetry-defender-powershell-proposal.md`; vẫn chưa hiệu chỉnh. Tệp cấu hình thiếu khóa `EXTERNAL_AV` bị loader từ chối.
+- v2 (2026-11-28): thêm `EXTERNAL_AV` với trọng số 1.0 và trần 60 (bằng `RULE`), theo D7 của `docs/architecture/w8/telemetry-defender-powershell-proposal.md`; giá trị 1.0/60 được người dùng duyệt thay Cyber ngày 2026-11-28 (mục 12.16), vẫn chưa hiệu chỉnh. Tệp cấu hình thiếu khóa `EXTERNAL_AV` bị loader từ chối.
 - Đổi giá trị: sửa tệp, tăng `version`, thêm dòng `changelog` (ngày, lý do), chạy `python -m pytest -q tests/risk` rồi khởi động lại core/API. Đây là quy trình kiểm soát thay đổi theo NIST SP 800-128 (xem [NIST_MAPPING.md](NIST_MAPPING.md)).
 
 ## 5. Lưu trữ và luồng

@@ -953,3 +953,21 @@ còn chờ (khóa `severity_by`, `context_fields`, `group_by_field`; rule type `
 1.0/60; quyền `raw` thay vai trò admin và danh sách luật che; phương pháp nối tiến trình và cửa sổ 24 giờ) **không** nằm trong phê
 duyệt này.
 
+### 12.16. Ngày 2026-11-28: người dùng duyệt thay Cyber sáu quyết định còn chờ
+
+Người dùng yêu cầu "duyệt thay Cyber cả sáu mục" sau khi Claude liệt kê sáu mục dưới đây. Đây là phê duyệt của người dùng thay cho nhóm
+Cyber (mục 6 vốn thuộc Software/Data, người dùng duyệt cùng lúc), **chưa có review độc lập** của Cyber/Data. Phê duyệt chấp nhận thiết kế
+và giá trị hiện có; **không** biến các giá trị heuristic thành giá trị đã hiệu chỉnh.
+
+| # | Quyết định | Duyệt như hiện có | Vẫn đúng sau phê duyệt |
+|---|---|---|---|
+| 1 | Khóa rule `severity_by`, `context_fields`, `group_by_field` (mục 12.3, 12.12) | Có | `group_by_field` gom không theo khung thời gian (12.12) |
+| 2 | Rule type `scriptblock`, khóa `patterns`/`base64`, 9 mẫu DET-203/204, `base64.min_length` 40 (mục 12.4) | Có | DET-203/204 `synthetic_only`; quan sát FP với `Import-Module` công cụ kiểm thử (12.11); T1027 vẫn không gắn |
+| 3 | `EXTERNAL_AV` trọng số 1.0, trần 60 (mục 12.5) | Có | `config/risk-scoring.yaml` giữ `status: heuristic_uncalibrated`; phần còn lại của cấu hình rủi ro không thuộc phê duyệt này |
+| 4 | Quyền `raw` (analyst/approver) thay vai trò admin để xem script gốc, audit `SCRIPT_RAW_VIEW`; danh sách luật che trong `src/common/redact.py` (mục 12.6) | Có | Che bí mật là heuristic, không bảo đảm che hết |
+| 5 | Phương pháp nối tiến trình `PID_IMAGE_LIFETIME`, `PROCESS_NAME_LIFETIME`, `FILE_CREATE`; cửa sổ nhìn lại 24 giờ (mục 12.8) | Có | Vẫn là suy luận tính khi truy vấn, không ghi vào alert; trên VM 548/554 block 4104 `UNIQUE` (12.11) |
+| 6 | `BUCKET_SECONDS = 600` (gom alert không khai `group_by_field`) và ngân sách nạp 20 giây mỗi vòng core (mục 12.10) | Có | Hai giá trị chọn tay, chưa đo |
+
+Sau phê duyệt này, các quyết định triển khai của hạng mục 1–11 và các bản sửa ngày 2026-11-28 không còn mục nào chờ người dùng; các mục
+vẫn chờ review độc lập của nhóm (Data, Cyber, Software) như mọi phê duyệt "thay" trước đó (D1–D10, C-007/CFG-006/`degraded`, 12.15).
+
