@@ -174,3 +174,42 @@
 - Status: PASS / FAIL / NOT RUN _(chọn)_
 - Evidence: _(lệnh, đầu ra, ảnh chụp đã che định danh)_
 - Known limitations: —
+
+## AT-47 · Agent đọc ba kênh trên VM, checkpoint riêng; một kênh thiếu quyền không chặn Sysmon
+
+- Preconditions: Windows 10 VM, Sysmon chạy, Script Block Logging bật, agent.channels bật ba kênh
+- Steps:
+  1. python -m edr_ctl start --config C:\dacn_edr\edr.yaml --live
+  2. Xem C:\dacn_edr\agent\health.json (channels) và checkpoint_live_<kênh>.json
+  3. Theo docs/implementation/acceptance/W8_DEFENDER_POWERSHELL_VM_GUIDE.md mục 3 (V1), 8 (V6)
+- Expected: Ba kênh running/idle, errors rỗng, ba checkpoint; dừng/chạy lại không mất sự kiện; kênh thiếu quyền -> degraded, Sysmon vẫn chạy
+- Actual: _(điền)_
+- Status: PASS / FAIL / NOT RUN _(chọn)_
+- Evidence: _(lệnh, đầu ra, ảnh chụp đã che định danh)_
+- Known limitations: Quan sát thủ công 2026-11-28, một VM, một lần (w8 mục 12.11): ba kênh idle, errors rỗng, ba checkpoint; 4104 phát sinh khi dừng (RecordId 914) vào Silver sau khi chạy lại; ledger cân bằng ba kênh. Phần kênh thiếu quyền (degraded) CHƯA chạy trên VM
+
+## AT-48 · EICAR -> Defender 1116 -> alert DET-201 -> truy vết raw_xml
+
+- Preconditions: Như AT-47; Defender real-time protection bật
+- Steps:
+  1. powershell -ExecutionPolicy Bypass -File scripts\lab\dacn_lab_scenarios.ps1 -Scenario SC05 -Eicar (sau -WhatIf)
+  2. GET /alerts?source=DEFENDER, /alerts/{id}/evidence?include_raw=true, /alerts/{id}/process-links
+  3. Theo W8_DEFENDER_POWERSHELL_VM_GUIDE.md mục 6 (V4)
+- Expected: Một alert DET-201 (1116+1117), source_label Defender, evidence FULL có raw_xml và tham chiếu Bronze
+- Actual: _(điền)_
+- Status: PASS / FAIL / NOT RUN _(chọn)_
+- Evidence: _(lệnh, đầu ra, ảnh chụp đã che định danh)_
+- Known limitations: Quan sát thủ công 2026-11-28, một VM, một lần (w8 mục 12.11): một alert DET-201 với 1116+1117, evidence FULL có raw_xml; FILE_CREATE UNIQUE, PROCESS_NAME_LIFETIME AMBIGUOUS. Bản sửa gom alert (12.12) và DET-202 v3 (12.14) chưa chạy lại trên VM
+
+## AT-49 · 4104 thật (một phần và nhiều phần) vào Silver đúng; che bí mật ở API
+
+- Preconditions: Như AT-47
+- Steps:
+  1. Chạy script lành tính dài và hai dòng thử V3 theo W8_DEFENDER_POWERSHELL_VM_GUIDE.md mục 4-5
+  2. python tests\e2e\w8_channel_report.py --silver ... --bronze ... --since <T0>
+  3. GET /alerts/{id}/script với viewer và analyst (?reveal=true)
+- Expected: Block nhiều phần ghép đủ; DET-203/204 MATCH; /script che chuỗi giả theo mặc định; reveal chỉ cho quyền raw và có audit SCRIPT_RAW_VIEW
+- Actual: _(điền)_
+- Status: PASS / FAIL / NOT RUN _(chọn)_
+- Evidence: _(lệnh, đầu ra, ảnh chụp đã che định danh)_
+- Known limitations: Quan sát thủ công 2026-11-28, một VM, một lần (w8 mục 12.11): 554/554 block ghép đủ (33 nhiều phần); 548/554 nối UNIQUE về powershell.exe; /script redacted, viewer reveal 403, analyst reveal có audit. Nút xem bản gốc trên dashboard chưa quan sát

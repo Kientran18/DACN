@@ -1,6 +1,6 @@
 # Đề xuất bổ sung telemetry Microsoft Defender và PowerShell Script Block Logging
 
-> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–9 xong ngày 2026-11-28, xem mục 12; 11: lượt chạy đầu trên VM xong ngày 2026-11-28, xem mục 12.11).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
+> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–9 xong ngày 2026-11-28, xem mục 12; 11: lượt chạy đầu trên VM xong ngày 2026-11-28, xem mục 12.11; 10: xong, mục 12.17).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
 > Data/Cyber; chưa có review độc lập của nhóm Data/Cyber. Người dùng nói "bắt đầu" ngày 2026-11-28. Tài liệu này không
 > thay đổi contract `bronze-event/1.0`, DDL v1.1, DDL v1.2, ADR, README hay kế hoạch 12 tuần. Mọi ánh xạ field gắn nhãn **[CHƯA XÁC MINH]**
 > giữ nguyên nhãn đó cho tới khi có mẫu XML thật từ VM (mục 2.8); phê duyệt thiết kế không xác minh các field này.
@@ -970,4 +970,13 @@ và giá trị hiện có; **không** biến các giá trị heuristic thành gi
 
 Sau phê duyệt này, các quyết định triển khai của hạng mục 1–11 và các bản sửa ngày 2026-11-28 không còn mục nào chờ người dùng; các mục
 vẫn chờ review độc lập của nhóm (Data, Cyber, Software) như mọi phê duyệt "thay" trước đó (D1–D10, C-007/CFG-006/`degraded`, 12.15).
+
+### 12.17. Ngày 2026-11-28: hạng mục 10 (tài liệu và danh mục nghiệm thu)
+
+| Thay đổi | Tệp |
+|---|---|
+| Thêm AT-44…AT-49 theo mục 6.5: AT-44 (R-11, L, Bronze 1.1), AT-45 (R-02, L, Silver v1.3), AT-46 (R-03, L, DET-201..204), AT-47 (R-01, W, agent ba kênh), AT-48 (R-04, W, EICAR → DET-201 → `raw_xml`), AT-49 (R-02, W, 4104 và che bí mật). Mục W không gắn test Linux; kết quả quan sát thủ công một lần trên VM ghi trong `limits`, không điền PASS | `tests/acceptance/at_catalog.yaml`, `tests/acceptance/test_runner_logic.py` (đếm 49 AT) |
+| Chạy lại `run_acceptance.py`: **28 PASS, 4 PARTIAL, 0 FAIL, 17 NOT RUN** (49 AT; trước: 28/1/0/14 trên 43). AT-44..46 PARTIAL vì 1.1, DDL v1.3, rule mới chưa phê duyệt chéo hoặc chưa đo FP; AT-47..49 NOT RUN (mức W) | `docs/implementation/acceptance/ACCEPTANCE_REPORT.md`, `WINDOWS_ACCEPTANCE_CHECKLIST.md`, `acceptance_results.json` |
+| Bảng yêu cầu và danh sách AT cập nhật; mục 4 số liệu mới | `docs/implementation/EDR_ACCEPTANCE_MATRIX.md` |
+| Bỏ câu "chưa kiểm chứng trên Windows" của hai kênh (đã chạy một lần trên VM); thêm lệnh bật Script Block Logging, lưu ý lệnh gõ tay bị ghi lại, quyền Event Log Readers, đọc lịch sử lần đầu; cập nhật số test Linux | `docs/implementation/EDR_INSTALL_GUIDE.md` |
 

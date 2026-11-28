@@ -8,18 +8,18 @@ Quy ước trạng thái: `PASS` · `FAIL` · `NOT RUN` · `N/A`. Cột *Mức b
 
 | ID | Yêu cầu (từ mục tiêu MVP) | Module | Hiện thực | Test chính | Bằng chứng | Trạng thái |
 |---|---|---|---|---|---|---|
-| R-01 | Thành phần Windows thu thập telemetry Sysmon liên tục | `src/agent/` | PH2 (Linux: nguồn giả/tệp; live Windows chưa kiểm chứng) | AT-01…AT-05 | Báo cáo nghiệm thu mức L; live Windows `UNKNOWN` | 3 NOT RUN, 2 PASS |
-| R-02 | Pipeline tiếp nhận, chuẩn hóa, kiểm tra, lưu sự kiện | `src/pipeline/` | PH3 (DuckDB bền vững, replay; L) | AT-06…AT-10 | Báo cáo nghiệm thu mức L | 5 PASS |
-| R-03 | Detection Engine phát hiện hành vi/IOC/mẫu test | `src/detection/` | PH4 | AT-11…AT-16 | Báo cáo nghiệm thu mức L | 1 NOT RUN, 5 PASS |
-| R-04 | Cảnh báo có thông tin và bằng chứng | `src/alerts/` | PH6 | AT-17…AT-20 | Báo cáo nghiệm thu mức L | 4 PASS |
+| R-01 | Thành phần Windows thu thập telemetry Sysmon liên tục | `src/agent/` | PH2 (Linux: nguồn giả/tệp; live Windows chưa kiểm chứng) | AT-01…AT-05, AT-47 | Báo cáo nghiệm thu mức L; live Windows `UNKNOWN` | 4 NOT RUN, 2 PASS |
+| R-02 | Pipeline tiếp nhận, chuẩn hóa, kiểm tra, lưu sự kiện | `src/pipeline/` | PH3 (DuckDB bền vững, replay; L) | AT-06…AT-10, AT-45, AT-49 | Báo cáo nghiệm thu mức L | 1 NOT RUN, 1 PARTIAL, 5 PASS |
+| R-03 | Detection Engine phát hiện hành vi/IOC/mẫu test | `src/detection/` | PH4 | AT-11…AT-16, AT-46 | Báo cáo nghiệm thu mức L | 1 NOT RUN, 1 PARTIAL, 5 PASS |
+| R-04 | Cảnh báo có thông tin và bằng chứng | `src/alerts/` | PH6 | AT-17…AT-20, AT-48 | Báo cáo nghiệm thu mức L | 1 NOT RUN, 4 PASS |
 | R-05 | Phản ứng có kiểm soát (terminate/quarantine thử nghiệm khi được phép) | `src/response/` | PH7 | AT-21…AT-26 | Báo cáo nghiệm thu mức L | 2 NOT RUN, 4 PASS |
 | R-06 | Backend API kết nối module | `src/api/` | PH8 | AT-27…AT-29 | Báo cáo nghiệm thu mức L | 3 PASS |
-| R-07 | Dashboard giám sát endpoint/sự kiện/phát hiện/cảnh báo/phản ứng | `src/dashboard/` | PH9 | AT-30…AT-33 | Báo cáo nghiệm thu mức L | 1 NOT RUN, 2 PARTIAL, 1 PASS |
+| R-07 | Dashboard giám sát endpoint/sự kiện/phát hiện/cảnh báo/phản ứng | `src/dashboard/` | PH9 | AT-30…AT-33 | Báo cáo nghiệm thu mức L | 1 NOT RUN, 3 PASS |
 | R-08 | Cài đặt/khởi động toàn hệ thống theo quy trình tài liệu hóa | `src/edr_ctl.py`, tài liệu | PH10 | AT-34, AT-35 | Báo cáo nghiệm thu mức L | 2 NOT RUN |
 | R-09 | Bộ kiểm thử end-to-end trên Windows 10 VM | `tests/e2e/`, `scripts/lab/` | PH5, PH10, PH11 | AT-36…AT-40 | Báo cáo nghiệm thu mức L | 5 NOT RUN |
 | R-10 | Tài liệu kỹ thuật, hướng dẫn, báo cáo nghiệm thu | `docs/` | PH12 | AT-41 | Kiểm tra liên kết; user guide/báo cáo cuối thuộc PH12 | 1 PARTIAL |
-| R-11 | Hợp đồng dữ liệu không bị phá vỡ (Bronze 1.0, UUIDv5, raw preservation) | contract tests | Có test (L) | AT-42 | Test contract chạy lại mức L, xem báo cáo | 1 PASS |
-| R-12 | Khả năng thêm ML mà không viết lại engine | `src/detection/ml/` | PH4-T10 | AT-43 | Báo cáo nghiệm thu mức L | 1 PARTIAL |
+| R-11 | Hợp đồng dữ liệu không bị phá vỡ (Bronze 1.0, UUIDv5, raw preservation) | contract tests | Có test (L) | AT-42, AT-44 | Test contract chạy lại mức L, xem báo cáo | 1 PARTIAL, 1 PASS |
+| R-12 | Khả năng thêm ML mà không viết lại engine | `src/detection/ml/` | PH4-T10 | AT-43 | Báo cáo nghiệm thu mức L | 1 PASS |
 
 **Điều kiện sẵn sàng nghiệm thu MVP:** R-01…R-09 đều `PASS` ở mức bằng chứng `W` (hoặc `L` cho R-06 phần logic), chuỗi `Telemetry → Pipeline → Detection → Alert → Investigation → Safe Response → Dashboard` được chạy thật ít nhất một kịch bản (SC-01 hoặc SC-03) và lặp lại được.
 
@@ -85,18 +85,24 @@ Mức: `F/L/W`. Tất cả `Actual` hiện **chưa có**; Status = `NOT RUN`.
 | AT-41 | R-10 | — | Tài liệu cài đặt/user guide/báo cáo đầy đủ, liên kết hợp lệ | |
 | AT-42 | R-11 | L | Toàn bộ test contract/identity xanh; UUIDv5 từ Silver tái dựng được | Phụ thuộc quyết định hostname (D-07) |
 | AT-43 | R-12 | L | Tắt ML = hành vi không đổi; detector giả hoạt động | |
+| AT-44 | R-11 | L | Bản ghi Defender/PowerShell → Bronze `bronze-event/1.1`, `source` đúng kênh, định danh ADR 0001 | Thêm 2026-11-28 (w8 mục 6.5); 1.1 chưa phê duyệt chéo |
+| AT-45 | R-02 | L | Route theo kênh vào Silver v1.3, mã lỗi mới, dedup, view ghép 4104 | DDL v1.3 đề xuất |
+| AT-46 | R-03 | L | DACN-DET-201..204 trên fixture; alert không chứa script; không response | Rule `synthetic_only` |
+| AT-47 | R-01 | W | Agent đọc ba kênh trên VM, checkpoint riêng, kênh thiếu quyền không chặn Sysmon | Quan sát thủ công một lần 2026-11-28 (trừ phần thiếu quyền) |
+| AT-48 | R-04 | W | EICAR → 1116 → alert DET-201 → truy vết `raw_xml` | Quan sát thủ công một lần 2026-11-28 |
+| AT-49 | R-02 | W | 4104 thật một phần/nhiều phần vào Silver; che bí mật ở API | Quan sát thủ công một lần 2026-11-28 (trừ nút dashboard) |
 
 ## 4. Tình trạng tổng hợp (sinh từ `scripts/acceptance/run_acceptance.py`)
 
-Chạy lúc 2026-11-08T13:19:43Z (UTC), commit `da94bd4`, mức bằng chứng **L** (Linux). Chi tiết từng AT: [acceptance/ACCEPTANCE_REPORT.md](acceptance/ACCEPTANCE_REPORT.md); việc cho người dùng trên VM: [acceptance/WINDOWS_ACCEPTANCE_CHECKLIST.md](acceptance/WINDOWS_ACCEPTANCE_CHECKLIST.md).
+Chạy lúc 2026-11-28T13:33:12Z (UTC), trên commit `ced63a7` cộng thay đổi chưa commit của hạng mục 10 (thêm AT-44…AT-49), mức bằng chứng **L** (Linux, Python 3.13). Chi tiết từng AT: [acceptance/ACCEPTANCE_REPORT.md](acceptance/ACCEPTANCE_REPORT.md); việc cho người dùng trên VM: [acceptance/WINDOWS_ACCEPTANCE_CHECKLIST.md](acceptance/WINDOWS_ACCEPTANCE_CHECKLIST.md).
 
 | Trạng thái | Số test nghiệm thu (AT) |
 |---|---|
-| PASS | 25 |
+| PASS | 28 |
 | PARTIAL (test đạt, còn khoảng trống ghi trong báo cáo) | 4 |
 | FAIL | 0 |
-| NOT RUN (cần Windows VM) | 14 |
+| NOT RUN (cần Windows VM) | 17 |
 
-Ghi chú: các AT PASS ở mức L dùng dữ liệu synthetic/giả lập; các mục đã thay đổi so với bản đầu: R-11 không còn FAIL vì lỗi mã `C-002` đã được sửa và chạy lại. Điều kiện sẵn sàng nghiệm thu MVP (mục 1) **chưa đạt**: R-01, R-05, R-07, R-08, R-09 còn AT mức W chưa chạy.
+Ghi chú: các AT PASS ở mức L dùng dữ liệu synthetic/giả lập; AT-44…AT-46 (kênh Defender/PowerShell) là PARTIAL vì bronze-event/1.1, DDL v1.3 và các rule mới chưa phê duyệt chéo/chưa đo FP; AT-47…AT-49 (mức W) đã được người dùng quan sát thủ công một lần trên VM ngày 2026-11-28 (ghi trong `limits` của `at_catalog.yaml`, mục 12.11 của tài liệu w8) nhưng trình nghiệm thu không điền PASS cho mức W; các mục đã thay đổi so với bản đầu: R-11 không còn FAIL vì lỗi mã `C-002` đã được sửa và chạy lại. Điều kiện sẵn sàng nghiệm thu MVP (mục 1) **chưa đạt**: R-01, R-05, R-07, R-08, R-09 còn AT mức W chưa chạy.
 
 Giới hạn chung: kết quả `L`/`F` không thay cho kiểm chứng trên Windows; tỷ lệ phát hiện chỉ có nghĩa trên tập kịch bản đã chạy; không suy rộng sang malware ngoài thực tế.

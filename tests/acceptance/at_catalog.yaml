@@ -1,4 +1,4 @@
-# Danh mục test nghiệm thu AT-01..AT-43 (PH11-T01).
+# Danh mục test nghiệm thu AT-01..AT-49 (PH11-T01; AT-44..49 thêm 2026-11-28 cho kênh Defender/PowerShell).
 # level: L = chạy được trên Linux với dữ liệu mẫu/giả lập; W = cần Windows VM thật (Claude không chạy);
 #        D = kiểm tra tài liệu.
 # tests: danh sách pytest node id (hoặc tiền tố) được coi là bằng chứng cho AT đó.
@@ -394,3 +394,62 @@ AT-43:
   expected: ML tắt mặc định, không kích hoạt response
   tests: [tests/detection/test_rules_harness.py::test_ml_off_by_default_and_never_triggers_response, tests/detection/test_ml_loader.py::test_enabled_fake_detector_does_not_change_rule_results, tests/detection/test_ml_loader.py::test_load_ok_and_score_is_not_response_trigger]
   limits: Chưa có mô hình ML thật
+# --- AT-44..AT-49: telemetry Windows Defender + PowerShell 4104 (docs/architecture/w8/telemetry-defender-powershell-proposal.md
+#     mục 6.5, hạng mục 10; thêm ngày 2026-11-28). Mức W: kết quả quan sát thủ công ghi trong `limits`, KHÔNG điền PASS.
+AT-44:
+  req: R-11
+  level: L
+  goal: Bản ghi Defender/PowerShell synthetic -> Bronze bronze-event/1.1, source đúng theo kênh, định danh theo ADR 0001
+  pre: Fixture tests/fixtures/windows_channels/*.synthetic.xml
+  steps: ["build_bronze_record trên fixture Defender/PowerShell và Sysmon", "Kiểm tra source, schema_version, event_id", "Kênh lạ và source không khớp kênh"]
+  expected: Defender -> WINDOWS_DEFENDER, PowerShell -> POWERSHELL (1.1); Sysmon giữ 1.0; công thức event_id không đổi; kênh lạ -> C-007; adapter fail-closed với 1.1
+  tests: [tests/pipeline/test_bronze_v11_channels.py]
+  gaps: "bronze-event/1.1 là bản bổ sung người dùng duyệt (D1-D2) thay cho Data/Software/Cyber, chưa phê duyệt chéo"
+  limits: Dữ liệu synthetic
+AT-45:
+  req: R-02
+  level: L
+  goal: Route theo kênh vào bảng Silver v1.3, mã lỗi mới, dedup, view ghép 4104
+  pre: Fixture windows_channels; DDL v1.3 đề xuất
+  steps: ["Nạp segment hỗn hợp Sysmon/Defender/PowerShell", "Kiểm tra bảng đích, DLQ, view v_powershell_scriptblocks_complete", "Nạp lại segment"]
+  expected: Mỗi bản ghi vào đúng bảng hoặc DLQ với mã ERR_* cụ thể; block thiếu phần không có trong view (không bịa); nạp lại idempotent; Sysmon không đổi
+  tests: [tests/pipeline/test_silver_windows_channels.py, tests/pipeline/test_ingest_batching.py::test_mixed_channels_in_batches]
+  gaps: "DDL v1.3 là đề xuất chưa duyệt chéo"
+  limits: Dữ liệu synthetic
+AT-46:
+  req: R-03
+  level: L
+  goal: DACN-DET-201..204 trên fixture; alert không chứa script; không response tự động
+  pre: Fixture windows_channels
+  steps: ["Chạy DetectionEngine và AlertBuilder trên fixture Defender/PowerShell", "Kiểm tra outcome, severity, gom alert, nội dung alert"]
+  expected: DET-201 gom 1116/1117 theo detection_id; DET-202 severity theo Event ID, 5007 lọc theo khóa và hướng thay đổi; DET-203/204 MATCH đúng mẫu, alert chỉ có tên mẫu và sha256; rule chỉ alert
+  tests: [tests/detection/test_defender_rules.py, tests/detection/test_powershell_rules.py, tests/api/test_script_redaction.py::test_alert_list_and_detail_never_contain_script]
+  gaps: "Mọi rule synthetic_only; chưa có số đo FP trên tải lành tính"
+  limits: Dữ liệu synthetic; danh sách mẫu/khóa do người dùng duyệt thay Cyber (w8 mục 12.15-12.16)
+AT-47:
+  req: R-01
+  level: W
+  goal: Agent đọc ba kênh trên VM, checkpoint riêng; một kênh thiếu quyền không chặn Sysmon
+  pre: Windows 10 VM, Sysmon chạy, Script Block Logging bật, agent.channels bật ba kênh
+  steps: ["python -m edr_ctl start --config C:\\dacn_edr\\edr.yaml --live", "Xem C:\\dacn_edr\\agent\\health.json (channels) và checkpoint_live_<kênh>.json", "Theo docs/implementation/acceptance/W8_DEFENDER_POWERSHELL_VM_GUIDE.md mục 3 (V1), 8 (V6)"]
+  expected: Ba kênh running/idle, errors rỗng, ba checkpoint; dừng/chạy lại không mất sự kiện; kênh thiếu quyền -> degraded, Sysmon vẫn chạy
+  tests: []
+  limits: "Quan sát thủ công 2026-11-28, một VM, một lần (w8 mục 12.11): ba kênh idle, errors rỗng, ba checkpoint; 4104 phát sinh khi dừng (RecordId 914) vào Silver sau khi chạy lại; ledger cân bằng ba kênh. Phần kênh thiếu quyền (degraded) CHƯA chạy trên VM"
+AT-48:
+  req: R-04
+  level: W
+  goal: EICAR -> Defender 1116 -> alert DET-201 -> truy vết raw_xml
+  pre: Như AT-47; Defender real-time protection bật
+  steps: ["powershell -ExecutionPolicy Bypass -File scripts\\lab\\dacn_lab_scenarios.ps1 -Scenario SC05 -Eicar (sau -WhatIf)", "GET /alerts?source=DEFENDER, /alerts/{id}/evidence?include_raw=true, /alerts/{id}/process-links", "Theo W8_DEFENDER_POWERSHELL_VM_GUIDE.md mục 6 (V4)"]
+  expected: Một alert DET-201 (1116+1117), source_label Defender, evidence FULL có raw_xml và tham chiếu Bronze
+  tests: []
+  limits: "Quan sát thủ công 2026-11-28, một VM, một lần (w8 mục 12.11): một alert DET-201 với 1116+1117, evidence FULL có raw_xml; FILE_CREATE UNIQUE, PROCESS_NAME_LIFETIME AMBIGUOUS. Bản sửa gom alert (12.12) và DET-202 v3 (12.14) chưa chạy lại trên VM"
+AT-49:
+  req: R-02
+  level: W
+  goal: 4104 thật (một phần và nhiều phần) vào Silver đúng; che bí mật ở API
+  pre: Như AT-47
+  steps: ["Chạy script lành tính dài và hai dòng thử V3 theo W8_DEFENDER_POWERSHELL_VM_GUIDE.md mục 4-5", "python tests\\e2e\\w8_channel_report.py --silver ... --bronze ... --since <T0>", "GET /alerts/{id}/script với viewer và analyst (?reveal=true)"]
+  expected: Block nhiều phần ghép đủ; DET-203/204 MATCH; /script che chuỗi giả theo mặc định; reveal chỉ cho quyền raw và có audit SCRIPT_RAW_VIEW
+  tests: []
+  limits: "Quan sát thủ công 2026-11-28, một VM, một lần (w8 mục 12.11): 554/554 block ghép đủ (33 nhiều phần); 548/554 nối UNIQUE về powershell.exe; /script redacted, viewer reveal 403, analyst reveal có audit. Nút xem bản gốc trên dashboard chưa quan sát"

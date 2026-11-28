@@ -5,10 +5,10 @@
 
 ## Môi trường chạy
 
-- Thời điểm (UTC): 2026-11-24T02:24:53Z · thời lượng: 34.1 s
-- Commit: `88a84a4` (cây làm việc có thay đổi chưa commit)
-- Python 3.13.18 · Linux 6.18.44-fc-v819
-- Thư viện: pytest 9.1.1, duckdb 2.0.0, fastapi 0.164.0, uvicorn 0.54.0, httpx 0.28.1, pydantic 2.13.5, PyYAML 6.0.3, jsonschema 4.26.0
+- Thời điểm (UTC): 2026-11-28T13:33:12Z · thời lượng: 81.7 s
+- Commit: `ced63a7` (cây làm việc có thay đổi chưa commit)
+- Python 3.13.18 · Linux 6.18.44-fc-v880
+- Thư viện: pytest 9.1.1, duckdb 2.0.1, fastapi 0.165.0, uvicorn 0.54.0, httpx 0.29.0, pydantic 2.13.5, PyYAML 6.0.3, jsonschema 4.26.0
 - Mức bằng chứng: L (Linux, dữ liệu synthetic/giả lập); W (Windows) chưa chạy
 
 ## Tổng hợp
@@ -16,9 +16,9 @@
 | Trạng thái | Số AT |
 |---|---|
 | PASS | 28 |
-| PARTIAL | 1 |
+| PARTIAL | 4 |
 | FAIL | 0 |
-| NOT RUN | 14 |
+| NOT RUN | 17 |
 
 PARTIAL = test đạt nhưng catalog ghi rõ phần Expected chưa được phủ tự động.
 
@@ -487,7 +487,7 @@ PARTIAL = test đạt nhưng catalog ghi rõ phần Expected chưa được ph�
 - **Preconditions:** Repo
 - **Steps:** 1. Kiểm tra liên kết tương đối trong docs/implementation
 - **Expected:** Mọi liên kết tương đối trỏ tới tệp tồn tại
-- **Actual:** 48 liên kết tương đối đã kiểm tra; hỏng: không
+- **Actual:** 55 liên kết tương đối đã kiểm tra; hỏng: không
 - **Chưa phủ:** Chỉ kiểm tra liên kết nội bộ; user guide, hướng dẫn cài đặt chưa được ai làm theo trên VM sạch (AT-35)
 
 ### AT-42 · R-11 · mức L · **PASS**
@@ -545,3 +545,157 @@ PARTIAL = test đạt nhưng catalog ghi rõ phần Expected chưa được ph�
   - `tests/detection/test_ml_loader.py::test_enabled_fake_detector_does_not_change_rule_results` → passed
   - `tests/detection/test_ml_loader.py::test_load_ok_and_score_is_not_response_trigger` → passed
 - **Known limitations:** Chưa có mô hình ML thật
+
+### AT-44 · R-11 · mức L · **PARTIAL**
+
+- **Mục tiêu:** Bản ghi Defender/PowerShell synthetic -> Bronze bronze-event/1.1, source đúng theo kênh, định danh theo ADR 0001
+- **Preconditions:** Fixture tests/fixtures/windows_channels/*.synthetic.xml
+- **Steps:** 1. build_bronze_record trên fixture Defender/PowerShell và Sysmon; 2. Kiểm tra source, schema_version, event_id; 3. Kênh lạ và source không khớp kênh
+- **Expected:** Defender -> WINDOWS_DEFENDER, PowerShell -> POWERSHELL (1.1); Sysmon giữ 1.0; công thức event_id không đổi; kênh lạ -> C-007; adapter fail-closed với 1.1
+- **Actual:** 12 test pytest đạt, 0 lỗi
+- **Evidence (pytest node):**
+  - `tests/pipeline/test_bronze_v11_channels.py::test_new_channels_get_their_own_source_and_v11[defender_1116.synthetic.xml-WINDOWS_DEFENDER]` → passed
+  - `tests/pipeline/test_bronze_v11_channels.py::test_new_channels_get_their_own_source_and_v11[defender_5001.synthetic.xml-WINDOWS_DEFENDER]` → passed
+  - `tests/pipeline/test_bronze_v11_channels.py::test_new_channels_get_their_own_source_and_v11[ps4104_single.synthetic.xml-POWERSHELL]` → passed
+  - `tests/pipeline/test_bronze_v11_channels.py::test_sysmon_record_unchanged_v10` → passed
+  - `tests/pipeline/test_bronze_v11_channels.py::test_identity_formula_unchanged_and_channel_separates_same_record_id` → passed
+  - `tests/pipeline/test_bronze_v11_channels.py::test_unsupported_channel_is_c007_not_mislabelled` → passed
+  - `tests/pipeline/test_bronze_v11_channels.py::test_source_or_version_not_matching_channel_is_rejected` → passed
+  - `tests/pipeline/test_bronze_v11_channels.py::test_v10_schema_still_rejects_new_sources` → passed
+  - `tests/pipeline/test_bronze_v11_channels.py::test_adapter_accepts_v11_and_names_event_type_by_channel` → passed
+  - `tests/pipeline/test_bronze_v11_channels.py::test_adapter_still_fails_closed_on_v11_identity` → passed
+  - `tests/pipeline/test_bronze_v11_channels.py::test_sysmon_validator_never_accepts_new_channels` → passed
+  - `tests/pipeline/test_bronze_v11_channels.py::test_channel_table_helpers` → passed
+- **Chưa phủ:** bronze-event/1.1 là bản bổ sung người dùng duyệt (D1-D2) thay cho Data/Software/Cyber, chưa phê duyệt chéo
+- **Known limitations:** Dữ liệu synthetic
+
+### AT-45 · R-02 · mức L · **PARTIAL**
+
+- **Mục tiêu:** Route theo kênh vào bảng Silver v1.3, mã lỗi mới, dedup, view ghép 4104
+- **Preconditions:** Fixture windows_channels; DDL v1.3 đề xuất
+- **Steps:** 1. Nạp segment hỗn hợp Sysmon/Defender/PowerShell; 2. Kiểm tra bảng đích, DLQ, view v_powershell_scriptblocks_complete; 3. Nạp lại segment
+- **Expected:** Mỗi bản ghi vào đúng bảng hoặc DLQ với mã ERR_* cụ thể; block thiếu phần không có trong view (không bịa); nạp lại idempotent; Sysmon không đổi
+- **Actual:** 18 test pytest đạt, 0 lỗi
+- **Evidence (pytest node):**
+  - `tests/pipeline/test_silver_windows_channels.py::test_defender_detection_and_action_share_detection_id` → passed
+  - `tests/pipeline/test_silver_windows_channels.py::test_defender_cmdline_resource_and_unknown_process` → passed
+  - `tests/pipeline/test_silver_windows_channels.py::test_defender_config_events` → passed
+  - `tests/pipeline/test_silver_windows_channels.py::test_defender_missing_threat_goes_to_dlq` → passed
+  - `tests/pipeline/test_silver_windows_channels.py::test_scriptblock_parts_and_complete_view` → passed
+  - `tests/pipeline/test_silver_windows_channels.py::test_incomplete_block_not_in_view_and_not_fabricated` → passed
+  - `tests/pipeline/test_silver_windows_channels.py::test_bad_part_number_and_missing_field` → passed
+  - `tests/pipeline/test_silver_windows_channels.py::test_unsupported_event_id_in_supported_channel` → passed
+  - `tests/pipeline/test_silver_windows_channels.py::test_replay_is_idempotent_and_lineage_written` → passed
+  - `tests/pipeline/test_silver_windows_channels.py::test_sysmon_still_routed_to_sysmon_tables_in_mixed_segment` → passed
+  - `tests/pipeline/test_silver_windows_channels.py::test_validator_rejects_unsupported_channel_and_bad_timestamp` → passed
+  - `tests/pipeline/test_silver_windows_channels.py::test_split_resource[file:_C:\\a\\b.txt-expected0]` → passed
+  - `tests/pipeline/test_silver_windows_channels.py::test_split_resource[CmdLine:_cmd /c x-expected1]` → passed
+  - `tests/pipeline/test_silver_windows_channels.py::test_split_resource[C:\\no\\prefix.txt-expected2]` → passed
+  - `tests/pipeline/test_silver_windows_channels.py::test_split_resource[-expected3]` → passed
+  - `tests/pipeline/test_silver_windows_channels.py::test_split_resource[None-expected4]` → passed
+  - `tests/pipeline/test_silver_windows_channels.py::test_raw_data_kept_verbatim` → passed
+  - `tests/pipeline/test_ingest_batching.py::test_mixed_channels_in_batches` → passed
+- **Chưa phủ:** DDL v1.3 là đề xuất chưa duyệt chéo
+- **Known limitations:** Dữ liệu synthetic
+
+### AT-46 · R-03 · mức L · **PARTIAL**
+
+- **Mục tiêu:** DACN-DET-201..204 trên fixture; alert không chứa script; không response tự động
+- **Preconditions:** Fixture windows_channels
+- **Steps:** 1. Chạy DetectionEngine và AlertBuilder trên fixture Defender/PowerShell; 2. Kiểm tra outcome, severity, gom alert, nội dung alert
+- **Expected:** DET-201 gom 1116/1117 theo detection_id; DET-202 severity theo Event ID, 5007 lọc theo khóa và hướng thay đổi; DET-203/204 MATCH đúng mẫu, alert chỉ có tên mẫu và sha256; rule chỉ alert
+- **Actual:** 64 test pytest đạt, 0 lỗi
+- **Evidence (pytest node):**
+  - `tests/detection/test_defender_rules.py::test_det201_eicar_detection_and_action_become_one_external_alert` → passed
+  - `tests/detection/test_defender_rules.py::test_det201_different_detections_are_separate_alerts` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_severity_by_event_id_and_mitre` → passed
+  - `tests/detection/test_defender_rules.py::test_defender_only_ingestion_after_first_run_is_evaluated` → passed
+  - `tests/detection/test_defender_rules.py::test_incremental_run_with_only_channel_data_and_no_sysmon` → passed
+  - `tests/detection/test_defender_rules.py::test_defender_timestamps_do_not_move_correlation_watermark` → passed
+  - `tests/detection/test_defender_rules.py::test_defender_alert_evidence_resolves_to_raw_xml` → passed
+  - `tests/detection/test_defender_rules.py::test_engine_without_v13_tables_skips_channel_rules` → passed
+  - `tests/detection/test_defender_rules.py::test_loader_rejects_bad_source_events[kw0-ch\u1ec9 khai m\u1ed9t]` → passed
+  - `tests/detection/test_defender_rules.py::test_loader_rejects_bad_source_events[kw1-kh\xf4ng c\xf3 b\u1ea3ng Silver]` → passed
+  - `tests/detection/test_defender_rules.py::test_loader_rejects_bad_source_events[kw2-kh\xf4ng h\u1ed7 tr\u1ee3 Event ID]` → passed
+  - `tests/detection/test_defender_rules.py::test_loader_rejects_bad_source_events[kw3-EXTERNAL_DEFENDER]` → passed
+  - `tests/detection/test_defender_rules.py::test_loader_rejects_bad_source_events[kw4-ch\u1ec9 d\xf9ng rule 'scriptblock']` → passed
+  - `tests/detection/test_defender_rules.py::test_loader_rejects_bad_source_events[kw5-source_events ch\u1ec9 d\xf9ng]` → passed
+  - `tests/detection/test_defender_rules.py::test_loader_rejects_bad_source_events[kw6-sysmon_event_ids ho\u1eb7c source_events]` → passed
+  - `tests/detection/test_defender_rules.py::test_loader_normalizes_channel_case_without_mutating_input` → passed
+  - `tests/detection/test_defender_rules.py::test_evaluator_severity_by_and_context_only_on_match` → passed
+  - `tests/detection/test_defender_rules.py::test_shipped_defender_rules_are_alert_only` → passed
+  - `tests/detection/test_defender_rules.py::test_det201_detection_across_10_minute_boundary_stays_one_alert` → passed
+  - `tests/detection/test_defender_rules.py::test_det201_1117_processed_first_keeps_earliest_first_seen` → passed
+  - `tests/detection/test_defender_rules.py::test_det201_different_detection_ids_far_apart_are_not_merged` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_without_group_by_field_still_uses_time_buckets` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_v2_internal_5007_changes_do_not_alert` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_v2_security_related_5007_alerts[TamperProtection = 0x1]` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_v2_security_related_5007_alerts[DisableBmNetworkSensor = 0x1]` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_v2_security_related_5007_alerts[DisableRealtimeMonitoring = 0x]` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_v2_security_related_5007_alerts[dacn_lab = 0x0]` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_v2_security_related_5007_alerts[SubmitSamplesConsent = 0x2]` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_v2_security_related_5007_alerts[SpynetReporting = 0x0]` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_v2_security_related_5007_alerts[DisableBehaviorMonitoring = 0x]` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_v3_strengthen_or_noop_5007_does_not_alert[dacn_lab = 0x0]` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_v3_strengthen_or_noop_5007_does_not_alert[DisableBmNetworkSensor = 0x0]` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_v3_strengthen_or_noop_5007_does_not_alert[DisableRealtimeMonitoring = 0x]` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_v3_strengthen_or_noop_5007_does_not_alert[TamperProtection = 0x1]` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_v3_strengthen_or_noop_5007_does_not_alert[disableioavprotection = 0X0]` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_v3_records_change_class_in_match` → passed
+  - `tests/detection/test_defender_rules.py::test_det202_v2_5001_still_alerts_high` → passed
+  - `tests/detection/test_defender_rules.py::test_classify_registry_change[None-None-None]` → passed
+  - `tests/detection/test_defender_rules.py::test_classify_registry_change[--None]` → passed
+  - `tests/detection/test_defender_rules.py::test_classify_registry_change[HKLM\\X\\Real-Time Protection\\DisableRealtimeMonitoring = 0x0-HKLM\\X\\Real-Time Protection\\DisableRealtimeMonitoring = 0x1-WEAKEN]` → passed
+  - `tests/detection/test_defender_rules.py::test_classify_registry_change[HKLM\\X\\DisableAntiSpyware = 1-HKLM\\X\\DisableAntiSpyware = 0-STRENGTHEN]` → passed
+  - `tests/detection/test_defender_rules.py::test_classify_registry_change[-HKLM\\X\\DisableAntiSpyware = 0x1-WEAKEN]` → passed
+  - `tests/detection/test_defender_rules.py::test_classify_registry_change[-HKLM\\X\\DisableAntiSpyware = 0x0-CHANGE]` → passed
+  - `tests/detection/test_defender_rules.py::test_classify_registry_change[HKLM\\X\\DisableAntiSpyware = 0x1-HKLM\\X\\DisableAntiSpyware = 0x2-CHANGE]` → passed
+  - `tests/detection/test_defender_rules.py::test_classify_registry_change[HKLM\\X\\DisableFoo = abc-HKLM\\X\\DisableFoo = def-CHANGE]` → passed
+  - `tests/detection/test_defender_rules.py::test_classify_registry_change[-HKLM\\X\\Exclusions\\Paths\\C:\\lab = 0x0-WEAKEN]` → passed
+  - `tests/detection/test_defender_rules.py::test_classify_registry_change[HKLM\\X\\Exclusions\\Paths\\C:\\lab = 0x0--STRENGTHEN]` → passed
+  - `tests/detection/test_defender_rules.py::test_classify_registry_change[HKLM\\X\\Exclusions\\Paths\\C:\\a = 0x0-HKLM\\X\\Exclusions\\Paths\\C:\\b = 0x0-WEAKEN]` → passed
+  - `tests/detection/test_defender_rules.py::test_classify_registry_change[HKLM\\X\\Features\\TamperProtection = 0x0-HKLM\\X\\Features\\TamperProtection = 0x1-CHANGE]` → passed
+  - `tests/detection/test_defender_rules.py::test_classify_registry_change[HKLM\\X\\Features\\TamperProtection = 0x1-hklm\\x\\features\\tamperprotection = 0X1-NOOP]` → passed
+  - `tests/detection/test_defender_rules.py::test_classify_registry_change[HKLM\\X\\Spynet\\SpynetReporting = 0x2-HKLM\\X\\Spynet\\SpynetReporting = 0x0-CHANGE]` → passed
+  - `tests/detection/test_defender_rules.py::test_classify_registry_change[khong co dau bang-khong co dau bang 2-CHANGE]` → passed
+  - `tests/detection/test_powershell_rules.py::test_det203_match_alert_has_no_script_text` → passed
+  - `tests/detection/test_powershell_rules.py::test_benign_block_no_result` → passed
+  - `tests/detection/test_powershell_rules.py::test_pattern_split_across_parts_matches_when_block_complete` → passed
+  - `tests/detection/test_powershell_rules.py::test_missing_part_no_fake_join_and_partial_coverage` → passed
+  - `tests/detection/test_powershell_rules.py::test_late_part_completes_block_and_is_evaluated` → passed
+  - `tests/detection/test_powershell_rules.py::test_det204_decodes_utf16_base64_and_det203_does_not_see_it` → passed
+  - `tests/detection/test_powershell_rules.py::test_decode_candidates_limits` → passed
+  - `tests/detection/test_powershell_rules.py::test_evaluator_uses_gap_and_hashes_clean_text` → passed
+  - `tests/detection/test_powershell_rules.py::test_shipped_powershell_rules` → passed
+  - `tests/detection/test_powershell_rules.py::test_existing_benign_fixtures_do_not_trigger[ps4104_single.synthetic.xml]` → passed
+  - `tests/detection/test_powershell_rules.py::test_existing_benign_fixtures_do_not_trigger[ps4104_three_parts.synthetic.xml]` → passed
+  - `tests/api/test_script_redaction.py::test_alert_list_and_detail_never_contain_script` → passed
+- **Chưa phủ:** Mọi rule synthetic_only; chưa có số đo FP trên tải lành tính
+- **Known limitations:** Dữ liệu synthetic; danh sách mẫu/khóa do người dùng duyệt thay Cyber (w8 mục 12.15-12.16)
+
+### AT-47 · R-01 · mức W · **NOT RUN**
+
+- **Mục tiêu:** Agent đọc ba kênh trên VM, checkpoint riêng; một kênh thiếu quyền không chặn Sysmon
+- **Preconditions:** Windows 10 VM, Sysmon chạy, Script Block Logging bật, agent.channels bật ba kênh
+- **Steps:** 1. python -m edr_ctl start --config C:\dacn_edr\edr.yaml --live; 2. Xem C:\dacn_edr\agent\health.json (channels) và checkpoint_live_<kênh>.json; 3. Theo docs/implementation/acceptance/W8_DEFENDER_POWERSHELL_VM_GUIDE.md mục 3 (V1), 8 (V6)
+- **Expected:** Ba kênh running/idle, errors rỗng, ba checkpoint; dừng/chạy lại không mất sự kiện; kênh thiếu quyền -> degraded, Sysmon vẫn chạy
+- **Actual:** Cần Windows 10 VM thật; Claude không chạy được.
+- **Known limitations:** Quan sát thủ công 2026-11-28, một VM, một lần (w8 mục 12.11): ba kênh idle, errors rỗng, ba checkpoint; 4104 phát sinh khi dừng (RecordId 914) vào Silver sau khi chạy lại; ledger cân bằng ba kênh. Phần kênh thiếu quyền (degraded) CHƯA chạy trên VM
+
+### AT-48 · R-04 · mức W · **NOT RUN**
+
+- **Mục tiêu:** EICAR -> Defender 1116 -> alert DET-201 -> truy vết raw_xml
+- **Preconditions:** Như AT-47; Defender real-time protection bật
+- **Steps:** 1. powershell -ExecutionPolicy Bypass -File scripts\lab\dacn_lab_scenarios.ps1 -Scenario SC05 -Eicar (sau -WhatIf); 2. GET /alerts?source=DEFENDER, /alerts/{id}/evidence?include_raw=true, /alerts/{id}/process-links; 3. Theo W8_DEFENDER_POWERSHELL_VM_GUIDE.md mục 6 (V4)
+- **Expected:** Một alert DET-201 (1116+1117), source_label Defender, evidence FULL có raw_xml và tham chiếu Bronze
+- **Actual:** Cần Windows 10 VM thật; Claude không chạy được.
+- **Known limitations:** Quan sát thủ công 2026-11-28, một VM, một lần (w8 mục 12.11): một alert DET-201 với 1116+1117, evidence FULL có raw_xml; FILE_CREATE UNIQUE, PROCESS_NAME_LIFETIME AMBIGUOUS. Bản sửa gom alert (12.12) và DET-202 v3 (12.14) chưa chạy lại trên VM
+
+### AT-49 · R-02 · mức W · **NOT RUN**
+
+- **Mục tiêu:** 4104 thật (một phần và nhiều phần) vào Silver đúng; che bí mật ở API
+- **Preconditions:** Như AT-47
+- **Steps:** 1. Chạy script lành tính dài và hai dòng thử V3 theo W8_DEFENDER_POWERSHELL_VM_GUIDE.md mục 4-5; 2. python tests\e2e\w8_channel_report.py --silver ... --bronze ... --since <T0>; 3. GET /alerts/{id}/script với viewer và analyst (?reveal=true)
+- **Expected:** Block nhiều phần ghép đủ; DET-203/204 MATCH; /script che chuỗi giả theo mặc định; reveal chỉ cho quyền raw và có audit SCRIPT_RAW_VIEW
+- **Actual:** Cần Windows 10 VM thật; Claude không chạy được.
+- **Known limitations:** Quan sát thủ công 2026-11-28, một VM, một lần (w8 mục 12.11): 554/554 block ghép đủ (33 nhiều phần); 548/554 nối UNIQUE về powershell.exe; /script redacted, viewer reveal 403, analyst reveal có audit. Nút xem bản gốc trên dashboard chưa quan sát

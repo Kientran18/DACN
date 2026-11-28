@@ -13,8 +13,9 @@ spec.loader.exec_module(ra)
 CAT = yaml.safe_load((ROOT / "tests/acceptance/at_catalog.yaml").read_text(encoding="utf-8"))
 
 
-def test_catalog_has_43_unique_ats_with_required_fields():
-    assert sorted(CAT) == [f"AT-{i:02d}" for i in range(1, 44)]
+def test_catalog_has_49_unique_ats_with_required_fields():
+    # AT-44..49: kênh Defender/PowerShell (docs/architecture/w8 mục 6.5), thêm 2026-11-28
+    assert sorted(CAT) == [f"AT-{i:02d}" for i in range(1, 50)]
     for at, a in CAT.items():
         for k in ("req", "level", "goal", "pre", "steps", "expected", "tests"):
             assert k in a, (at, k)

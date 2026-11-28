@@ -54,11 +54,20 @@ python -m api.auth --config C:\dacn_edr\edr.yaml --role approver --actor <tên>
 Quy tắc hai người đang **bật** (`require_distinct_approver: true`): `--actor` của analyst và approver phải **khác nhau**. Demo một người dùng thì đặt `false` trong `config\response-policy.yaml`.
 
 Kênh Event Log của agent live nằm ở mục `agent.channels` trong `edr.yaml` (thiếu mục này = chỉ Sysmon). Tệp mẫu để
-kênh Windows Defender và PowerShell **tắt**; bật bằng `enabled: true` chỉ để thử trên VM lab. **Chưa kiểm chứng trên Windows**
-(2026-11-28; mới có test với nguồn giả trên Linux và mẫu XML thật nạp ở file mode): agent ghi bản ghi các kênh này vào Bronze
+kênh Windows Defender và PowerShell **tắt**; bật bằng `enabled: true` chỉ để thử trên VM lab. **Đã chạy một lần trên một
+Windows 10 VM** (2026-11-28, theo `docs/implementation/acceptance/W8_DEFENDER_POWERSHELL_VM_GUIDE.md`; kết quả ở mục 12.11 của tài liệu
+đề xuất, các bản sửa sau đó chưa chạy lại trên VM): agent ghi bản ghi các kênh này vào Bronze
 (`bronze-event/1.1`), pipeline nạp vào bảng Silver `silver_defender_events`, `silver_powershell_scriptblock_events` (DDL v1.3 đề xuất);
-có rule Defender `DACN-DET-201`/`DACN-DET-202` (alert nguồn `EXTERNAL_DEFENDER`); rule PowerShell `DACN-DET-203`/`DACN-DET-204` (alert chỉ chứa tên mẫu và sha256, không chứa văn bản script). Xem script của alert PowerShell qua `GET /alerts/{id}/script`: mặc định **đã che** chuỗi giống bí mật (heuristic, không bảo đảm che hết); `?reveal=true` cần vai trò có quyền `raw` (analyst/approver) và được ghi audit `SCRIPT_RAW_VIEW`. Kênh PowerShell cần bật Script Block Logging và có thể chứa dữ liệu nhạy cảm: xem
-`docs/architecture/w8/telemetry-defender-powershell-proposal.md` mục 2.3–2.8. Mỗi kênh có checkpoint riêng
+có rule Defender `DACN-DET-201`/`DACN-DET-202` (alert nguồn `EXTERNAL_DEFENDER`); rule PowerShell `DACN-DET-203`/`DACN-DET-204` (alert chỉ chứa tên mẫu và sha256, không chứa văn bản script). Xem script của alert PowerShell qua `GET /alerts/{id}/script`: mặc định **đã che** chuỗi giống bí mật (heuristic, không bảo đảm che hết); `?reveal=true` cần vai trò có quyền `raw` (analyst/approver) và được ghi audit `SCRIPT_RAW_VIEW`. Kênh PowerShell cần bật Script Block Logging (Windows PowerShell 5.1) và có thể chứa dữ liệu nhạy cảm, kể cả mọi lệnh gõ tay (đừng
+dán token hay mật khẩu vào lệnh khi kênh này bật). Bật trên VM lab (Administrator), theo mục 2.4 của
+`docs/architecture/w8/telemetry-defender-powershell-proposal.md`:
+```powershell
+New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging" -Force | Out-Null
+Set-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging" -Name EnableScriptBlockLogging -Value 1
+Get-ItemProperty "HKLM:\Software\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging"     # EnableScriptBlockLogging : 1
+```
+Quyền đọc: trên VM đã thử, nhóm Event Log Readers đọc được cả hai kênh (SDDL, mục 12.2 của tài liệu đề xuất). Lần đầu bật kênh, agent
+đọc toàn bộ lịch sử log (không có checkpoint), nên sẽ có alert từ sự kiện cũ. Chi tiết dữ liệu nhạy cảm, kích thước log: mục 2.3–2.8. Mỗi kênh có checkpoint riêng
 `C:\dacn_edr\agent\checkpoint_live_<kênh>.json`; Sysmon kế thừa `checkpoint_live.json` cũ (tệp cũ được giữ).
 
 `config\response-policy.yaml` mặc định **dry_run**; **không đổi** trừ khi bạn chủ động chạy PH7-T10. Policy dùng biến `%TEMP%`, `%PUBLIC%`, `%SystemRoot%`, `%ProgramFiles%`, `%ProgramFiles(x86)%` (có sẵn trên Windows).
@@ -94,7 +103,7 @@ Remove-Item -Recurse -Force C:\dacn_edr, C:\dacn_venv                # xóa dữ
 ## 9. Kiểm thử trên Linux (không cần Windows)
 ```bash
 pip install -r requirements.txt
-python -m pytest -q            # 395 pass khi có lightgbm (đo 2026-11-22); một số test cần node + playwright (tự bỏ qua nếu thiếu)
+python -m pytest -q            # 690 pass, 2 skipped khi KHÔNG có lightgbm (đo 2026-11-28); một số test cần node + playwright (tự bỏ qua nếu thiếu)
 ```
 
 ## Giới hạn đã biết
