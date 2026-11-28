@@ -15,6 +15,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from alerts.evidence import resolve_evidence
+from alerts.scriptblock_view import script_for_alert
+from common.redact import redact
 from alerts.process_view import CATEGORIES as PROC_EVENT_KINDS, process_events, process_tree_view, search_processes
 from alerts.store import TRANSITIONS, AlertStore, InvalidTransition
 from alerts.timeline import process_tree, timeline
@@ -384,7 +386,34 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
                 e["raw_xml"] = None
             if e.get("silver"):
                 e["silver"].pop("raw_data", None)
+                # PowerShell 4104: văn bản script có thể chứa bí mật (w8 mục 2.7) -> che nếu không xem raw (quyền `raw` + audit ở trên)
+                if not include_raw and e["silver"].get("script_block_text") is not None:
+                    e["silver"]["script_block_text"], hits = redact(e["silver"]["script_block_text"])
+                    e["silver"]["script_redacted"] = True
+                    e["silver"]["redaction_rules"] = sorted(set(hits))
         return ev
+
+    @app.get("/alerts/{alert_id}/script", tags=["evidence"])
+    def alert_script(alert_id: str, reveal: bool = False, who: dict = Depends(need("read"))):
+        """Văn bản script block đã ghép của alert PowerShell (DACN-DET-203/204). Mặc định ĐÃ CHE chuỗi giống bí mật
+        (heuristic, không bảo đảm che hết). reveal=true cần quyền `raw` và ghi audit SCRIPT_RAW_VIEW."""
+        if reveal and "raw" not in ROLES[who["role"]]:
+            raise HTTPException(403, "vai trò không được xem script gốc")
+        with lock:
+            a = get_alert(alert_id)
+            sb = script_for_alert(con, a["contributing_event_ids"])
+            if sb is None:
+                raise HTTPException(404, "alert không có script block PowerShell")
+            if reveal:
+                alerts.record(who["actor"], "SCRIPT_RAW_VIEW", "alert", alert_id,
+                              f"xem script gốc script_block_id={sb['script_block_id']}")
+        if reveal:
+            sb.update(redacted=False, redaction_rules=[])
+        else:
+            sb["text"], hits = redact(sb["text"])
+            sb.update(redacted=True, redaction_rules=sorted(set(hits)), redaction_count=len(hits),
+                      note="đã che chuỗi giống bí mật bằng heuristic; không bảo đảm che hết")
+        return sb
 
     def _guid(alert_id: str) -> str:
         a = get_alert(alert_id)

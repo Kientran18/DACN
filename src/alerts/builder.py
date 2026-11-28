@@ -3,12 +3,8 @@ from __future__ import annotations
 
 from typing import Dict, Iterable
 
-from .evidence import _silver   # tra một sự kiện Silver theo event_id (dùng chung với evidence)
-
-
-def _first_event(con, event_id):
-    """Gồm cả bảng chỉ dùng nội bộ (PowerShell 4104): chỉ lấy hostname/thời điểm/trường gom, không đưa văn bản vào alert."""
-    return _silver(con, event_id, internal=True)
+from .evidence import _silver as _first_event   # tra một sự kiện Silver theo event_id (dùng chung với evidence)
+# Với hàng PowerShell 4104 builder chỉ dùng hostname/thời điểm/script_block_id; văn bản script không vào alert.
 
 BUCKET_SECONDS = 600   # cửa sổ dedup nhóm: giá trị tạm, chưa hiệu chỉnh
 

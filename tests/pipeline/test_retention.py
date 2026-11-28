@@ -62,3 +62,19 @@ def test_corrupt_manifest_is_unknown_not_crash(tmp_path, manifest):
     rep = plan_retention(tmp_path, st.con, raw_days=30, now=NOW)
     assert [u["segment"] for u in rep["unknown"]] == ["seg-bad.jsonl"]
     assert [c["segment"] for c in rep["would_delete"]] == ["seg-ok.jsonl"]
+
+
+def test_powershell_segments_can_have_shorter_threshold_without_default(tmp_path):
+    """D8 (docs/architecture/w8): ngưỡng riêng cho segment PowerShell 4104, chỉ khi người dùng đặt; không có mặc định."""
+    import windows_channels as wc
+    from pipeline.retention import POWERSHELL_SEGMENT_PREFIX
+    assert POWERSHELL_SEGMENT_PREFIX == "seg-" + wc.channel_slug(wc.POWERSHELL_CHANNEL) + "-"
+    st = SilverStore(tmp_path / "s.duckdb")
+    seg(tmp_path, "seg-20261101T000000Z-0001.jsonl", 10)                                   # Sysmon
+    seg(tmp_path, POWERSHELL_SEGMENT_PREFIX + "20261101T000000Z-0001.jsonl", 10)          # PowerShell
+    same = plan_retention(tmp_path, st.con, raw_days=30, now=NOW)
+    assert same["would_delete"] == [] and same["powershell_raw_days"] is None              # bỏ trống = dùng raw_days
+    short = plan_retention(tmp_path, st.con, raw_days=30, now=NOW, powershell_raw_days=7)
+    assert [c["segment"] for c in short["would_delete"]] == [POWERSHELL_SEGMENT_PREFIX + "20261101T000000Z-0001.jsonl"]
+    with pytest.raises(ValueError, match="powershell_raw_days"):
+        plan_retention(tmp_path, st.con, raw_days=30, now=NOW, powershell_raw_days=0)

@@ -57,7 +57,7 @@ Kênh Event Log của agent live nằm ở mục `agent.channels` trong `edr.yam
 kênh Windows Defender và PowerShell **tắt**; bật bằng `enabled: true` chỉ để thử trên VM lab. **Chưa kiểm chứng trên Windows**
 (2026-11-28; mới có test với nguồn giả trên Linux và mẫu XML thật nạp ở file mode): agent ghi bản ghi các kênh này vào Bronze
 (`bronze-event/1.1`), pipeline nạp vào bảng Silver `silver_defender_events`, `silver_powershell_scriptblock_events` (DDL v1.3 đề xuất);
-có rule Defender `DACN-DET-201`/`DACN-DET-202` (alert nguồn `EXTERNAL_DEFENDER`); rule PowerShell `DACN-DET-203`/`DACN-DET-204` (alert chỉ chứa tên mẫu và sha256, không chứa văn bản script; API hiện **không trả** script). Kênh PowerShell cần bật Script Block Logging và có thể chứa dữ liệu nhạy cảm: xem
+có rule Defender `DACN-DET-201`/`DACN-DET-202` (alert nguồn `EXTERNAL_DEFENDER`); rule PowerShell `DACN-DET-203`/`DACN-DET-204` (alert chỉ chứa tên mẫu và sha256, không chứa văn bản script). Xem script của alert PowerShell qua `GET /alerts/{id}/script`: mặc định **đã che** chuỗi giống bí mật (heuristic, không bảo đảm che hết); `?reveal=true` cần vai trò có quyền `raw` (analyst/approver) và được ghi audit `SCRIPT_RAW_VIEW`. Kênh PowerShell cần bật Script Block Logging và có thể chứa dữ liệu nhạy cảm: xem
 `docs/architecture/w8/telemetry-defender-powershell-proposal.md` mục 2.3–2.8. Mỗi kênh có checkpoint riêng
 `C:\dacn_edr\agent\checkpoint_live_<kênh>.json`; Sysmon kế thừa `checkpoint_live.json` cũ (tệp cũ được giữ).
 
@@ -79,6 +79,7 @@ Xem nhật ký: `python -m edr_ctl logs --config C:\dacn_edr\edr.yaml --name age
 python -m pipeline.retention --config C:\dacn_edr\edr.yaml --raw-days 30 --out C:\dacn_edr\retention_report.json
 ```
 Ngưỡng `--raw-days` do bạn quyết định. Lệnh này không xóa tệp nào; segment là bằng chứng của alert chưa đóng được giữ lại (`EVIDENCE_HOLD`).
+Tùy chọn `--powershell-raw-days <n>`: ngưỡng riêng (ngắn hơn) cho segment kênh PowerShell 4104, vì script có thể chứa bí mật; bỏ trống thì dùng chung `--raw-days`. Dry-run không dọn Silver.
 
 ## 7. Chạy kịch bản mô phỏng
 Xem `scripts\lab\README.md` (đọc script, chạy `-WhatIf`, rồi chạy thật) và đối chiếu bằng `tests\e2e\compare_expected.py`.

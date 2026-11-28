@@ -59,7 +59,7 @@ def only(results, rid):
     return [r for r in results if r.rule_id == rid]
 
 
-def test_det203_match_alert_has_no_script_text_and_evidence_is_withheld(tmp_path):
+def test_det203_match_alert_has_no_script_text(tmp_path):
     e = Env(tmp_path)
     secret = "SYNTHETIC-NOT-A-SECRET-123"
     e.ingest([ps_xml(10, 1, 1, f"$p = '{secret}'; $s = 'x' | {IEX}")])
@@ -71,9 +71,9 @@ def test_det203_match_alert_has_no_script_text_and_evidence_is_withheld(tmp_path
     dumped = json.dumps(a, default=str)
     assert secret not in dumped and IEX not in dumped                 # không có văn bản script trong alert
     assert json.loads(a["mitre_technique_ids"]) == ["T1059.001"] and a["detection_source"] == "RULE"
+    # Hàm nội bộ trả nguyên văn (để API quyết định che); che ở tầng API được kiểm trong tests/api/test_script_redaction.py
     ev = resolve_evidence(e.st.con, out["alerts"][0], tmp_path / "b1")
-    assert ev["events"][0]["silver"] is None and ev["events"][0]["raw_xml"] is None    # API chưa trả script (hạng mục 8)
-    assert secret not in json.dumps(ev, default=str)
+    assert ev["status"] == "FULL" and secret in ev["events"][0]["silver"]["script_block_text"]
 
 
 def test_benign_block_no_result(tmp_path):

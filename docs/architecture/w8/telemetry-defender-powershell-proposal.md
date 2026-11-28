@@ -1,6 +1,6 @@
 # Đề xuất bổ sung telemetry Microsoft Defender và PowerShell Script Block Logging
 
-> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–3, 5–7 xong ngày 2026-11-28, xem mục 12).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
+> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–3, 5–8 xong ngày 2026-11-28, xem mục 12).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
 > Data/Cyber; chưa có review độc lập của nhóm Data/Cyber. Người dùng nói "bắt đầu" ngày 2026-11-28. Tài liệu này không
 > thay đổi contract `bronze-event/1.0`, DDL v1.1, DDL v1.2, ADR, README hay kế hoạch 12 tuần. Mọi ánh xạ field gắn nhãn **[CHƯA XÁC MINH]**
 > giữ nguyên nhãn đó cho tới khi có mẫu XML thật từ VM (mục 2.8); phê duyệt thiết kế không xác minh các field này.
@@ -748,3 +748,30 @@ Hệ quả cần biết: nhiễu của DET-202 (5007 nội bộ, `low` = 10 đi�
 Kiểm thử (Linux, Python 3.13, không có `lightgbm`): `python -m pytest -q` → 615 pass, 2 skipped, 0 fail.
 
 Quyết định triển khai **chờ duyệt**: trọng số 1.0 và trần 60 cho `EXTERNAL_AV`; quy tắc nhận diện theo tiền tố `EXTERNAL_` của `detection_source`.
+
+### 12.6. Ngày 2026-11-28: hạng mục 8 (API che bí mật, xem script có kiểm soát, retention PowerShell)
+
+| Thay đổi | Tệp |
+|---|---|
+| Hàm che chuỗi giống bí mật (heuristic): khối private key, `ConvertTo-SecureString '...'`, tham số `-Password/-Token/-ApiKey...`, gán `password=`/`api_key:`..., `Bearer ...`, khóa dạng `AKIA...`, chuỗi dài ≥ 40 ký tự có cả hoa/thường/số | `src/common/redact.py` (mới) |
+| Ghép script block của một alert, đánh dấu phần thiếu `[... THIẾU PHẦN n ...]` (không bịa) | `src/alerts/scriptblock_view.py` (mới) |
+| `GET /alerts/{id}/script`: mặc định trả bản **đã che** + danh sách luật đã áp dụng; `?reveal=true` cần quyền `raw` và ghi `audit_log` `SCRIPT_RAW_VIEW` (actor, alert, script_block_id) | `src/api/app.py` |
+| Evidence: nay tra cả bảng PowerShell; `script_block_text` được che khi không `include_raw`; `raw_xml` vẫn chỉ trả khi `include_raw` (quyền `raw`, audit `EVIDENCE_RAW_VIEW` như trước) | `src/alerts/evidence.py`, `src/api/app.py` |
+| Retention dry-run: `--powershell-raw-days` tùy chọn, **không có mặc định** (bỏ trống = dùng `--raw-days`), áp cho segment có tiền tố kênh PowerShell. Đáp ứng điều kiện D8: số ngày là cấu hình do người dùng chọn | `src/pipeline/retention.py` |
+| Test: 17 test API/che + 1 test retention; sửa 1 test hạng mục 6 (evidence nội bộ nay trả nguyên văn, API che) | `tests/api/test_script_redaction.py`, `tests/pipeline/test_retention.py`, `tests/detection/test_powershell_rules.py` |
+
+**Khác thiết kế P1 (mục 2.7):** P1 ghi "vai trò `admin` xem bản gốc", nhưng hệ thống không có vai trò admin (chỉ `viewer`, `analyst`,
+`approver`, `responder`). Đã dùng quyền `raw` hiện có (analyst, approver), đúng cơ chế đang áp cho `raw_xml`, kèm audit mỗi lần xem.
+Nếu muốn chặt hơn (ví dụ chỉ approver), cần quyết định thêm quyền riêng.
+
+Giới hạn:
+- Che là heuristic: bí mật không theo mẫu (mật khẩu trần trong chuỗi bình thường, biến ghép) vẫn lộ ở bản "đã che". Bản gốc vẫn nằm
+  nguyên ở Bronze/Silver (ADR 0003); ai đọc trực tiếp tệp/DuckDB trên máy vẫn thấy.
+- Luật `long_token` cũng che payload base64 dài (DET-204); người điều tra cần `reveal` để xem.
+- Retention xóa thật vẫn chưa có (chỉ dry-run); Silver PowerShell không bị dọn.
+
+Kiểm tra trên mẫu thật (scratchpad): 20 script block 4104 lành tính của người dùng → 0 lần che (không che nhầm). Mẫu nhỏ.
+
+Kiểm thử (Linux, Python 3.13, không có `lightgbm`): `python -m pytest -q` → 633 pass, 2 skipped, 0 fail.
+
+Quyết định triển khai **chờ duyệt**: dùng quyền `raw` thay vai trò admin; danh sách luật che; ngưỡng 40 ký tự của `long_token`.
