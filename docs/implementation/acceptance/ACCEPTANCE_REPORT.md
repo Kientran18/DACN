@@ -5,8 +5,8 @@
 
 ## Môi trường chạy
 
-- Thời điểm (UTC): 2026-11-28T13:33:12Z · thời lượng: 81.7 s
-- Commit: `ced63a7` (cây làm việc có thay đổi chưa commit)
+- Thời điểm (UTC): 2026-11-28T14:17:20Z · thời lượng: 85.8 s
+- Commit: `0bc2a3b` (cây làm việc có thay đổi chưa commit)
 - Python 3.13.18 · Linux 6.18.44-fc-v880
 - Thư viện: pytest 9.1.1, duckdb 2.0.1, fastapi 0.165.0, uvicorn 0.54.0, httpx 0.29.0, pydantic 2.13.5, PyYAML 6.0.3, jsonschema 4.26.0
 - Mức bằng chứng: L (Linux, dữ liệu synthetic/giả lập); W (Windows) chưa chạy
@@ -16,9 +16,9 @@
 | Trạng thái | Số AT |
 |---|---|
 | PASS | 28 |
-| PARTIAL | 4 |
+| PARTIAL | 6 |
 | FAIL | 0 |
-| NOT RUN | 17 |
+| NOT RUN | 18 |
 
 PARTIAL = test đạt nhưng catalog ghi rõ phần Expected chưa được phủ tự động.
 
@@ -699,3 +699,106 @@ PARTIAL = test đạt nhưng catalog ghi rõ phần Expected chưa được ph�
 - **Expected:** Block nhiều phần ghép đủ; DET-203/204 MATCH; /script che chuỗi giả theo mặc định; reveal chỉ cho quyền raw và có audit SCRIPT_RAW_VIEW
 - **Actual:** Cần Windows 10 VM thật; Claude không chạy được.
 - **Known limitations:** Quan sát thủ công 2026-11-28, một VM, một lần (w8 mục 12.11): 554/554 block ghép đủ (33 nhiều phần); 548/554 nối UNIQUE về powershell.exe; /script redacted, viewer reveal 403, analyst reveal có audit. Nút xem bản gốc trên dashboard chưa quan sát
+
+### AT-50 · R-03 · mức L · **PARTIAL**
+
+- **Mục tiêu:** Nạp tập con rule Sigma theo manifest ghim sha256; rule không hỗ trợ bị loại kèm mã SIG-E* và lý do
+- **Preconditions:** config/sigma-rules.yaml (mặc định tắt), src/detection/sigma/manifest.yaml (28 rule SigmaHQ @ddf1d4f87fd2)
+- **Steps:** 1. PYTHONPATH=src:poc/sysmon-collector python -m detection.sigma list; 2. python -m detection.sigma check <tệp.yml>
+- **Expected:** 28 rule nạp được, 0 bị loại; rule sai sha256/logsource/field/modifier/condition/keyword/status bị loại đúng mã; trùng rule_id loại mọi bên; mặc định tắt
+- **Actual:** 53 test pytest đạt, 0 lỗi
+- **Evidence (pytest node):**
+  - `tests/detection/test_sigma_compiler.py::test_equals_case_insensitive_and_wildcards` → passed
+  - `tests/detection/test_sigma_compiler.py::test_question_mark_and_escaped_wildcard` → passed
+  - `tests/detection/test_sigma_compiler.py::test_contains_startswith_endswith_list_is_or` → passed
+  - `tests/detection/test_sigma_compiler.py::test_contains_all_is_and` → passed
+  - `tests/detection/test_sigma_compiler.py::test_cased_modifier` → passed
+  - `tests/detection/test_sigma_compiler.py::test_regex_search_case_sensitive_unless_i` → passed
+  - `tests/detection/test_sigma_compiler.py::test_windash_expands_dash_and_slash_at_word_start` → passed
+  - `tests/detection/test_sigma_compiler.py::test_cidr` → passed
+  - `tests/detection/test_sigma_compiler.py::test_base64offset_contains_matches_any_alignment` → passed
+  - `tests/detection/test_sigma_compiler.py::test_utf16le_base64offset` → passed
+  - `tests/detection/test_sigma_compiler.py::test_base64_plain` → passed
+  - `tests/detection/test_sigma_compiler.py::test_null_and_exists` → passed
+  - `tests/detection/test_sigma_compiler.py::test_numeric_compare_and_int_value_equality` → passed
+  - `tests/detection/test_sigma_compiler.py::test_fieldref` → passed
+  - `tests/detection/test_sigma_compiler.py::test_condition_and_not_with_explanation` → passed
+  - `tests/detection/test_sigma_compiler.py::test_one_of_them_and_parentheses_and_or` → passed
+  - `tests/detection/test_sigma_compiler.py::test_missing_field_gives_unknown_with_missing_list` → passed
+  - `tests/detection/test_sigma_compiler.py::test_unknown_is_absorbed_by_definite_false` → passed
+  - `tests/detection/test_sigma_compiler.py::test_field_not_defined_for_event_type_is_false_not_unknown` → passed
+  - `tests/detection/test_sigma_compiler.py::test_rejections[det0-SIG-E004]` → passed
+  - `tests/detection/test_sigma_compiler.py::test_rejections[det1-SIG-E004]` → passed
+  - `tests/detection/test_sigma_compiler.py::test_rejections[det2-SIG-E004]` → passed
+  - `tests/detection/test_sigma_compiler.py::test_rejections[det3-SIG-E005]` → passed
+  - `tests/detection/test_sigma_compiler.py::test_rejections[det4-SIG-E005]` → passed
+  - `tests/detection/test_sigma_compiler.py::test_rejections[det5-SIG-E005]` → passed
+  - `tests/detection/test_sigma_compiler.py::test_rejections[det6-SIG-E005]` → passed
+  - `tests/detection/test_sigma_compiler.py::test_rejections[det7-SIG-E005]` → passed
+  - `tests/detection/test_sigma_compiler.py::test_rejections[det8-SIG-E006]` → passed
+  - `tests/detection/test_sigma_compiler.py::test_rejections[det9-SIG-E003]` → passed
+  - `tests/detection/test_sigma_compiler.py::test_rejections[det10-SIG-E010]` → passed
+  - `tests/detection/test_sigma_compiler.py::test_rejections[det11-SIG-E010]` → passed
+  - `tests/detection/test_sigma_compiler.py::test_unsupported_logsource_rejected` → passed
+  - `tests/detection/test_sigma_compiler.py::test_commandline_in_file_event_rejected_not_in_sysmon_event11` → passed
+  - `tests/detection/test_sigma_compiler.py::test_windefend_eventids_outside_collected_set_noted` → passed
+  - `tests/detection/test_sigma_loader.py::test_packaged_manifest_loads_all_selected_rules` → passed
+  - `tests/detection/test_sigma_loader.py::test_level_status_and_mitre_mapping` → passed
+  - `tests/detection/test_sigma_loader.py::test_disabled_config_loads_nothing_but_reports` → passed
+  - `tests/detection/test_sigma_loader.py::test_default_config_is_disabled` → passed
+  - `tests/detection/test_sigma_loader.py::test_config_rejects_unknown_key` → passed
+  - `tests/detection/test_sigma_loader.py::test_rules_dir_merge_has_no_collision` → passed
+  - `tests/detection/test_sigma_loader.py::test_local_rule_loads` → passed
+  - `tests/detection/test_sigma_loader.py::test_sha256_mismatch_rejected` → passed
+  - `tests/detection/test_sigma_loader.py::test_id_mismatch_rejected` → passed
+  - `tests/detection/test_sigma_loader.py::test_prefix_collision_rejects_both` → passed
+  - `tests/detection/test_sigma_loader.py::test_experimental_needs_flag_and_informational_or_deprecated_rejected` → passed
+  - `tests/detection/test_sigma_loader.py::test_max_rules` → passed
+  - `tests/detection/test_sigma_loader.py::test_unsupported_logsource_and_missing_file` → passed
+  - `tests/detection/test_sigma_loader.py::test_multi_document_rejected` → passed
+  - `tests/detection/test_sigma_loader.py::test_sha256_ignores_crlf_line_endings` → passed
+  - `tests/detection/test_sigma_loader.py::test_manifest_sha_matches_files_in_repo` → passed
+  - `tests/detection/test_sigma_cli.py::test_check_supported_prints_manifest_entry` → passed
+  - `tests/detection/test_sigma_cli.py::test_check_rejected_has_code` → passed
+  - `tests/detection/test_sigma_cli.py::test_list_default_config` → passed
+- **Chưa phủ:** Thiết kế Sigma người dùng duyệt thay Cyber (docs/implementation/SIGMA_RULES.md mục 2), chưa review độc lập
+- **Known limitations:** Dữ liệu synthetic; độ phủ cú pháp không phải tỷ lệ phát hiện
+
+### AT-51 · R-03 · mức L · **PARTIAL**
+
+- **Mục tiêu:** Rule Sigma chạy trong DetectionEngine, ra DetectionResult -> alert detection_source SIGMA có giải thích và ghi công tác giả; không response
+- **Preconditions:** Fixture Silver synthetic có nhãn (tests/detection/test_sigma_engine.py)
+- **Steps:** 1. Chạy DetectionEngine với rule DACN + rule Sigma; 2. AlertBuilder; 3. GET /sigma/rules, /alerts?source=SIGMA; 4. Dashboard: nguồn Sigma, khung Rule Sigma
+- **Expected:** TP/TN/INSUFFICIENT đúng nhãn; script 4104 không vào kết quả; alert có matched_fields.sigma và attribution.author; nhóm rủi ro SIGMA không cộng thưởng đa dạng với RULE; module Sigma không import response
+- **Actual:** 19 test pytest đạt, 0 lỗi
+- **Evidence (pytest node):**
+  - `tests/detection/test_sigma_engine.py::test_labeled_fixture_outcomes` → passed
+  - `tests/detection/test_sigma_engine.py::test_scriptblock_assembled_and_text_not_copied` → passed
+  - `tests/detection/test_sigma_engine.py::test_explanation_and_attribution` → passed
+  - `tests/detection/test_sigma_engine.py::test_alerts_have_sigma_source_and_gaps_for_insufficient` → passed
+  - `tests/detection/test_sigma_engine.py::test_default_rules_have_no_sigma` → passed
+  - `tests/detection/test_sigma_engine.py::test_sigma_rule_change_triggers_rescan_without_duplicates` → passed
+  - `tests/detection/test_sigma_safety.py::test_sigma_package_never_imports_response_or_exec` → passed
+  - `tests/detection/test_sigma_safety.py::test_all_sigma_rules_alert_only` → passed
+  - `tests/detection/test_sigma_safety.py::test_validator_rejects_sigma_misuse` → passed
+  - `tests/api/test_sigma_api.py::test_sigma_rules_listing_and_detail` → passed
+  - `tests/api/test_sigma_api.py::test_sigma_rules_when_disabled_or_absent` → passed
+  - `tests/api/test_sigma_api.py::test_alerts_source_filter_sigma` → passed
+  - `tests/risk/test_sigma_risk.py::test_config_v3_has_sigma` → passed
+  - `tests/risk/test_sigma_risk.py::test_sigma_points_and_cap` → passed
+  - `tests/risk/test_sigma_risk.py::test_sigma_and_rule_are_not_independent_for_diversity` → passed
+  - `tests/risk/test_sigma_risk.py::test_config_without_sigma_rejected` → passed
+  - `tests/risk/test_sigma_risk.py::test_service_maps_sigma_alert_to_sigma_category` → passed
+  - `tests/dashboard/test_dashboard_sigma.py::test_dashboard_sigma` → passed
+  - `tests/e2e/test_atomic_compare.py::test_sigma_option_reports_sigma_matches_separately_and_keeps_verdicts` → passed
+- **Chưa phủ:** Mọi rule Sigma synthetic_only; level chưa hiệu chỉnh cho DACN
+- **Known limitations:** Dữ liệu synthetic; chưa đo hiệu năng
+
+### AT-52 · R-03 · mức W · **NOT RUN**
+
+- **Mục tiêu:** Rule Sigma trên Windows 10 VM - nạp đủ sau checkout Windows, so rule khớp DACN và Sigma theo atomic, alert Sigma truy vết tới raw_xml
+- **Preconditions:** Windows 10 VM như AT-47; config/sigma-rules.yaml enabled true
+- **Steps:** 1. Theo docs/implementation/acceptance/SIGMA_VM_GUIDE.md mục 3-5 (V-S1..V-S3); 2. python tests\e2e\atomic_compare.py ... --sigma
+- **Expected:** 28 loaded, 0 rejected; báo cáo atomic_compare có mục so sánh DACN và Sigma; alert Sigma có khung Rule Sigma và evidence FULL
+- **Actual:** Cần Windows 10 VM thật; Claude không chạy được.
+- **Known limitations:** CHƯA chạy trên VM

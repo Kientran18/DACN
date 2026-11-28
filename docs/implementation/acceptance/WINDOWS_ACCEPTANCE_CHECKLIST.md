@@ -213,3 +213,15 @@
 - Status: PASS / FAIL / NOT RUN _(chọn)_
 - Evidence: _(lệnh, đầu ra, ảnh chụp đã che định danh)_
 - Known limitations: Quan sát thủ công 2026-11-28, một VM, một lần (w8 mục 12.11): 554/554 block ghép đủ (33 nhiều phần); 548/554 nối UNIQUE về powershell.exe; /script redacted, viewer reveal 403, analyst reveal có audit. Nút xem bản gốc trên dashboard chưa quan sát
+
+## AT-52 · Rule Sigma trên Windows 10 VM - nạp đủ sau checkout Windows, so rule khớp DACN và Sigma theo atomic, alert Sigma truy vết tới raw_xml
+
+- Preconditions: Windows 10 VM như AT-47; config/sigma-rules.yaml enabled true
+- Steps:
+  1. Theo docs/implementation/acceptance/SIGMA_VM_GUIDE.md mục 3-5 (V-S1..V-S3)
+  2. python tests\e2e\atomic_compare.py ... --sigma
+- Expected: 28 loaded, 0 rejected; báo cáo atomic_compare có mục so sánh DACN và Sigma; alert Sigma có khung Rule Sigma và evidence FULL
+- Actual: _(điền)_
+- Status: PASS / FAIL / NOT RUN _(chọn)_
+- Evidence: _(lệnh, đầu ra, ảnh chụp đã che định danh)_
+- Known limitations: CHƯA chạy trên VM

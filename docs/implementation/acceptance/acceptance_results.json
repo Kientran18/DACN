@@ -1,8 +1,8 @@
 {
   "meta": {
-    "run_utc": "2026-11-28T13:33:12Z",
-    "duration_s": 81.7,
-    "commit": "ced63a7",
+    "run_utc": "2026-11-28T14:17:20Z",
+    "duration_s": 85.8,
+    "commit": "0bc2a3b",
     "dirty": true,
     "python": "3.13.18",
     "os": "Linux 6.18.44-fc-v880",
@@ -10,8 +10,8 @@
     "pytest_exit_code": 0,
     "counts": {
       "PASS": 28,
-      "NOT RUN": 17,
-      "PARTIAL": 4
+      "NOT RUN": 18,
+      "PARTIAL": 6
     },
     "packages": {
       "pytest": "9.1.1",
@@ -1755,6 +1755,349 @@
       ],
       "expected": "Block nhiều phần ghép đủ; DET-203/204 MATCH; /script che chuỗi giả theo mặc định; reveal chỉ cho quyền raw và có audit SCRIPT_RAW_VIEW",
       "limits": "Quan sát thủ công 2026-11-28, một VM, một lần (w8 mục 12.11): 554/554 block ghép đủ (33 nhiều phần); 548/554 nối UNIQUE về powershell.exe; /script redacted, viewer reveal 403, analyst reveal có audit. Nút xem bản gốc trên dashboard chưa quan sát",
+      "gaps": "",
+      "tests": [],
+      "actual": "Cần Windows 10 VM thật; Claude không chạy được.",
+      "status": "NOT RUN"
+    },
+    {
+      "id": "AT-50",
+      "req": "R-03",
+      "level": "L",
+      "goal": "Nạp tập con rule Sigma theo manifest ghim sha256; rule không hỗ trợ bị loại kèm mã SIG-E* và lý do",
+      "pre": "config/sigma-rules.yaml (mặc định tắt), src/detection/sigma/manifest.yaml (28 rule SigmaHQ @ddf1d4f87fd2)",
+      "steps": [
+        "PYTHONPATH=src:poc/sysmon-collector python -m detection.sigma list",
+        "python -m detection.sigma check <tệp.yml>"
+      ],
+      "expected": "28 rule nạp được, 0 bị loại; rule sai sha256/logsource/field/modifier/condition/keyword/status bị loại đúng mã; trùng rule_id loại mọi bên; mặc định tắt",
+      "limits": "Dữ liệu synthetic; độ phủ cú pháp không phải tỷ lệ phát hiện",
+      "gaps": "Thiết kế Sigma người dùng duyệt thay Cyber (docs/implementation/SIGMA_RULES.md mục 2), chưa review độc lập",
+      "tests": [
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_equals_case_insensitive_and_wildcards",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_question_mark_and_escaped_wildcard",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_contains_startswith_endswith_list_is_or",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_contains_all_is_and",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_cased_modifier",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_regex_search_case_sensitive_unless_i",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_windash_expands_dash_and_slash_at_word_start",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_cidr",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_base64offset_contains_matches_any_alignment",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_utf16le_base64offset",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_base64_plain",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_null_and_exists",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_numeric_compare_and_int_value_equality",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_fieldref",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_condition_and_not_with_explanation",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_one_of_them_and_parentheses_and_or",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_missing_field_gives_unknown_with_missing_list",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_unknown_is_absorbed_by_definite_false",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_field_not_defined_for_event_type_is_false_not_unknown",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_rejections[det0-SIG-E004]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_rejections[det1-SIG-E004]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_rejections[det2-SIG-E004]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_rejections[det3-SIG-E005]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_rejections[det4-SIG-E005]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_rejections[det5-SIG-E005]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_rejections[det6-SIG-E005]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_rejections[det7-SIG-E005]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_rejections[det8-SIG-E006]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_rejections[det9-SIG-E003]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_rejections[det10-SIG-E010]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_rejections[det11-SIG-E010]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_unsupported_logsource_rejected",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_commandline_in_file_event_rejected_not_in_sysmon_event11",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_compiler.py::test_windefend_eventids_outside_collected_set_noted",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_loader.py::test_packaged_manifest_loads_all_selected_rules",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_loader.py::test_level_status_and_mitre_mapping",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_loader.py::test_disabled_config_loads_nothing_but_reports",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_loader.py::test_default_config_is_disabled",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_loader.py::test_config_rejects_unknown_key",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_loader.py::test_rules_dir_merge_has_no_collision",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_loader.py::test_local_rule_loads",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_loader.py::test_sha256_mismatch_rejected",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_loader.py::test_id_mismatch_rejected",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_loader.py::test_prefix_collision_rejects_both",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_loader.py::test_experimental_needs_flag_and_informational_or_deprecated_rejected",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_loader.py::test_max_rules",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_loader.py::test_unsupported_logsource_and_missing_file",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_loader.py::test_multi_document_rejected",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_loader.py::test_sha256_ignores_crlf_line_endings",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_loader.py::test_manifest_sha_matches_files_in_repo",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_cli.py::test_check_supported_prints_manifest_entry",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_cli.py::test_check_rejected_has_code",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_cli.py::test_list_default_config",
+          "outcome": "passed"
+        }
+      ],
+      "actual": "53 test pytest đạt, 0 lỗi",
+      "status": "PARTIAL"
+    },
+    {
+      "id": "AT-51",
+      "req": "R-03",
+      "level": "L",
+      "goal": "Rule Sigma chạy trong DetectionEngine, ra DetectionResult -> alert detection_source SIGMA có giải thích và ghi công tác giả; không response",
+      "pre": "Fixture Silver synthetic có nhãn (tests/detection/test_sigma_engine.py)",
+      "steps": [
+        "Chạy DetectionEngine với rule DACN + rule Sigma",
+        "AlertBuilder",
+        "GET /sigma/rules, /alerts?source=SIGMA",
+        "Dashboard: nguồn Sigma, khung Rule Sigma"
+      ],
+      "expected": "TP/TN/INSUFFICIENT đúng nhãn; script 4104 không vào kết quả; alert có matched_fields.sigma và attribution.author; nhóm rủi ro SIGMA không cộng thưởng đa dạng với RULE; module Sigma không import response",
+      "limits": "Dữ liệu synthetic; chưa đo hiệu năng",
+      "gaps": "Mọi rule Sigma synthetic_only; level chưa hiệu chỉnh cho DACN",
+      "tests": [
+        {
+          "node": "tests/detection/test_sigma_engine.py::test_labeled_fixture_outcomes",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_engine.py::test_scriptblock_assembled_and_text_not_copied",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_engine.py::test_explanation_and_attribution",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_engine.py::test_alerts_have_sigma_source_and_gaps_for_insufficient",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_engine.py::test_default_rules_have_no_sigma",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_engine.py::test_sigma_rule_change_triggers_rescan_without_duplicates",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_safety.py::test_sigma_package_never_imports_response_or_exec",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_safety.py::test_all_sigma_rules_alert_only",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/detection/test_sigma_safety.py::test_validator_rejects_sigma_misuse",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/api/test_sigma_api.py::test_sigma_rules_listing_and_detail",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/api/test_sigma_api.py::test_sigma_rules_when_disabled_or_absent",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/api/test_sigma_api.py::test_alerts_source_filter_sigma",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/risk/test_sigma_risk.py::test_config_v3_has_sigma",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/risk/test_sigma_risk.py::test_sigma_points_and_cap",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/risk/test_sigma_risk.py::test_sigma_and_rule_are_not_independent_for_diversity",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/risk/test_sigma_risk.py::test_config_without_sigma_rejected",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/risk/test_sigma_risk.py::test_service_maps_sigma_alert_to_sigma_category",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/dashboard/test_dashboard_sigma.py::test_dashboard_sigma",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/e2e/test_atomic_compare.py::test_sigma_option_reports_sigma_matches_separately_and_keeps_verdicts",
+          "outcome": "passed"
+        }
+      ],
+      "actual": "19 test pytest đạt, 0 lỗi",
+      "status": "PARTIAL"
+    },
+    {
+      "id": "AT-52",
+      "req": "R-03",
+      "level": "W",
+      "goal": "Rule Sigma trên Windows 10 VM - nạp đủ sau checkout Windows, so rule khớp DACN và Sigma theo atomic, alert Sigma truy vết tới raw_xml",
+      "pre": "Windows 10 VM như AT-47; config/sigma-rules.yaml enabled true",
+      "steps": [
+        "Theo docs/implementation/acceptance/SIGMA_VM_GUIDE.md mục 3-5 (V-S1..V-S3)",
+        "python tests\\e2e\\atomic_compare.py ... --sigma"
+      ],
+      "expected": "28 loaded, 0 rejected; báo cáo atomic_compare có mục so sánh DACN và Sigma; alert Sigma có khung Rule Sigma và evidence FULL",
+      "limits": "CHƯA chạy trên VM",
       "gaps": "",
       "tests": [],
       "actual": "Cần Windows 10 VM thật; Claude không chạy được.",
