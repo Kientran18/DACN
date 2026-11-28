@@ -62,7 +62,9 @@ Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết qu�
 - Điểm rủi ro: hiệu chỉnh trọng số và ngưỡng trên kịch bản lab và tải lành tính; Cyber duyệt cách gộp severity; hiệu năng khi có nhiều alert.
 - Phê duyệt liên nhóm: DDL v1.2, schema `DetectionResult`, hostname D-07, tên event type (Q-X3), số hiệu DET-101, mã lỗi `R-*`/`A-*`, ADR 0004/0007, các schema/contract W06–W07 (`docs/architecture/w6/contracts/`, `docs/architecture/w7/contracts/`), bảng `static_candidates` và số hiệu `DACN-STATIC-001`.
 
-**Kết quả test mới nhất (2026-11-28, Linux, Python 3.13, KHÔNG có `lightgbm`, sau khi thêm công cụ báo cáo hạng mục 11):** `python -m pytest -q` → **650 pass, 2 skipped, 0 fail** (thêm 5 test `tests/e2e/test_w8_channel_report.py`). Hướng dẫn chạy hạng mục 11 trên VM: `docs/implementation/acceptance/W8_DEFENDER_POWERSHELL_VM_GUIDE.md` (**chưa chạy**).
+**Kết quả test mới nhất (2026-11-28, Linux, Python 3.13, KHÔNG có `lightgbm`, sau khi sửa lỗi hiệu năng nạp Silver):** `python -m pytest -q` → **656 pass, 2 skipped, 0 fail** (thêm 5 test `tests/pipeline/test_ingest_batching.py`, 1 test `tests/core/test_core_loop.py`). Lỗi quan sát trên Windows 10 VM khi chạy hạng mục 11 (một lần): core nạp khoảng 4 bản ghi/giây (0,42 s/bản ghi, thời gian nằm ở các lệnh DuckDB), một vòng nạp 1.962 s nên Detection không chạy. Sửa: nạp theo lô, segment cũ nhất trước, ngân sách nạp 20 s mỗi vòng, `pending_segments` trong `/health`; Linux 500 bản ghi 3,8 s → 0,6 s; **chưa đo lại trên VM**. Hạng mục 11: V1 đạt, V2 cho thấy PID của 4104 bằng PID `powershell.exe` (một lần), V3–V7 chưa chạy (xem `docs/architecture/w8/telemetry-defender-powershell-proposal.md` mục 12.10).
+
+**Kết quả test (2026-11-28, sau khi thêm công cụ báo cáo hạng mục 11):** `python -m pytest -q` → 650 pass, 2 skipped, 0 fail (thêm 5 test `tests/e2e/test_w8_channel_report.py`). Hướng dẫn: `docs/implementation/acceptance/W8_DEFENDER_POWERSHELL_VM_GUIDE.md`.
 
 **Kết quả test (2026-11-28, sau hạng mục 4 nối tiến trình):** `python -m pytest -q` → 645 pass, 2 skipped, 0 fail (thêm 10 test `tests/alerts/test_process_link.py`, 3 kiểm tra Playwright).
 

@@ -828,3 +828,35 @@ Hai dòng thử DET-203/DET-204 trong hướng dẫn đã được kiểm với 
 báo cáo mới thay thế. Lưu ý quan sát từ code: lần đầu bật kênh không có checkpoint, `EventLogSource` đọc từ bản ghi cũ nhất (`EvtQuery`
 chiều tiến), nên alert từ sự kiện cũ (EICAR/A09 ngày 2026-11-26, 5007) sẽ xuất hiện; đây là hành vi đúng, không phải FP mới.
 
+### 12.10. Ngày 2026-11-28: lượt chạy đầu hạng mục 11 trên VM (người dùng chạy) và sửa lỗi hiệu năng nạp
+
+Quan sát (một Windows 10 VM, một lần; số liệu do người dùng chụp lại):
+
+| Bước | Kết quả |
+|---|---|
+| V1 | Agent đọc ba kênh: `state` idle, ba kênh idle, `errors={}`; ba checkpoint riêng; lần đầu đọc lịch sử: Sysmon 9.173, Defender 314, PowerShell 313 sự kiện. `/health` agent `REPORTED`. DLQ 5 dòng (chưa biết thuộc kênh nào) |
+| V2 | Script lành tính khoảng 50.000 ký tự chạy được. `Get-WinEvent`: các 4104 của cửa sổ thử có `ProcessId` **bằng `$PID`** của `powershell.exe` đó (3 sự kiện V3 cùng PID). Đây là quan sát đầu tiên ủng hộ giả định của `PID_IMAGE_LIFETIME` (mục 12.8); một lần, một VM. Chưa xem được nhãn nối trên DACN vì lỗi dưới |
+| V3 | Dừng. Agent đã đọc 4104 của V3 (`events_written` 313 → 377), nhưng không có alert DET-203/204 mới; 6 kết quả DET-203 MATCH nhiều khả năng từ lịch sử log |
+
+Nguyên nhân V3 (đo trên VM): core nạp quá chậm. `metrics.jsonl`: một vòng nạp 46 segment, 7.569 bản ghi trong **1.962 giây** (khoảng
+3,9 bản ghi/giây), CPU-bound; hàng đợi 185–193 segment; Detection chỉ chạy sau khi nạp hết hàng đợi, và hàng đợi xếp theo tên nên
+segment PowerShell/Defender (`seg-microsoft...`) đứng sau mọi segment Sysmon (`seg-2026...`). Profile trên bản sao Silver (khoảng 59.000
+dòng lineage): segment Sysmon 500 bản ghi mất 209 giây (0,42 giây/bản ghi), thời gian nằm ở các lệnh DuckDB: `_insert` 0,27 giây/lệnh
+và phần còn lại trong `ingest_segment` (INSERT lineage, commit); `checkpoint` chỉ 0,38 giây. Trên Linux cùng cỡ DB: 7,6 ms/bản ghi.
+Vì sao mỗi lệnh DuckDB trên VM chậm như vậy **chưa rõ** (giả thuyết chưa kiểm: quét thời gian thực của Defender trên tệp DB/WAL,
+đĩa của VM; không tắt hay thêm loại trừ Defender khi chưa có quyết định của người dùng). Lỗi có từ trước hạng mục 1–9 (chỉ Sysmon cũng
+gặp); hai kênh mới và việc đọc lịch sử làm lộ rõ.
+
+Sửa (người dùng yêu cầu "làm cả 1 và 2"):
+
+| Thay đổi | Tệp |
+|---|---|
+| Nạp theo lô: adapter/validator từng bản ghi như cũ, rồi tra trùng một truy vấn mỗi bảng, INSERT nhiều dòng (tối đa 200 dòng/lệnh) cho bảng Silver và lineage. Số lệnh DuckDB mỗi segment không tăng theo số bản ghi (khoảng 10 thay vì khoảng 2 mỗi bản ghi). Ngữ nghĩa giữ nguyên: bản đầu tiên của một `event_id` được ghi, bản sau là duplicate hoặc `ERR_EVENT_ID_COLLISION` (kể cả trong cùng segment), DLQ như cũ, một transaction mỗi segment | `src/pipeline/silver_store.py` |
+| `ingest_dir`: segment niêm phong sớm nhất trước (mtime, rồi tên); `max_seconds` tùy chọn, luôn nạp ít nhất một segment | `src/pipeline/silver_store.py` |
+| Core: ngân sách nạp 20 giây mỗi vòng (`DEFAULT_INGEST_BUDGET_S`, chọn tay, chưa đo) rồi chạy Detection; `metrics.jsonl` và `/health` (`core.last_ingest`) có `pending_segments` | `src/core/service.py`, `src/pipeline/worker.py` |
+| Test | `tests/pipeline/test_ingest_batching.py` (5), `tests/core/test_core_loop.py` (+1) |
+
+Đo trên Linux (dữ liệu synthetic, DB khoảng 128.000 dòng lineage): 500 bản ghi từ 3,8 giây xuống 0,6 giây. **Chưa đo lại trên VM**;
+nếu chi phí trên VM là theo lệnh, kỳ vọng giảm mạnh, nếu theo dòng thì giảm ít. Hướng dẫn mục 3 và 5 đã sửa: bỏ câu sai về niêm phong
+300 giây (ở `--live` agent niêm phong cuối mỗi lượt đọc), chặn `$id` rỗng, xem `pending_segments`.
+

@@ -39,3 +39,23 @@ def test_real_cycle_with_unreadable_manifest_quarantines_segment_instead_of_rais
     seg.with_suffix(".manifest.json").write_text(good)               # manifest hoàn chỉnh: vòng sau nạp được
     m = svc.cycle()
     assert m["segments_ingested"] == 1 and m["records_inserted"] > 0
+
+
+def test_cycle_ingest_budget_lets_detection_run_with_backlog(tmp_path):
+    """Lỗi quan sát trên Windows 10 VM (2026-11-28): một vòng nạp hết hàng đợi mất 1.962 s, Detection chờ suốt thời gian đó.
+    Với ngân sách, mỗi vòng nạp >= 1 segment rồi chạy Detection; hàng đợi giảm dần qua các vòng."""
+    bdir = tmp_path / "b"
+    xmls = list(bc.iter_raw_xml_from_file(SYN))
+    for k in range(3):
+        w = BronzeWriter(bdir, name_prefix=f"x{k}-")
+        for i, x in enumerate(xmls):
+            w.append(bc.build_bronze_record(x, mode="file", seq=i))
+        w.seal()
+    st = SilverStore(tmp_path / "s.duckdb")
+    svc = CoreService(st, bdir, tmp_path / "m.jsonl", ingest_budget_s=0)
+    m = svc.cycle()
+    assert m["segments_ingested"] == 1 and m["pending_segments"] == 2
+    assert st.con.execute("select count(*) from _detection_cursor").fetchone()[0] == 1     # Detection đã chạy
+    svc.cycle(); m = svc.cycle()
+    assert m["pending_segments"] == 0
+    assert svc.status()["last_ingest"]["pending_segments"] == 0                          # /health thấy được hàng đợi

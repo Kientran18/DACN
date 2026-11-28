@@ -1,6 +1,9 @@
 # Hướng dẫn hạng mục 11: kiểm thử kênh Windows Defender và PowerShell 4104 trên Windows 10 VM
 
-> **Trạng thái (2026-11-28):** chưa ai chạy hướng dẫn này. Mã nguồn tương ứng (hạng mục 1–9 và 4 của
+> **Trạng thái (2026-11-28):** lượt chạy đầu đã làm xong V1, V2 rồi dừng ở V3 vì lỗi hiệu năng của core: nạp chỉ khoảng 2–4 bản
+> ghi/giây, một vòng nạp mất 1.962 giây nên Detection không chạy. Đã sửa (nạp theo lô, ngân sách nạp mỗi vòng, segment cũ nhất
+> trước), nhưng **chưa đo lại trên VM**. Kết quả lượt đầu: mục 12.10 của tài liệu đề xuất.
+> Mã nguồn tương ứng (hạng mục 1–9 và 4 của
 > `docs/architecture/w8/telemetry-defender-powershell-proposal.md`) mới được kiểm thử trên Linux: nguồn giả, fixture synthetic và 28 sự
 > kiện thật nạp ở file mode. Mọi chữ "Mong đợi" dưới đây là **dự kiến suy ra từ code**, chưa phải kết quả đo. Bước nào lỗi thì ghi
 > lại đầu ra, gửi cho Claude và **đừng tự sửa code**. Lỗi cũng là kết quả có giá trị.
@@ -148,8 +151,9 @@ Mong đợi:
 - Ba checkpoint: `checkpoint_live_microsoft_windows_sysmon_operational.json`, `..._windows_defender_operational.json`,
   `..._powershell_operational.json`. Checkpoint Sysmon chép từ `checkpoint_live.json` cũ, tệp cũ vẫn còn.
 - Segment Bronze có ba nhóm tên: `seg-<thời điểm>` (Sysmon), `seg-microsoft_windows_windows_defender_operational`,
-  `seg-microsoft_windows_powershell_operational`. Segment chỉ được niêm phong khi đủ 5000 bản ghi, 8 MiB, mở quá 300 giây (có bản ghi
-  mới), hoặc khi dừng. Lúc đầu có thể mới thấy tệp `.jsonl.part`.
+  `seg-microsoft_windows_powershell_operational`. Ở chế độ `--live`, agent niêm phong segment ở cuối **mỗi lượt đọc** có sự kiện
+  (`src/agent/runner.py`), nên hầu như không còn tệp `.jsonl.part`. Mỗi segment có thêm một tệp `.manifest.json`, nên số tệp không
+  phải số segment.
 - `events_written` của Defender và PowerShell tăng dần cho tới khi đọc hết lịch sử (mỗi lượt đọc tối đa 500 sự kiện mỗi kênh, xoay vòng).
   **Chờ tới khi hai số này đứng yên** rồi mới sang V2. Ghi lại thời gian chờ và hai con số.
 
@@ -158,7 +162,11 @@ Kiểm tra qua API (cần `$HV` ở mục 1.3):
 ```powershell
 $r = Invoke-RestMethod "$API/health" -Headers $HV
 $r.agent.status; $r.pipeline | Format-List
+$r.core.last_ingest | Format-List      # pending_segments: số segment đã niêm phong chưa nạp
 ```
+
+`core.last_ingest.pending_segments` phải giảm dần về gần 0 sau khi đọc hết lịch sử. Nếu nó tăng mãi, core nạp không kịp: dừng lại và
+gửi `C:\dacn_edr\metrics.jsonl` (10 dòng cuối) cho Claude.
 
 Mong đợi: `agent.status` là `REPORTED`, không phải `DEGRADED`, `ERROR` hay `STALE`.
 
@@ -220,14 +228,15 @@ Mong đợi (đã thử hai dòng này với hàm của rule trên Linux, chưa 
   `securestring_plaintext`).
 - Dòng 2: DET-204 MATCH (giải mã UTF-16LE ra `invoke-expression`); DET-203 **không** MATCH dòng này.
 
-Đợi khoảng 1 phút để core nạp. Nếu chưa thấy alert, xem lưu ý về niêm phong segment ở V1: segment PowerShell có thể chưa niêm phong.
-Khi đó chờ 5 phút sau sự kiện cuối, hoặc kiểm tra bằng báo cáo ở mục 9 (báo cáo tự nạp segment còn thiếu). Sau đó kiểm tra qua API.
+Đợi khoảng 1 phút để core nạp. Trước khi gọi API, kiểm tra `(Invoke-RestMethod "$API/health" -Headers $HV).core.last_ingest`:
+`pending_segments` phải gần 0. Nếu còn lớn, core đang nạp phần cũ hơn: chờ thêm.
 Gọi API từ cửa sổ A (đã có `$HV`, `$HA`) để không thêm 4104 vào cửa sổ C:
 
 ```powershell
 $ps = (Invoke-RestMethod "$API/alerts?limit=200" -Headers $HV).items | Where-Object { $_.rule_id -in "DACN-DET-203","DACN-DET-204" }
 $ps | Select-Object alert_id, rule_id, severity, first_seen_utc, source_label | Format-Table
 $id = ($ps | Where-Object rule_id -eq "DACN-DET-203" | Sort-Object first_seen_utc | Select-Object -Last 1).alert_id
+if (-not $id) { throw "Chưa có alert DET-203: xem pending_segments ở trên, chờ thêm rồi chạy lại từ dòng `$ps = ..." }
 $s = Invoke-RestMethod "$API/alerts/$id/script" -Headers $HV
 $s.redacted; $s.redaction_rules; $s.text.Contains("DacnW8FakeValue123"); $s.text.Contains("ĐÃ CHE")
 try { Invoke-RestMethod "$API/alerts/$id/script?reveal=true" -Headers $HV } catch { $_.Exception.Response.StatusCode }   # viewer: phải 403
@@ -267,6 +276,7 @@ Sau khoảng 1–5 phút, từ cửa sổ A:
 $d = (Invoke-RestMethod "$API/alerts?source=DEFENDER&limit=200" -Headers $HV).items
 $d | Select-Object alert_id, rule_id, severity, first_seen_utc, source_label, detection_source | Format-Table
 $id = ($d | Where-Object rule_id -eq "DACN-DET-201" | Sort-Object first_seen_utc | Select-Object -Last 1).alert_id
+if (-not $id) { throw "Chưa có alert DET-201: xem core.last_ingest.pending_segments trong /health, chờ thêm" }
 $l = Invoke-RestMethod "$API/alerts/$id/process-links" -Headers $HV
 $l.events | ForEach-Object { $_.links | Select-Object method, confidence, @{n="n_candidates"; e={$_.candidates.Count}} } | Format-Table
 $e = Invoke-RestMethod "$API/alerts/$id/evidence?include_raw=true" -Headers $HA

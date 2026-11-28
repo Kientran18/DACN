@@ -15,10 +15,17 @@ from detection.loader import load_rules
 from pipeline.worker import IngestWorker
 
 
+# Ngân sách nạp mỗi vòng (giây): hết ngân sách thì chạy Detection rồi nạp tiếp ở vòng sau. Giá trị chọn tay, chưa đo;
+# lý do: trên Windows 10 VM (2026-11-28) một vòng nạp hết hàng đợi mất 1.962 s, alert mới chờ suốt thời gian đó.
+DEFAULT_INGEST_BUDGET_S = 20.0
+
+
 class CoreService:
     def __init__(self, store, bronze_dir: Path, metrics_path: Path, rules: Optional[Dict[str, dict]] = None,
-                 ioc_path: Optional[Path] = None, lock: Optional[threading.RLock] = None, ml_runner=None):
+                 ioc_path: Optional[Path] = None, lock: Optional[threading.RLock] = None, ml_runner=None,
+                 ingest_budget_s: Optional[float] = DEFAULT_INGEST_BUDGET_S):
         self.store, self.lock = store, lock or threading.RLock()
+        self.ingest_budget_s = ingest_budget_s
         self.rules = rules if rules is not None else load_rules()
         self.ioc_path = ioc_path
         self.worker = IngestWorker(bronze_dir, store, metrics_path, lock=self.lock)
@@ -27,6 +34,7 @@ class CoreService:
         self.log = get_logger("core")
         self.last_error = None          # {"at_utc", "type", "message"} của vòng lỗi gần nhất
         self.last_ok_utc = None
+        self.last_ingest = None         # số liệu nạp của vòng gần nhất (segment, hàng đợi còn lại, thời gian)
         # Tín hiệu ML (tắt mặc định): chỉ góp vào điểm rủi ro, không tạo alert, không gọi response.
         self.ml_runner = ml_runner
         self.ml_last_error = None
@@ -34,13 +42,14 @@ class CoreService:
 
     def status(self) -> dict:
         enabled = self.ml_runner.enabled() if self.ml_runner else {"ML_STATIC": False, "ML_BEHAVIOR": False}
-        return {"last_error": self.last_error, "last_cycle_ok_utc": self.last_ok_utc,
+        return {"last_error": self.last_error, "last_cycle_ok_utc": self.last_ok_utc, "last_ingest": self.last_ingest,
                 "ml": {"enabled": enabled, "last_run": self.ml_last_run, "last_error": self.ml_last_error}}
 
     def cycle(self) -> dict:
         """Một vòng: nạp segment mới, chạy rule, dựng alert. Khóa chỉ giữ theo từng pha (ingest khóa theo từng
         segment) để API không bị chặn cả vòng; con trỏ phát hiện nằm trong DB nên pha nào lỡ dở sẽ chạy lại."""
-        m = self.worker.run_once()
+        m = self.worker.run_once(max_seconds=self.ingest_budget_s)
+        self.last_ingest = {k: m.get(k) for k in ("ts", "segments_ingested", "records_read", "elapsed_s", "pending_segments")}
         with self.lock:
             eng = DetectionEngine(self.store.con, rules=self.rules, ioc=IocStore(self.ioc_path) if self.ioc_path else IocStore())
             eng.run()
