@@ -1,8 +1,7 @@
 # Hướng dẫn hạng mục 11: kiểm thử kênh Windows Defender và PowerShell 4104 trên Windows 10 VM
 
-> **Trạng thái (2026-11-28):** lượt chạy đầu đã làm xong V1, V2 rồi dừng ở V3 vì lỗi hiệu năng của core: nạp chỉ khoảng 2–4 bản
-> ghi/giây, một vòng nạp mất 1.962 giây nên Detection không chạy. Đã sửa (nạp theo lô, ngân sách nạp mỗi vòng, segment cũ nhất
-> trước), nhưng **chưa đo lại trên VM**. Kết quả lượt đầu: mục 12.10 của tài liệu đề xuất.
+> **Trạng thái (2026-11-28):** đã chạy một lượt trên một VM. Lượt đầu dừng ở V3 vì lỗi hiệu năng nạp (mục 12.10 của tài liệu đề
+> xuất); sau bản sửa `208a713`, V1–V7 đạt, trừ phần bấm nút xem bản gốc trên dashboard ở V3 (mục 12.11).
 > Mã nguồn tương ứng (hạng mục 1–9 và 4 của
 > `docs/architecture/w8/telemetry-defender-powershell-proposal.md`) mới được kiểm thử trên Linux: nguồn giả, fixture synthetic và 28 sự
 > kiện thật nạp ở file mode. Mọi chữ "Mong đợi" dưới đây là **dự kiến suy ra từ code**, chưa phải kết quả đo. Bước nào lỗi thì ghi

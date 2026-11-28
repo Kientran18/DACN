@@ -1,6 +1,6 @@
 # Đề xuất bổ sung telemetry Microsoft Defender và PowerShell Script Block Logging
 
-> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–9 xong ngày 2026-11-28, xem mục 12; còn 11: kiểm thử trên VM, hướng dẫn đã soạn ở mục 12.9).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
+> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–9 xong ngày 2026-11-28, xem mục 12; 11: lượt chạy đầu trên VM xong ngày 2026-11-28, xem mục 12.11).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
 > Data/Cyber; chưa có review độc lập của nhóm Data/Cyber. Người dùng nói "bắt đầu" ngày 2026-11-28. Tài liệu này không
 > thay đổi contract `bronze-event/1.0`, DDL v1.1, DDL v1.2, ADR, README hay kế hoạch 12 tuần. Mọi ánh xạ field gắn nhãn **[CHƯA XÁC MINH]**
 > giữ nguyên nhãn đó cho tới khi có mẫu XML thật từ VM (mục 2.8); phê duyệt thiết kế không xác minh các field này.
@@ -859,4 +859,33 @@ Sửa (người dùng yêu cầu "làm cả 1 và 2"):
 Đo trên Linux (dữ liệu synthetic, DB khoảng 128.000 dòng lineage): 500 bản ghi từ 3,8 giây xuống 0,6 giây. **Chưa đo lại trên VM**;
 nếu chi phí trên VM là theo lệnh, kỳ vọng giảm mạnh, nếu theo dòng thì giảm ít. Hướng dẫn mục 3 và 5 đã sửa: bỏ câu sai về niêm phong
 300 giây (ở `--live` agent niêm phong cuối mỗi lượt đọc), chặn `$id` rỗng, xem `pending_segments`.
+
+### 12.11. Ngày 2026-11-28: kết quả lượt chạy hạng mục 11 trên VM (sau bản sửa `208a713`)
+
+Một Windows 10 VM, Defender bật (real-time, tamper protection), Sysmon v15.22, Script Block Logging bật; người dùng chạy **một lần**
+theo `docs/implementation/acceptance/W8_DEFENDER_POWERSHELL_VM_GUIDE.md`; số liệu từ ảnh chụp và `w8_channel_report.py`
+(`--since` = thời điểm bắt đầu V1). Đây là quan sát, không phải tỷ lệ phát hiện hay tỷ lệ FP.
+
+| Mã | Kết quả | Bằng chứng |
+|---|---|---|
+| V1 | Đạt | Ba kênh idle, `errors={}`, ba checkpoint riêng; `/health` agent `REPORTED` |
+| V2 | Đạt | Block dài ghép đủ: 554 script block, 33 nhiều phần, **554/554** có mặt trong `v_powershell_scriptblocks_complete` (không block thiếu phần). Nối tiến trình 4104: **548/554 `UNIQUE`**, ảnh ứng viên đều là `powershell.exe`; 6 `NONE`; `none_but_pid_has_other_image = 0` (không thấy PID nào thuộc ảnh khác). `Get-WinEvent`: `ProcessId` của 4104 = `$PID` của cửa sổ thử. Kích thước phần lớn nhất 19.452 ký tự (mẫu trước 17.651) |
+| V3 | Đạt (trừ phần dashboard) | DET-203 MATCH dòng có `Invoke-Expression`, DET-204 MATCH dòng base64 (không MATCH DET-203). `/script`: `redacted=True`, luật `securestring_plaintext`, chuỗi giả không còn; viewer `reveal` → 403; analyst `reveal` thấy bản gốc; chi tiết alert không chứa chuỗi giả. Kiểm tra chữ "ĐÃ CHE" ra False vì lệnh gõ "DA CHE" không dấu (lỗi kiểm tra, không phải lỗi che). Audit: `SCRIPT_RAW_VIEW` = 1, tức nút xem bản gốc trên dashboard **chưa được bấm/chưa quan sát** |
+| V4 | Đạt | EICAR qua SC05: Defender 1116 (Real-Time Protection, `file`) rồi 1117 `Quarantine`; một alert DET-201 (2 sự kiện), `source_label` Defender; evidence `FULL`, có `raw_xml` và tham chiếu Bronze. Nối tiến trình: `FILE_CREATE` **UNIQUE** (Sysmon có Event 11 cho tệp EICAR trong `dacn_lab`, trả lời câu hỏi mở của 6.3); `PROCESS_NAME_LIFETIME` AMBIGUOUS (6 ứng viên cùng ảnh) |
+| V5 | Đạt (kỳ vọng tối thiểu) | A02: Defender chặn khi tạo tiến trình (`Access is denied`), `Trojan:Win32/Powessere.K` (`CmdLine`), DET-201 có, không có 4104 từ A02. A03: AMSI chặn khi phân tích cú pháp (`ScriptContainedMaliciousContent`), Defender `Trojan:PowerShell/Mimikatz.A` (`CmdLine`) và `Trojan:PowerShell/PSAttackTool.A` (`amsi`), DET-201 có; DET-203 không MATCH A03 (tên cmdlet không thuộc 9 mẫu, như dự kiến). `Resources` của mọi phát hiện không trỏ vào `C:\dacn_edr\` (giả thuyết "Defender quét tệp DACN" bị bác bỏ) |
+| V6 | Đạt | 4104 phát sinh khi agent và core dừng (RecordId 914) có trong Silver sau khi chạy lại (`count = 1`). Event Log kể từ mốc: 4104 = 459 (đếm trước khi dừng), Silver = 465 (sau đó còn lệnh mới); Defender = 8, Silver = 8 |
+| V7 | Đạt | Bronze: Sysmon chỉ `SYSMON` (63.994), PowerShell chỉ `POWERSHELL` (760), Defender chỉ `WINDOWS_DEFENDER` (322), `channel_mismatch = 0`; `open_part_files = 0`; ledger cân bằng ở cả ba kênh; DLQ 6 dòng đều `ERR_UNSUPPORTED_EVENT_ID` ở kênh **Sysmon** (0 ở kênh mới); `response_actions` rỗng; `alerts_with_process_guid_new_rules = 0` |
+
+Phát hiện mới (chưa sửa, chờ người dùng quyết):
+1. **Một phát hiện Defender bị tách thành hai alert DET-201.** `detection_id` `f21b…` (PSAttackTool, AMSI): 1116 lúc 02:38:55 và 1117 lúc
+   02:40:27 (giờ VM) rơi vào hai khung `BUCKET_SECONDS = 600` cố định (`src/alerts/builder.py`), nên thành hai alert. Đề xuất: rule có
+   `group_by_field` (Defender theo `detection_id`, PowerShell theo `script_block_id`) gom không theo khung thời gian.
+2. **5 alert DET-203 từ `Import-Module invoke-atomicredteam`** (mẫu `net.webclient`, `reflection.assembly]::load`, `invoke-expression`;
+   suy ra từ thời điểm, chưa đối chiếu `script_path`). Quan sát FP với công cụ quản trị/kiểm thử; DET-203 vốn ghi giới hạn này.
+3. **5007 nhiễu:** 306 sự kiện 5007 trong Silver → 11 alert DET-202 `low` (gom theo khung 10 phút). Vẫn chờ quyết định loại trừ.
+4. **Checkpoint DuckDB chậm trên VM**: một `checkpoint` sau khi nạp 500 bản ghi mất 124,88 giây (Linux dưới 1 giây); chưa thấy ảnh hưởng
+   trong lượt chạy (hàng đợi về 0), nguyên nhân chưa rõ.
+5. Hiệu năng sau bản sửa: segment 500 bản ghi 209 s → 7,2 s trên VM; khi chạy live mỗi vòng nạp 0,07–0,3 s, `pending_segments = 0`.
+
+Kiểm tra chưa làm: một kênh thiếu quyền (`degraded`) trên VM; nút xem bản gốc trên dashboard; 5001/5013 (không có sự kiện).
 
