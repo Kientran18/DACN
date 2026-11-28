@@ -595,10 +595,10 @@ Làm trước cổng chặn "mẫu XML thật" (hạng mục 0) vì không phụ
 | `/health` báo `DEGRADED` khi `state = degraded` | `src/api/app.py` |
 | Fixture SYNTHETIC (tên `Data Name` là giả thuyết, gắn nhãn) và test | `tests/fixtures/windows_channels/`, `tests/pipeline/test_bronze_v11_channels.py`, `tests/agent/test_multichannel.py`, `tests/api/test_api.py`, `tests/agent/test_runner.py`, `tests/agent/test_eventlog_source.py` |
 
-Quyết định triển khai nhỏ phát sinh (cần ghi nhận, chưa nằm trong D1–D10):
+Quyết định triển khai nhỏ phát sinh (ngoài D1–D10; **người dùng duyệt `C-007`, `CFG-006` và `degraded` ngày 2026-11-28**, thay cho Data/Software, chưa có review độc lập):
 - **Mã collector mới `C-007`** (kênh không được hỗ trợ): sự kiện kênh lạ (ví dụ file mode đọc export Security) bị từ chối ở collector,
   ghi `collector_errors.jsonl` kèm `raw_xml`, thay vì gắn nhãn sai `SYSMON`. Bảng mã C-001..C-006 trong
-  `docs/research/software/w5/01-collector-to-bronze-interface-contract-v1.md` chưa được sửa; cần Data/Software bổ sung.
+  `docs/research/software/w5/01-collector-to-bronze-interface-contract-v1.md` đã bổ sung dòng C-007 (2026-11-28).
 - **Mã cấu hình `CFG-006`** (danh sách kênh không hợp lệ hoặc kênh không hỗ trợ; agent thoát mã 2).
 - **Trạng thái health `degraded`** và `/health` status `DEGRADED`.
 - Tên segment Sysmon giữ nguyên `seg-<thời gian>-<n>`; kênh khác `seg-<slug>-<thời gian>-<n>`.

@@ -107,6 +107,7 @@ Collector (Software)                         Validation (Data)
 | C-004 | Ghi đĩa thất bại (đầy ổ, từ chối quyền) | Collector | Dừng nạp, **không** nâng checkpoint, cảnh báo |
 | C-005 | Bookmark hỏng, hoặc mất bản ghi (stale) | Collector | Bắt đầu từ bản ghi cũ nhất còn lại, ghi sự kiện `COLLECTOR_INTERNAL` về khoảng hở |
 | C-006 | Không có quyền đọc channel (access denied) | Collector | Dừng, báo lỗi rõ ràng |
+| C-007 | Channel không được hỗ trợ (bổ sung 2026-11-28, người dùng duyệt; xem `docs/architecture/w8/telemetry-defender-powershell-proposal.md` mục 12) | Collector | Không tạo bản ghi Bronze (tránh gắn nhãn sai `source`); ghi `collector_errors.jsonl` kèm `raw_xml`, tăng bộ đếm, tiếp tục |
 | V-001 | Envelope sai schema, `schema_version` major lạ | Validation | `quarantine/validation`, giữ nguyên dòng gốc |
 | V-002 | `event_data` thiếu trường bắt buộc của loại sự kiện | Validation | Như V-001 |
 | V-003 | Ép kiểu thất bại (ví dụ `ProcessId` không phải số) | Validation | Như V-001 |
