@@ -1,6 +1,6 @@
 # Đề xuất bổ sung telemetry Microsoft Defender và PowerShell Script Block Logging
 
-> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–2 xong ngày 2026-11-28, xem mục 12).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
+> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–3 xong ngày 2026-11-28, xem mục 12).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
 > Data/Cyber; chưa có review độc lập của nhóm Data/Cyber. Người dùng nói "bắt đầu" ngày 2026-11-28. Tài liệu này không
 > thay đổi contract `bronze-event/1.0`, DDL v1.1, DDL v1.2, ADR, README hay kế hoạch 12 tuần. Mọi ánh xạ field gắn nhãn **[CHƯA XÁC MINH]**
 > giữ nguyên nhãn đó cho tới khi có mẫu XML thật từ VM (mục 2.8); phê duyệt thiết kế không xác minh các field này.
@@ -220,6 +220,8 @@ Tệp schema mới `bronze-event-1.1.schema.json` đặt cạnh tệp 1.0 (khôn
 | `writer_process_id` | Là tiến trình ghi sự kiện (Defender service hoặc chính `powershell.exe`), **không** mặc định là tiến trình bị giám sát. Với 4104, **[CHƯA XÁC MINH]** `System/Execution@ProcessID` chính là PID của `powershell.exe` chạy script; đây là đầu mối join với Sysmon (mục 4.6) |
 
 ### 3.4. Ánh xạ field
+
+> **Cập nhật 2026-11-28:** tên trường đã đối chiếu với mẫu XML thật đã khử định danh; kết quả và các giả thuyết được xác nhận/bác bỏ ở mục 12.2. Bảng dưới giữ nguyên để lưu vết thiết kế.
 
 **Defender 1116/1117.** Tài liệu Microsoft liệt kê **nhãn trong message**, không nói đó là `Data Name` trong XML **[MS-DOC]**:
 
@@ -613,3 +615,59 @@ Hiện trạng dữ liệu: bản ghi Defender/PowerShell vào Bronze đúng nh�
 Kiểm tra trên VM khi người dùng muốn (không bắt buộc trước hạng mục 3): bật một kênh mới trong `edr.yaml`, chạy
 `python -m agent run --config C:\dacn_edr\edr.yaml --live` (không `--follow`), xem `C:\dacn_edr\agent\health.json` mục `channels`
 và segment `seg-microsoft_windows_...` trong `bronze\`. Không gửi nội dung segment PowerShell (có thể chứa script/bí mật).
+
+### 12.2. Ngày 2026-11-28: đối chiếu mẫu XML thật và hạng mục 3 (Silver v1.3)
+
+**Mẫu nhận được** (người dùng xuất bằng `wevtutil qe` trên một Windows 10 VM, đã khử định danh: `LAB-HOST-01`, `LABUSER01`, SID giả;
+Defender Product Version 4.18.26100.4; Windows PowerShell 5.1). Mẫu **không** được commit; fixture trong
+`tests/fixtures/windows_channels/` dựng lại theo cấu trúc, với giá trị giả.
+
+| Tệp | Nội dung |
+|---|---|
+| defender_detect | 2 cặp 1116/1117: EICAR (Real-Time Protection, Quarantine) và `Trojan:Win32/Commandrob.A!ml` từ Atomic A09 (System, Remove) |
+| defender_cfg | 4 sự kiện 5007; **không có** 5001/5013 |
+| ps4104 | 20 sự kiện 4104 mới nhất: 13 block một phần và phần 13–19 của một block 19 phần |
+| `wevtutil gl` | `channelAccess` và `maxSize` của hai kênh |
+
+**Kết quả đối chiếu:**
+
+| Giả thuyết (mục 2–4) | Kết quả trên mẫu |
+|---|---|
+| Defender dùng `EventData/Data[@Name]` (không phải `UserData`) | **Xác nhận**. `event_data` đầy đủ, adapter khớp `raw_xml` |
+| Tên trường có khoảng trắng: `Threat Name`, `Threat ID`, `Severity Name`, `Category Name`, `Path`, `Process Name`, `Detection User`, `Action Name`, `Detection ID`, `Detection Time` | **Xác nhận**. Có thêm `Security intelligence Version`, `Engine Version`, `Source Name`, `Remediation User`, `Unused`..`Unused6` (rỗng). Nhãn trên trang Microsoft ("Name", "User", "Action") **không** phải `Data Name` |
+| Có trường nối 1116↔1117 | **Xác nhận**: `Detection ID` giống nhau ở 1116 và 1117 của cùng phát hiện (cả hai cặp) |
+| `Path` có tiền tố `file:_` | **Xác nhận**, và có thêm `CmdLine:_` (Atomic A09: Path là command line, không phải tệp). Path của A09 **bị cắt ngắn** giữa chừng |
+| `Process Name` có thể là "Unknown" | **Xác nhận** (A09). EICAR: đường dẫn đầy đủ `...\powershell.exe`. Không có PID |
+| 5007 có `Old value`/`New value` | Tên thật là `Old Value`/`New Value` (V hoa). Cả 4 mẫu là thay đổi nội bộ của Defender (`WdConfigHash`, `ServiceStartStates`, `InitializingComponentProgress`): 5007 đơn lẻ rất ồn, giữ severity thấp cho DET-202 |
+| 4104: `MessageNumber`, `MessageTotal`, `ScriptBlockText`, `ScriptBlockId`, `Path` | **Xác nhận** (đúng thứ tự này). `Path` rỗng khi chạy tương tác. Level 5 (Verbose), Task 2, Opcode 15 |
+| Script block lớn bị chia nhiều sự kiện | **Xác nhận**: block 19 phần, mỗi phần 17.651 ký tự (phần cuối ngắn hơn); các phần ghi liên tiếp trong cùng mili giây, EventRecordID tăng dần |
+| `System/Execution@ProcessID` của 4104 là PID của `powershell.exe` | **Chưa xác nhận**: mọi 4104 cùng PID 2888, khớp với một phiên PowerShell, nhưng chưa đối chiếu với Sysmon Event 1 cùng máy |
+| Event Log Readers đọc được hai kênh | SDDL `channelAccess` của **cả hai** kênh có `(A;;0x1;;;S-1-5-32-573)` (quyền đọc cho Event Log Readers). Mới đọc SDDL, **chưa** thử chạy agent bằng tài khoản không phải Administrator |
+| Kích thước log | `maxSize`: Defender 16.777.216 byte (16 MiB), PowerShell 15.728.640 byte (15 MiB); `retention: false` (ghi đè vòng). Chưa đo tốc độ ghi |
+| 5001, 5013 | **Chưa có mẫu**: chỉ lưu khung chung + `raw_data`; fixture `defender_5001.synthetic.xml` vẫn gắn nhãn giả thuyết |
+
+**Hạng mục 3 đã làm:**
+
+| Thay đổi | Tệp |
+|---|---|
+| DDL v1.3 (tệp riêng, không sửa v1.1/v1.2): `silver_defender_events`, `silver_powershell_scriptblock_events`, view `v_powershell_scriptblocks_complete`, 2 index | `src/pipeline/sql/silver_schema_v1_3_proposal_defender_powershell.sql` |
+| Validator riêng cho hai kênh, mã lỗi D5 (`ERR_UNSUPPORTED_CHANNEL`, `ERR_DEFENDER_MISSING_THREAT`, `ERR_PS_MISSING_SCRIPTBLOCK_FIELD`, `ERR_PS_INVALID_PART_NUMBER`) và mã W05 dùng lại | `src/pipeline/validator_windows_channels.py` |
+| `SilverStore` áp v1.3 và route theo kênh (Sysmon → validator W05 không đổi; Defender/PowerShell → validator mới); lineage, dedup, va chạm định danh dùng chung | `src/pipeline/silver_store.py` |
+| Fixture dựng theo cấu trúc thật (10 tệp) và 17 test | `tests/fixtures/windows_channels/`, `tests/pipeline/test_silver_windows_channels.py` |
+
+Khác biệt so với DDL nháp ở mục 4.2 (do mẫu thật):
+- `target_path` thay bằng `path_raw` (nguyên văn), `resource_type` (tiền tố trước `:_`, ví dụ `file`, `CmdLine`), `resource_value` (phần sau).
+  Chỉ tách tiền tố đầu tiên; nếu Path chứa nhiều tài nguyên thì giữ nguyên trong `resource_value` (chưa thấy trên mẫu).
+- Mọi giá trị Defender lưu dạng **chuỗi gốc** (kể cả `Severity ID`, `Action ID`): không ép kiểu, nên không có lỗi ép kiểu và không bịa giá trị.
+- Thêm `ingest_timestamp`, `source`, `level` (cả hai bảng), `user_sid` (4104), `remediation_user`, `source_name`, `origin_name`,
+  `execution_name`, `type_name`, `detection_time` (chuỗi gốc). Bỏ `detection_source`/`detection_type` (không có `Data Name` như vậy).
+- View gom theo (`hostname`, `script_block_id`, `message_total`) và chỉ nhận block có **đúng** `message_total` dòng với đủ số thứ tự.
+  Giới hạn: nếu cùng `ScriptBlockId` lặp lại (chạy lại cùng script, chưa xác minh có xảy ra không), block bị loại khỏi view; rule sẽ phải xét theo từng phần.
+
+Kiểm tra trên mẫu thật (scratchpad, không commit): 28 sự kiện → Bronze hợp lệ (28/28) → Silver 28 dòng, DLQ 0; 1116/1117 nối đúng
+qua `detection_id`; block 19 phần (chỉ có phần 13–19) **không** vào view, đúng thiết kế.
+
+Kiểm thử (Linux, Python 3.13, không có `lightgbm`): `python -m pytest -q` → 583 pass, 2 skipped, 0 fail. Chưa chạy trên Windows.
+
+Còn lại: hạng mục 4 (join tiến trình), 5–6 (rule DET-201..204), 7 (risk), 8 (API che bí mật; **trước khi xong hạng mục 8, văn bản
+script nằm nguyên trong Silver và có thể đọc qua truy vấn DuckDB trực tiếp**; API hiện chưa có endpoint đọc bảng này), 9 (dashboard), 11 (VM).

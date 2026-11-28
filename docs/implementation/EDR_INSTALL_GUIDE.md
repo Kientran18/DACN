@@ -55,8 +55,9 @@ Quy tắc hai người đang **bật** (`require_distinct_approver: true`): `--a
 
 Kênh Event Log của agent live nằm ở mục `agent.channels` trong `edr.yaml` (thiếu mục này = chỉ Sysmon). Tệp mẫu để
 kênh Windows Defender và PowerShell **tắt**; bật bằng `enabled: true` chỉ để thử trên VM lab. **Chưa kiểm chứng trên Windows**
-(2026-11-28; mới có test với nguồn giả trên Linux): agent ghi bản ghi các kênh này vào Bronze (`bronze-event/1.1`), nhưng Silver
-và rule cho chúng chưa triển khai nên bản ghi vào DLQ. Kênh PowerShell cần bật Script Block Logging và có thể chứa dữ liệu nhạy cảm: xem
+(2026-11-28; mới có test với nguồn giả trên Linux và mẫu XML thật nạp ở file mode): agent ghi bản ghi các kênh này vào Bronze
+(`bronze-event/1.1`), pipeline nạp vào bảng Silver `silver_defender_events`, `silver_powershell_scriptblock_events` (DDL v1.3 đề xuất);
+**chưa có rule** cho hai kênh và API **chưa che** văn bản script. Kênh PowerShell cần bật Script Block Logging và có thể chứa dữ liệu nhạy cảm: xem
 `docs/architecture/w8/telemetry-defender-powershell-proposal.md` mục 2.3–2.8. Mỗi kênh có checkpoint riêng
 `C:\dacn_edr\agent\checkpoint_live_<kênh>.json`; Sysmon kế thừa `checkpoint_live.json` cũ (tệp cũ được giữ).
 

@@ -86,8 +86,8 @@ def test_adapter_still_fails_closed_on_v11_identity():
         ad.to_silver_input(rec)
 
 
-def test_new_channels_do_not_enter_sysmon_tables_yet():
-    """Silver cho kênh mới chưa triển khai: validator Sysmon đưa vào DLQ, không ghi vào 4 bảng Sysmon, không mất âm thầm."""
+def test_sysmon_validator_never_accepts_new_channels():
+    """Validator Sysmon (W05) không nhận bản ghi kênh mới (SilverStore route chúng sang validator_windows_channels)."""
     for n in ("defender_1116.synthetic.xml", "ps4104_single.synthetic.xml"):
         eng = SilverValidatorEngine()
         assert not eng.process_record(ad.to_silver_input(bc.build_bronze_record(xml(n), mode="file")), "t")

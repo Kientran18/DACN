@@ -16,16 +16,21 @@ from typing import Dict, List
 import duckdb
 
 import bronze_to_silver_adapter as adapter
+import windows_channels as wc
 from validator_poc import SilverValidatorEngine
+from validator_windows_channels import WindowsChannelValidator
 
 from .segment_reader import SegmentError, read_segment
 from agent.bronze_writer import _sha256
 
 DDL = Path(__file__).parent / "sql" / "silver_gold_schema_and_views_v1_1.sql"
 DDL_V12 = Path(__file__).parent / "sql" / "silver_gold_schema_and_views_v1_2_proposal.sql"  # ĐỀ XUẤT, chưa duyệt
+# ĐỀ XUẤT v1.3: Windows Defender + PowerShell 4104 (người dùng duyệt D3 thay cho Data/Cyber; chưa review độc lập)
+DDL_V13 = Path(__file__).parent / "sql" / "silver_schema_v1_3_proposal_defender_powershell.sql"
 MAPPER_VERSION = "bronze_to_silver_adapter+validator_poc/v1.1-poc"
 TABLES = {"silver_process": "silver_process_events", "silver_file": "silver_file_events",
           "silver_registry": "silver_registry_events", "silver_network": "silver_network_events"}
+WIN_TABLES = ("silver_defender_events", "silver_powershell_scriptblock_events")
 
 LEDGER_DDL = """
 CREATE TABLE IF NOT EXISTS _ingest_ledger (
@@ -47,12 +52,13 @@ class SilverStore:
         self.con = duckdb.connect(str(path))
         self.con.execute(DDL.read_text(encoding="utf-8"))
         self.con.execute(DDL_V12.read_text(encoding="utf-8"))
+        self.con.execute(DDL_V13.read_text(encoding="utf-8"))
         self.con.execute(LEDGER_DDL)
         for ix in INDEXES:
             self.con.execute(ix)
         self._cols = {t: [r[0] for r in self.con.execute(
             "select column_name from information_schema.columns where table_name=? order by ordinal_position",
-            [t]).fetchall()] for t in list(TABLES.values()) + ["silver_quarantine_dlq"]}
+            [t]).fetchall()] for t in list(TABLES.values()) + list(WIN_TABLES) + ["silver_quarantine_dlq"]}
 
     def close(self):
         self.con.close()
@@ -120,16 +126,23 @@ class SilverStore:
                     self._dlq(code, "BRONZE_ADAPTER", str(exc), ref, rec)
                     res["quarantined"] += 1
                     continue
-                eng = SilverValidatorEngine()
-                if not eng.process_record(flat, ref):
+                # Route theo kênh: Sysmon -> validator W05 (không đổi); Defender/PowerShell -> validator v1.3 riêng.
+                if wc.is_sysmon(rec.get("channel")):
+                    eng = SilverValidatorEngine()
+                    ok = eng.process_record(flat, ref)
+                    out_rows = [(t, row) for attr, t in TABLES.items() for row in getattr(eng, attr)] if ok else []
+                else:
+                    eng = WindowsChannelValidator()
+                    ok = eng.process_record(flat, rec, ref)
+                    out_rows = [(t, row) for t, rows in eng.rows.items() for row in rows] if ok else []
+                if not ok:
                     for q in eng.quarantine_dlq:
                         self._dlq(q.error_code, q.error_stage, q.error_reason, ref, q.raw_payload)
                     res["quarantined"] += 1
                     continue
                 n = 0
-                for attr, table in TABLES.items():
-                    for row in getattr(eng, attr):
-                        n += self._insert(table, row)
+                for table, row in out_rows:
+                    n += self._insert(table, row)
                 if n:
                     self.con.execute(
                         "insert into silver_event_lineage values (?,?,?,?,?,?) on conflict do nothing",
