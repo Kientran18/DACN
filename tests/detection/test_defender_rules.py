@@ -273,7 +273,14 @@ SECURITY_5007 = [   # khóa liên quan bảo vệ: phải ra alert
     ("", f"{D}\\Exclusions\\Paths\\C:\\dacn_lab = 0x0"),
     (f"{D}\\Spynet\\SubmitSamplesConsent = 0x1", f"{D}\\Spynet\\SubmitSamplesConsent = 0x2"),
     (f"{D}\\Spynet\\SpynetReporting = 0x2", f"{D}\\Spynet\\SpynetReporting = 0x0"),
-    (f"{D}\\Exclusions\\Paths\\C:\\dacn_lab = 0x0", ""),            # New Value rỗng (xóa khóa): giữ alert, thận trọng
+    ("", f"{D}\\Real-Time Protection\\DisableBehaviorMonitoring = 0x1"),     # thêm giá trị Disable = 1: yếu đi
+]
+STRENGTHEN_OR_NOOP_5007 = [   # v3 (cách C): không ra alert
+    (f"{D}\\Exclusions\\Paths\\C:\\dacn_lab = 0x0", ""),                   # xóa Exclusion: mạnh lên
+    (f"{D}\\NIS\\Consumers\\IPS\\DisableBmNetworkSensor = 0x1", f"{D}\\NIS\\Consumers\\IPS\\DisableBmNetworkSensor = 0x0"),
+    (f"{D}\\Real-Time Protection\\DisableRealtimeMonitoring = 0x1", ""),       # xóa giá trị Disable: về mặc định
+    (f"{D}\\Features\\TamperProtection = 0x1", f"{D}\\Features\\TamperProtection = 0x1"),          # không đổi
+    (f"{D}\\Real-Time Protection\\DisableIOAVProtection = 0x0", f"{D}\\real-time protection\\disableioavprotection = 0X0"),
 ]
 
 
@@ -286,7 +293,7 @@ def _det202(tmp_path, pairs, extra=()):
 
 def test_det202_v2_internal_5007_changes_do_not_alert(tmp_path):
     res, rules = _det202(tmp_path, NOISE_5007)
-    assert rules["DACN-DET-202"]["rule_version"] == 2
+    assert rules["DACN-DET-202"]["rule_version"] == 3
     assert [r.outcome for r in res if r.outcome == "MATCH"] == []
 
 
@@ -296,6 +303,42 @@ def test_det202_v2_security_related_5007_alerts(tmp_path, pair):
     assert [r.outcome for r in res] == ["MATCH"] and res[0].severity == "low"
 
 
+@pytest.mark.parametrize("pair", STRENGTHEN_OR_NOOP_5007, ids=lambda p: (p[1] or p[0]).rsplit("\\", 1)[-1][:30])
+def test_det202_v3_strengthen_or_noop_5007_does_not_alert(tmp_path, pair):
+    res, _ = _det202(tmp_path, [pair])
+    assert [r.outcome for r in res if r.outcome == "MATCH"] == []
+
+
+def test_det202_v3_records_change_class_in_match(tmp_path):
+    res, _ = _det202(tmp_path, [SECURITY_5007[1], SECURITY_5007[0]])
+    assert sorted(r.matched_fields["registry_change"] for r in res) == ["CHANGE", "WEAKEN"]
+
+
 def test_det202_v2_5001_still_alerts_high(tmp_path):
     res, _ = _det202(tmp_path, [], extra=("defender_5001.synthetic.xml",))
     assert [(r.outcome, r.severity) for r in res] == [("MATCH", "high")]
+
+
+
+# ---- classify_registry_change (cách C) -------------------------------------------------------------------------------------
+from detection.registry_change import classify_registry_change as crc  # noqa: E402
+
+
+@pytest.mark.parametrize("old,new,want", [
+    (None, None, None), ("", "", None),
+    (r"HKLM\X\Real-Time Protection\DisableRealtimeMonitoring = 0x0", r"HKLM\X\Real-Time Protection\DisableRealtimeMonitoring = 0x1", "WEAKEN"),
+    (r"HKLM\X\DisableAntiSpyware = 1", r"HKLM\X\DisableAntiSpyware = 0", "STRENGTHEN"),
+    ("", r"HKLM\X\DisableAntiSpyware = 0x1", "WEAKEN"),
+    ("", r"HKLM\X\DisableAntiSpyware = 0x0", "CHANGE"),            # thêm giá trị Disable = 0: không yếu đi, không rõ
+    (r"HKLM\X\DisableAntiSpyware = 0x1", r"HKLM\X\DisableAntiSpyware = 0x2", "CHANGE"),
+    (r"HKLM\X\DisableFoo = abc", r"HKLM\X\DisableFoo = def", "CHANGE"),   # không phải số: không đoán
+    ("", r"HKLM\X\Exclusions\Paths\C:\lab = 0x0", "WEAKEN"),
+    (r"HKLM\X\Exclusions\Paths\C:\lab = 0x0", "", "STRENGTHEN"),
+    (r"HKLM\X\Exclusions\Paths\C:\a = 0x0", r"HKLM\X\Exclusions\Paths\C:\b = 0x0", "WEAKEN"),
+    (r"HKLM\X\Features\TamperProtection = 0x0", r"HKLM\X\Features\TamperProtection = 0x1", "CHANGE"),
+    (r"HKLM\X\Features\TamperProtection = 0x1", r"hklm\x\features\tamperprotection = 0X1", "NOOP"),
+    (r"HKLM\X\Spynet\SpynetReporting = 0x2", r"HKLM\X\Spynet\SpynetReporting = 0x0", "CHANGE"),
+    ("khong co dau bang", "khong co dau bang 2", "CHANGE"),
+])
+def test_classify_registry_change(old, new, want):
+    assert crc(old, new) == want

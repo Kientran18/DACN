@@ -1,5 +1,5 @@
 rule_id: DACN-DET-202
-rule_version: 2
+rule_version: 3
 name: Microsoft Defender bị tắt bảo vệ thời gian thực, đổi cấu hình hoặc chặn thay đổi (tamper)
 description: >
   Mục đích: đánh dấu sự kiện trạng thái của Defender có thể liên quan tới vô hiệu hóa công cụ bảo vệ.
@@ -11,6 +11,8 @@ description: >
   bảo vệ (tên giá trị bắt đầu bằng Disable, nhánh Exclusions, TamperProtection, Spynet SpynetReporting/SubmitSamplesConsent).
   Lý do: 306 sự kiện 5007 thật trên một VM (2026-11-23..28) gần như toàn bộ là thay đổi nội bộ (Features\EcsConfigs 120,
   Features\Controls 99, CoreService 27, Diagnostics 15). 5001/5013 không có New Value nên không bị điều kiện này ảnh hưởng.
+  v3 (2026-11-28, cách C ở w8 mục 12.14): bỏ thêm 5007 không đổi giá trị (NOOP) và đổi theo hướng mạnh lên (STRENGTHEN: giá trị
+  Disable* về 0 hoặc bị xóa, Exclusion bị xóa) qua registry_change_filter. TamperProtection/Spynet không suy ra hướng (CHANGE, vẫn alert).
 type: single
 status: enabled
 detection_source: EXTERNAL_DEFENDER
@@ -23,8 +25,9 @@ source_events:
   - {channel: "Microsoft-Windows-Windows Defender/Operational", event_ids: [5001, 5007, 5013]}
 context_fields: [event_type, old_value, new_value]
 # Loại trừ 5007 có 'New Value' KHÔNG chứa khóa liên quan bảo vệ trong phần tên khóa (trước dấu '='). New Value rỗng/thiếu
-# (xóa khóa) không bị loại trừ: giữ alert để thận trọng. Danh sách khóa là đề xuất của Software theo tên chính sách Defender,
+# (xóa khóa) không bị exclude loại trừ; registry_change_filter quyết định (xóa Exclusion/Disable* = STRENGTHEN, bỏ). Danh sách khóa là đề xuất của Software theo tên chính sách Defender,
 # CHƯA được Cyber xác nhận.
+registry_change_filter: {old_field: old_value, new_field: new_value, drop: [NOOP, STRENGTHEN]}
 exclude:
   - field: new_value
     op: regex
@@ -35,11 +38,11 @@ mitre_basis: >
   5001/5013 là trạng thái vô hiệu hóa hoặc bị chặn thay đổi của công cụ bảo vệ theo mô tả Microsoft
 false_positives:
   - 5007 rất ồn - cả 4 mẫu thật trên VM (2026-11-28) là thay đổi nội bộ của Defender (WdConfigHash, ServiceStartStates, InitializingComponentProgress); v2 loại trừ phần lớn
-  - Bật lại bảo vệ (ví dụ TamperProtection 0x0 -> 0x1) vẫn ra alert - v2 không xét hướng thay đổi
+  - TamperProtection/Spynet đổi theo bất kỳ hướng nào vẫn ra alert (v3 không suy ra hướng khi chưa kiểm chứng ý nghĩa giá trị)
   - Quản trị viên tắt real-time protection có chủ đích; cập nhật nền tảng Defender
 limitations:
   - 5001 và 5013 chưa có mẫu thật trên VM; cấu trúc EventData chưa xác minh (chỉ dùng windows_event_id)
   - v2 chỉ giữ 5007 của khóa trong danh sách; khóa liên quan bảo vệ có tên khác (không bắt đầu bằng Disable, ngoài các nhánh trên) bị bỏ sót
-  - Không xét hướng thay đổi, không bỏ thay đổi không đổi giá trị (cần sửa evaluator; cách C, chưa làm)
+  - Hướng chỉ suy từ tên (Disable*, Exclusions); giá trị Disable* không phải số hoặc đổi giữa hai giá trị khác 0 là CHANGE (vẫn alert)
   - Chỉ phủ tamper của Defender, KHÔNG mở khóa DET-007 (tamper của DACN/Sysmon)
 validation_status: synthetic_only

@@ -922,3 +922,18 @@ khóa liên quan bảo vệ có tên khác bị bỏ sót; không xét hướng 
 giá trị (cách C, cần sửa evaluator, chưa làm). Đổi `rule_version` làm engine đánh giá lại toàn bộ; alert DET-202 v1 đã có vẫn giữ.
 Kiểm thử: `python -m pytest -q` → 669 pass, 2 skipped, 0 fail (Linux). Chưa chạy trên VM.
 
+### 12.14. Ngày 2026-11-28: DACN-DET-202 v3, lọc 5007 theo hướng thay đổi (cách C, người dùng yêu cầu)
+
+| Thay đổi | Tệp |
+|---|---|
+| `classify_registry_change(old, new)` phân loại `NOOP` / `WEAKEN` / `STRENGTHEN` / `CHANGE` (None khi cả hai trống). Chỉ suy hướng ở chỗ tự rõ từ tên: giá trị `Disable*` là số (0 hoặc không có → khác 0 = WEAKEN; khác 0 → 0 hoặc xóa = STRENGTHEN), nhánh `\Exclusions\` (thêm hoặc đổi sang khóa khác = WEAKEN; xóa = STRENGTHEN). `TamperProtection`, `Spynet` và mọi khóa khác: `CHANGE` (ý nghĩa giá trị chưa kiểm chứng, không đoán) | `src/detection/registry_change.py` (mới) |
+| Khóa rule mới `registry_change_filter: {old_field, new_field, drop}`; evaluator chạy sau `exclude`, lớp trong `drop` → NO_MATCH (`notes: registry_change:<lớp>`), MATCH ghi `matched_fields.registry_change`. Hàng không có cả hai trường (5001/5013) không bị lọc. **Thay đổi rule model**: quyết định triển khai chờ duyệt như `severity_by`/`context_fields`/`group_by_field` | `src/detection/schema.py`, `src/detection/evaluator.py`, `docs/architecture/w6/contracts/rule.schema.json` (xuất lại bằng `scripts/contracts/export_issue40_contracts.py`) |
+| DET-202 `rule_version` 3: `registry_change_filter: {old_field: old_value, new_field: new_value, drop: [NOOP, STRENGTHEN]}`, giữ `exclude` của v2 | `src/detection/rules/dacn-det-202.yaml` |
+| Test: 16 ca phân loại; 5 ca 5007 mạnh lên hoặc không đổi không ra alert (gồm xóa Exclusion, `DisableBmNetworkSensor` 1→0, so sánh không phân biệt hoa/thường); MATCH ghi lớp; ca xóa Exclusion của v2 (giữ alert thận trọng) đổi thành không alert | `tests/detection/test_defender_rules.py` |
+
+Ước tính trên 306 sự kiện 5007 của VM (đếm tay từ thống kê ở 12.13, không phải đo lại): còn khoảng 4 kết quả (TamperProtection ×3 là
+`CHANGE`, `NIS\Consumers\IPS\DisableBmNetworkSensor` 0x0 → 0x1 là `WEAKEN`; `Default\...\DisableBmNetworkSensor` 0x1 → 0x0 bị bỏ).
+Giới hạn: hướng chỉ suy từ tên; một chính sách mà giá trị khác 0 nghĩa là bật bảo vệ nhưng tên bắt đầu bằng `Disable` sẽ bị phân loại
+sai (chưa thấy trên dữ liệu); TamperProtection/Spynet đổi theo hướng nào cũng ra alert. Kiểm thử: `python -m pytest -q` → 690 pass,
+2 skipped, 0 fail (Linux). Chưa chạy trên VM.
+

@@ -4,6 +4,7 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Optional, Tuple
 
+from .registry_change import classify_registry_change
 from .result import DetectionResult, make_dedup_key
 
 
@@ -68,6 +69,13 @@ def evaluate_single(rule: dict, row: dict) -> DetectionResult:
     for c in rule.get("exclude", []) or []:
         if cond_match(c, row)[0]:
             return DetectionResult(outcome="NO_MATCH", notes=[f"excluded_by:{c['field']}"], **base)
+    rcf = rule.get("registry_change_filter")
+    if rcf:
+        change = classify_registry_change(row.get(rcf["old_field"]), row.get(rcf["new_field"]))
+        if change in rcf["drop"]:
+            return DetectionResult(outcome="NO_MATCH", notes=[f"registry_change:{change}"], **base)
+        if change is not None:
+            matched["registry_change"] = change      # lớp thay đổi cho người điều tra (WEAKEN/CHANGE...)
     severity, reason = rule["severity"], rule.get("severity_reason", "")
     sb = rule.get("severity_by")
     if sb and row.get(sb["field"]) is not None and str(row[sb["field"]]) in sb["map"]:

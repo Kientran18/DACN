@@ -63,6 +63,14 @@ RULE_SCHEMA = {
                   "properties": {"all": {"type": "array", "items": _COND},
                                  "any": {"type": "array", "items": _COND}}},
         "exclude": {"type": "array", "items": _COND},
+        # Lọc theo hướng thay đổi registry (Defender 5007 'Old Value'/'New Value', w8 mục 12.14): phân loại bằng
+        # detection.registry_change; lớp nằm trong `drop` -> NO_MATCH. Hàng không có cả hai trường thì không bị lọc.
+        "registry_change_filter": {"type": "object", "additionalProperties": False,
+                                   "required": ["old_field", "new_field", "drop"],
+                                   "properties": {"old_field": {"type": "string", "pattern": "^[a-z_]+$"},
+                                                  "new_field": {"type": "string", "pattern": "^[a-z_]+$"},
+                                                  "drop": {"type": "array", "minItems": 1, "uniqueItems": True,
+                                                           "items": {"enum": ["NOOP", "WEAKEN", "STRENGTHEN", "CHANGE"]}}}},
         "correlation_keys": {"type": "array", "items": {"type": "string"}},
         "time_window_seconds": {"type": "integer", "minimum": 1},
         "allowed_lateness_seconds": {"type": "integer", "minimum": 0, "maximum": 86400},
