@@ -15,7 +15,7 @@ from .config import CATEGORIES, LEVELS, ML_CATEGORIES, RiskConfig
 
 @dataclass
 class Component:
-    category: str                       # RULE | CORRELATION | IOC | STATIC | ML_STATIC | ML_BEHAVIOR
+    category: str                       # RULE | CORRELATION | IOC | STATIC | EXTERNAL_AV | ML_STATIC | ML_BEHAVIOR
     ref_type: str                       # alert | ml_signal
     ref_id: str
     label: str = ""

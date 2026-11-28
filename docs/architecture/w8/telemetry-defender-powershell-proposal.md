@@ -1,6 +1,6 @@
 # Đề xuất bổ sung telemetry Microsoft Defender và PowerShell Script Block Logging
 
-> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–3, 5, 6 xong ngày 2026-11-28, xem mục 12).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
+> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–3, 5–7 xong ngày 2026-11-28, xem mục 12).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
 > Data/Cyber; chưa có review độc lập của nhóm Data/Cyber. Người dùng nói "bắt đầu" ngày 2026-11-28. Tài liệu này không
 > thay đổi contract `bronze-event/1.0`, DDL v1.1, DDL v1.2, ADR, README hay kế hoạch 12 tuần. Mọi ánh xạ field gắn nhãn **[CHƯA XÁC MINH]**
 > giữ nguyên nhãn đó cho tới khi có mẫu XML thật từ VM (mục 2.8); phê duyệt thiết kế không xác minh các field này.
@@ -728,3 +728,23 @@ Kiểm thử (Linux, Python 3.13, không có `lightgbm`): `python -m pytest -q` 
 
 Quyết định triển khai **chờ duyệt**: rule type `scriptblock`, field `patterns`/`base64`, giá trị `min_length` 40, danh sách 9 mẫu
 (lấy từ mục 5.2 và DET-001), giữ alert ở coverage PARTIAL khi phần thiếu đến sau.
+
+### 12.5. Ngày 2026-11-28: hạng mục 7 (điểm rủi ro `EXTERNAL_AV`)
+
+| Thay đổi | Tệp |
+|---|---|
+| Cơ chế `EXTERNAL_AV` trong danh sách category (không phải ML, nên được tính vào thưởng đa dạng như một cơ chế độc lập với rule DACN) | `src/risk/config.py`, `src/risk/scoring.py` |
+| Alert có `detection_source` bắt đầu bằng `EXTERNAL_` (Defender DET-201/202) xếp vào `EXTERNAL_AV`; không có `process_guid` nên chỉ vào chủ thể host | `src/risk/service.py` |
+| Cấu hình lên **v2**: `EXTERNAL_AV` trọng số 1.0, trần 60 (bằng `RULE`, vì DACN không xác minh lại phát hiện của Defender); `status: heuristic_uncalibrated`; changelog ghi lý do. Cấu hình thiếu khóa `EXTERNAL_AV` bị loader từ chối | `config/risk-scoring.yaml` |
+| Tài liệu | `docs/implementation/RISK_SCORING.md` |
+| 3 test mới; test cũ đổi `version == 1` thành `2` | `tests/risk/test_external_av.py`, `tests/risk/test_risk_scoring.py`, `tests/api/test_risk_api.py` |
+
+Ví dụ (synthetic): một alert Defender `medium` (25) và một alert DET-001 `medium` (25) trên cùng host trong cửa sổ 1 giờ
+→ 25 + 25 + thưởng đa dạng 10 = 60 (mức `high`). Giá trị heuristic, chưa hiệu chỉnh; điểm rủi ro vẫn **không** kích hoạt response.
+
+Hệ quả cần biết: nhiễu của DET-202 (5007 nội bộ, `low` = 10 điểm) giờ góp vào điểm host và thưởng đa dạng. Một host chỉ có
+5007 nội bộ và một alert DACN `medium` sẽ được 10 + 25 + 10 = 45 (`medium`). Cần Cyber quyết định loại trừ 5007 (xem 12.3).
+
+Kiểm thử (Linux, Python 3.13, không có `lightgbm`): `python -m pytest -q` → 615 pass, 2 skipped, 0 fail.
+
+Quyết định triển khai **chờ duyệt**: trọng số 1.0 và trần 60 cho `EXTERNAL_AV`; quy tắc nhận diện theo tiền tố `EXTERNAL_` của `detection_source`.

@@ -2,19 +2,21 @@
 # khởi đầu do Software đề xuất, chưa đo trên dữ liệu có nhãn của DACN, chưa được Cyber/Data duyệt.
 # Đổi bất kỳ giá trị nào phải tăng `version` và ghi lý do vào `changelog` (kiểm soát thay đổi theo NIST SP 800-128).
 # Điểm rủi ro KHÔNG BAO GIỜ kích hoạt response; chỉ dùng để sắp xếp ưu tiên điều tra.
-version: 1
+version: 2
 status: heuristic_uncalibrated
 changelog:
   - {version: 1, date: "2026-11-25", reason: "giá trị khởi đầu, chưa hiệu chỉnh"}
+  - {version: 2, date: "2026-11-28", reason: "thêm cơ chế EXTERNAL_AV (alert Defender DACN-DET-201/202, w8 D7); trọng số 1.0 và trần 60 bằng RULE, chưa hiệu chỉnh"}
 # Điểm gốc của một alert theo severity mà rule gán (rule là nguồn sự thật về severity).
 severity_points: {low: 10, medium: 25, high: 45, critical: 70}
 # Điểm tối đa của tín hiệu ML (điểm ML trong [0,1] được nhân với giá trị này).
 ml_max_points: {ML_STATIC: 12, ML_BEHAVIOR: 12}
 # Trọng số theo cơ chế phát hiện.
-weights: {RULE: 1.0, CORRELATION: 1.2, IOC: 1.0, STATIC: 0.8, ML_STATIC: 1.0, ML_BEHAVIOR: 1.0}
+# EXTERNAL_AV: phát hiện của sản phẩm khác (Defender); DACN không xác minh lại, nên không cao hơn RULE.
+weights: {RULE: 1.0, CORRELATION: 1.2, IOC: 1.0, STATIC: 0.8, EXTERNAL_AV: 1.0, ML_STATIC: 1.0, ML_BEHAVIOR: 1.0}
 # Trần điểm mỗi cơ chế: nhiều alert cùng loại không lấn át toàn bộ điểm. Trần ML thấp có chủ ý:
 # riêng ML (12 + 12 = 24) không vượt ngưỡng medium (30).
-category_caps: {RULE: 60, CORRELATION: 60, IOC: 60, STATIC: 40, ML_STATIC: 12, ML_BEHAVIOR: 12}
+category_caps: {RULE: 60, CORRELATION: 60, IOC: 60, STATIC: 40, EXTERNAL_AV: 60, ML_STATIC: 12, ML_BEHAVIOR: 12}
 # Thưởng khi nhiều cơ chế ĐỘC LẬP (không tính ML) cùng chỉ về một chủ thể: điểm cho mỗi cơ chế thêm, có trần.
 diversity_bonus: {per_extra_category: 10, max: 20}
 # Hash ảnh tiến trình nằm trong allowlist cục bộ: nhân điểm các thành phần của tiến trình đó với hệ số này.

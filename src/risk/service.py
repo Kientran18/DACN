@@ -5,7 +5,8 @@ không cũ đi khi alert đổi trạng thái hay allowlist đổi). Chi phí t�
 hiệu năng chưa đo trên VM.
 
 Nguồn:
-- alerts (v1.2 đề xuất): RULE / CORRELATION (rule type correlation) / IOC / STATIC (DACN-STATIC-001)
+- alerts (v1.2 đề xuất): RULE / CORRELATION (rule type correlation) / IOC / STATIC (DACN-STATIC-001) /
+  EXTERNAL_AV (detection_source EXTERNAL_*, ví dụ Defender DACN-DET-201/202; không có process_guid nên chỉ vào chủ thể host)
 - _ml_signals (nếu bảng tồn tại): ML_STATIC / ML_BEHAVIOR; INSUFFICIENT_TELEMETRY chỉ vào `not_evaluated`
 - coverage_gaps: chỉ liệt kê ở `data_gaps`, KHÔNG cộng điểm (thiếu dữ liệu không phải bằng chứng đe dọa)
 - allowlist hash cục bộ (IocStore) theo file_sha256 của Event 1 của tiến trình; trạng thái candidate static."""
@@ -106,6 +107,8 @@ class RiskService:
     def _category(self, a: dict) -> str:
         if a["rule_id"] == STATIC_RULE_ID:
             return "STATIC"
+        if (a["detection_source"] or "").startswith("EXTERNAL_"):
+            return "EXTERNAL_AV"
         if a["detection_source"] == "IOC" or (self.rules.get(a["rule_id"]) or {}).get("type") == "ioc":
             return "IOC"
         if (self.rules.get(a["rule_id"]) or {}).get("type") == "correlation":

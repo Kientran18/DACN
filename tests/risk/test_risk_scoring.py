@@ -23,7 +23,7 @@ def comp(cat, **kw):
 
 # ---- cấu hình có phiên bản -------------------------------------------------------------
 def test_default_config_is_versioned_and_labelled_uncalibrated(cfg):
-    assert cfg.version == 1 and cfg.status == "heuristic_uncalibrated"
+    assert cfg.version == 2 and cfg.status == "heuristic_uncalibrated"        # v2: thêm EXTERNAL_AV (2026-11-28)
     assert len(cfg.sha256) == 64
     assert cfg.data["weights"]["RULE"] == 1.0
 
@@ -60,7 +60,7 @@ def test_single_medium_rule_is_explained(cfg):
     c = r["components"][0]
     assert c["base_points"] == 25 and c["weight"] == 1.0 and c["points"] == 25 and c["included"] is True
     assert "severity=medium" in c["reason"]
-    assert r["config"]["version"] == 1 and r["config"]["status"] == "heuristic_uncalibrated"
+    assert r["config"]["version"] == 2 and r["config"]["status"] == "heuristic_uncalibrated"
     assert r["triggers_response"] is False
 
 

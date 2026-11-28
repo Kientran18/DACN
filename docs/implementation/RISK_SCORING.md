@@ -25,6 +25,7 @@ Ngoài phạm vi: tự tạo alert hay incident, tự response, chấm theo ngư
 | `CORRELATION` | `alerts` có rule `type: correlation` (DET-010) | `severity_points[severity]` |
 | `IOC` | `alerts` có `detection_source = IOC` hoặc rule `type: ioc` (DET-101) | `severity_points[severity]` |
 | `STATIC` | `alerts` của `DACN-STATIC-001` (static analysis issue #40) | `severity_points[severity]` |
+| `EXTERNAL_AV` | `alerts` có `detection_source` bắt đầu bằng `EXTERNAL_` (Defender `DACN-DET-201`/`202`; từ cấu hình v2, 2026-11-28). Không có `process_guid` nên chỉ vào chủ thể host. Không phải ML: được tính vào thưởng đa dạng | `severity_points[severity]` |
 | `ML_STATIC` | `_ml_signals` do `static_signal.py` (EMBER2024 nháp) ghi | `score × ml_max_points.ML_STATIC` |
 | `ML_BEHAVIOR` | `_ml_signals` do `behavior.py` (độ hiếm hành vi) ghi | `score × ml_max_points.ML_BEHAVIOR` |
 
@@ -62,6 +63,7 @@ Tệp `config/risk-scoring.yaml`:
 - Có `version`, `changelog` và `status: heuristic_uncalibrated`. Loader **từ chối** mọi giá trị `status` khác, để không ai đổi nhãn thành "đã hiệu chỉnh" khi chưa có số đo.
 - Kiểm tra chặt: từ chối khóa thừa hoặc thiếu, trọng số âm, ngưỡng không tăng dần (mã `RISK-CFG`).
 - Mọi kết quả kèm `config.version` và `config.sha256` (sha256 của tệp), nên truy được kết quả nào tính bằng cấu hình nào.
+- v2 (2026-11-28): thêm `EXTERNAL_AV` với trọng số 1.0 và trần 60 (bằng `RULE`), theo D7 của `docs/architecture/w8/telemetry-defender-powershell-proposal.md`; vẫn chưa hiệu chỉnh. Tệp cấu hình thiếu khóa `EXTERNAL_AV` bị loader từ chối.
 - Đổi giá trị: sửa tệp, tăng `version`, thêm dòng `changelog` (ngày, lý do), chạy `python -m pytest -q tests/risk` rồi khởi động lại core/API. Đây là quy trình kiểm soát thay đổi theo NIST SP 800-128 (xem [NIST_MAPPING.md](NIST_MAPPING.md)).
 
 ## 5. Lưu trữ và luồng
