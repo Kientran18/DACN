@@ -12,7 +12,7 @@ def test_risk_endpoints_require_token(ctx, path):  # noqa: F811
 
 def test_risk_config_is_versioned_and_uncalibrated(ctx):  # noqa: F811
     r = cl(ctx, "viewer").get("/risk/config").json()
-    assert r["version"] == 2 and r["status"] == "heuristic_uncalibrated" and len(r["sha256"]) == 64
+    assert r["version"] == 3 and r["status"] == "heuristic_uncalibrated" and len(r["sha256"]) == 64
     assert r["values"]["weights"]["RULE"] == 1.0 and r["ml_enabled"] == {"ML_STATIC": False, "ML_BEHAVIOR": False}
 
 

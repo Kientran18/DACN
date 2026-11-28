@@ -1,0 +1,180 @@
+# Manifest rule Sigma của DACN: rule nào được nạp, ghim theo sha256 (tệp đổi -> SIG-E009, phải cập nhật có chủ ý).
+# Nguồn SigmaHQ: commit ghim dưới đây; tệp gốc chép NGUYÊN VĂN (không sửa) vào rules/sigmahq/<đường dẫn trong kho SigmaHQ>.
+# Giấy phép rule SigmaHQ: Detection Rule License 1.1 (rules/sigmahq/LICENSE.Detection.Rules.md).
+# Thêm rule: docs/implementation/SIGMA_RULES.md mục 6 (lệnh `python -m detection.sigma check <tệp>` in dòng manifest gợi ý).
+source:
+  repository: https://github.com/SigmaHQ/sigma
+  commit: ddf1d4f87fd283513ac1dbf7e178c8a4064047df
+  commit_date: "2026-11-28"
+  license: DRL-1.1
+  license_url: https://github.com/SigmaHQ/Detection-Rule-License
+base_dir: rules
+rules:
+  - path: sigmahq/rules/windows/builtin/windefend/win_defender_real_time_protection_disabled.yml
+    origin: sigmahq
+    sigma_id: b28e58e4-2a72-4fae-bdee-0fbe904db642
+    sha256: 81a8fbd3ec9b1a9b4416e83c3018a11fde024a39db6b09dacef5c1dcec4ba63a
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/builtin/windefend/win_defender_threat.yml
+    origin: sigmahq
+    sigma_id: 57b649ef-ff42-4fb0-8bf6-62da243a1708
+    sha256: 547e7b885edd1e7f982d303b10419ad2da077aac875a0fa07d2fc27d990b765c
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/dns_query/dns_query_win_regsvr32_dns_query.yml
+    origin: sigmahq
+    sigma_id: 36e037c4-c228-4866-b6a3-48eb292b9955
+    sha256: 008f8752a0c8ee6be1939f8c7e0f27e9bf6b7d6504f923ee5823f624e57ba075
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/file/file_event/file_event_win_powershell_startup_shortcuts.yml
+    origin: sigmahq
+    sigma_id: 92fa78e7-4d39-45f1-91a3-8b23f3f1088d
+    sha256: a93b60d73aebb42693e7441de309350017a57cbbd5ddf7f79ebb57c14c7ad266
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/file/file_event/file_event_win_startup_folder_file_write.yml
+    origin: sigmahq
+    sigma_id: 2aa0a6b4-a865-495b-ab51-c28249537b75
+    sha256: 651a2ccddb72c7e95453a2e35d3c3c15a58d3fcb610cd085fa9b539ae1408e9b
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/network_connection/net_connection_win_certutil_initiated_connection.yml
+    origin: sigmahq
+    sigma_id: 0dba975d-a193-4ed1-a067-424df57570d1
+    sha256: 2f3c61de042180cf7acc0f50483306fe869656a73dedfc0374f3e5f0a22df1bb
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/network_connection/net_connection_win_regsvr32_network_activity.yml
+    origin: sigmahq
+    sigma_id: c7e91a02-d771-4a6d-a700-42587e0b1095
+    sha256: ee77b92fce62b73d63e420d793800ba62c059428279e13ab8edb0ef3d7e9b6e2
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/powershell/powershell_script/posh_ps_cmdlet_scheduled_task.yml
+    origin: sigmahq
+    sigma_id: 363eccc0-279a-4ccf-a3ab-24c2e63b11fb
+    sha256: 89fb4d577d256c3665a449d34891412d144f510f7d49ee1e8997403b6c705145
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/powershell/powershell_script/posh_ps_susp_download.yml
+    origin: sigmahq
+    sigma_id: 403c2cc0-7f6b-4925-9423-bfa573bed7eb
+    sha256: 3f76608f5104f323a0c50b1d5fb22434c3ae6252742059676d8777917dcef98e
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/powershell/powershell_script/posh_ps_web_request_cmd_and_cmdlets.yml
+    origin: sigmahq
+    sigma_id: 1139d2e2-84b1-4226-b445-354492eba8ba
+    sha256: 5f8389787ad63bba17d620235f46a1260e66f0ef6aa768370d15bad39c023287
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/process_creation/proc_creation_win_certutil_download.yml
+    origin: sigmahq
+    sigma_id: 19b08b1c-861d-4e75-a1ef-ea0c1baf202b
+    sha256: 1262c65c22592b28f2c63906462f07f9c0d95e8fa065405505d18979a5f278af
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/process_creation/proc_creation_win_cmd_del_execution.yml
+    origin: sigmahq
+    sigma_id: 379fa130-190e-4c3f-b7bc-6c8e834485f3
+    sha256: b3d22aa6b6d19865f292bdc1d15a94010bc0ff5aca481de419abc1f5e1fd3798
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/process_creation/proc_creation_win_hostname_execution.yml
+    origin: sigmahq
+    sigma_id: 7be5fb68-f9ef-476d-8b51-0256ebece19e
+    sha256: 68a20aca7def5223ee642b0c6ea89e35a116767271b682aeb9d631f6d4a07a4f
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/process_creation/proc_creation_win_mshta_http.yml
+    origin: sigmahq
+    sigma_id: b98d0db6-511d-45de-ad02-e82a98729620
+    sha256: 8930fa3632fec016d1fb6940bfbe48139b255855eba26e5784da57db3dc77922
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/process_creation/proc_creation_win_powershell_base64_encoded_cmd.yml
+    origin: sigmahq
+    sigma_id: ca2092a1-c273-4878-9b4b-0d60115bf5ea
+    sha256: aaa77a412c21e6e98226e130b58f552c9e1a758bb0ae16822225b2fbc284b10c
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/process_creation/proc_creation_win_powershell_download_patterns.yml
+    origin: sigmahq
+    sigma_id: 3b6ab547-8ec2-4991-b9d2-2b06702a48d7
+    sha256: 4c6dadd16cf1bbe4168f854eb6ca9104d8d692ba86f36f443c564db2a59b1fdb
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/process_creation/proc_creation_win_powershell_iex_patterns.yml
+    origin: sigmahq
+    sigma_id: 09576804-7a05-458e-a817-eb718ca91f54
+    sha256: df7432850577d9a645273fe1eab777fd026ef5371d43628357b40ce693e75ca1
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/process_creation/proc_creation_win_reg_add_run_key.yml
+    origin: sigmahq
+    sigma_id: de587dce-915e-4218-aac4-835ca6af6f70
+    sha256: e9f0394f510875a5e5015feee60b00a4119dfb018284104985a582d15f86e689
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/process_creation/proc_creation_win_reg_direct_asep_registry_keys_modification.yml
+    origin: sigmahq
+    sigma_id: 24357373-078f-44ed-9ac4-6d334a668a11
+    sha256: eefffa99d430484b3317fb4b40aa8faf52bb8f0601f3fe57a1027ebcf3589c71
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/process_creation/proc_creation_win_regsvr32_network_pattern.yml
+    origin: sigmahq
+    sigma_id: 867356ee-9352-41c9-a8f2-1be690d78216
+    sha256: d7fca474580984f4e629177ae65531c3814371a1eca43c33bd542567bcba2550
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/process_creation/proc_creation_win_rundll32_susp_activity.yml
+    origin: sigmahq
+    sigma_id: e593cf51-88db-4ee1-b920-37e89012a3c9
+    sha256: c75c393984ff8e181a515d46e4597e04b1dcbe1400cb44ff514b08c325796c2e
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/process_creation/proc_creation_win_schtasks_creation.yml
+    origin: sigmahq
+    sigma_id: 92626ddd-662c-49e3-ac59-f6535f12d189
+    sha256: 2f8ca8539179e6851171dd23f0d2e5a690e59b30d949aa6e29d04e7b33f82227
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/process_creation/proc_creation_win_schtasks_powershell_persistence.yml
+    origin: sigmahq
+    sigma_id: b66474aa-bd92-4333-a16c-298155b120df
+    sha256: 3be1832f83464fb355313ff9918027caaef29baf8ed79e8bf2711b2b40249f50
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/process_creation/proc_creation_win_schtasks_susp_pattern.yml
+    origin: sigmahq
+    sigma_id: f2c64357-b1d2-41b7-849f-34d2682c0fad
+    sha256: e37e1791d894a6ddaab450631e89e5bbb121ded5e5a10c584c8be850bb4e4b27
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/process_creation/proc_creation_win_susp_web_request_cmd_and_cmdlets.yml
+    origin: sigmahq
+    sigma_id: 9fc51a3c-81b3-4fa7-b35f-7c02cf10fd2d
+    sha256: 4b24df0142b41edc50606e784314ed91835dcc2341cb65f88adffc8cd4f45855
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/process_creation/proc_creation_win_systeminfo_execution.yml
+    origin: sigmahq
+    sigma_id: 0ef56343-059e-4cb6-adc1-4c3c967c5e46
+    sha256: 932bbd8e70ad177d6de617aee50942dec1264453e89dcd3ca84aca65c771920f
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/registry/registry_event/registry_event_susp_download_run_key.yml
+    origin: sigmahq
+    sigma_id: 9c5037d1-c568-49b3-88c7-9846a5bdc2be
+    sha256: 91e1c995b6f5a6ca603b58cfd728e6a8cde45bf20ac8855bdda4913d958551c8
+    version: 1
+    enabled: true
+  - path: sigmahq/rules/windows/registry/registry_set/registry_set_asep_reg_keys_modification_currentversion.yml
+    origin: sigmahq
+    sigma_id: 20f0ee37-5942-4e45-b7d5-c5b5db9df5cd
+    sha256: 7782c962b38d69534708d42e4d458a9c70b72380f30d8cd12a9e6e0eaca0cc30
+    version: 1
+    enabled: true

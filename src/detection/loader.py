@@ -56,6 +56,15 @@ def validate_rule(rule: dict, source: str = "") -> dict:
         raise RuleError(f"{source}: patterns/base64 chỉ dùng cho rule 'scriptblock'")
     if r.get("detection_source") == "EXTERNAL_DEFENDER" and set(channels) != {wc.DEFENDER_CHANNEL}:
         raise RuleError(f"{source}: detection_source EXTERNAL_DEFENDER chỉ dùng cho rule đọc riêng kênh Defender")
+    if r["type"] == "sigma":
+        if not r.get("sigma") or r.get("detection_source") != "SIGMA" or not r["rule_id"].startswith("DACN-SIG-"):
+            raise RuleError(f"{source}: rule 'sigma' cần khóa sigma, detection_source SIGMA và rule_id DACN-SIG-<8 hex>")
+        bad = [k for k in ("match", "exclude", "sysmon_event_ids", "source_events", "patterns", "base64", "severity_by",
+                           "registry_change_filter", "correlation_keys") if r.get(k)]
+        if bad:
+            raise RuleError(f"{source}: rule 'sigma' không dùng {bad} (điều kiện nằm trong sigma.detection)")
+    elif r.get("sigma") or r.get("detection_source") == "SIGMA" or r["rule_id"].startswith("DACN-SIG-"):
+        raise RuleError(f"{source}: khóa sigma / detection_source SIGMA / rule_id DACN-SIG- chỉ dùng cho rule 'sigma'")
     if r["type"] == "correlation" and not (r.get("time_window_seconds") and r.get("window_status")):
         raise RuleError(f"{source}: rule 'correlation' cần time_window_seconds và window_status")
     unknown = sorted(set(r.get("sysmon_event_ids") or []) - set(SILVER_TABLE_FOR_EVENT))

@@ -19,6 +19,7 @@ h1{font-size:1.35rem;margin:.2rem 0 1rem}h2{font-size:1.05rem;margin:1.4rem 0 .5
 .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 12px}.kv dt{color:var(--muted)}.kv dd{margin:0;word-break:break-word}
 .badge{display:inline-block;padding:1px 8px;border-radius:999px;border:1px solid var(--line);font-size:.8rem;font-weight:600}
 .badge.ext{color:var(--sample);border-color:var(--sample)}
+.badge.sigma{color:var(--warn);border-color:var(--warn);border-style:dashed}
 .badge.ok{color:var(--ok);border-color:var(--ok)}.badge.warn{color:var(--warn);border-color:var(--warn)}.badge.bad{color:var(--bad);border-color:var(--bad)}
 .mode-big{font-size:1rem;padding:4px 12px}
 .table-wrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px}

@@ -11,7 +11,10 @@ import yaml
 DEFAULT_PATH = Path(__file__).resolve().parents[2] / "config" / "risk-scoring.yaml"
 # EXTERNAL_AV: alert phản ánh phát hiện của sản phẩm khác trên máy (Microsoft Defender, rule detection_source EXTERNAL_DEFENDER;
 # docs/architecture/w8 D7). Không phải ML nên được tính vào thưởng đa dạng như một cơ chế độc lập với rule của DACN.
-CATEGORIES = ("RULE", "CORRELATION", "IOC", "STATIC", "EXTERNAL_AV", "ML_STATIC", "ML_BEHAVIOR")
+# SIGMA: alert của rule cộng đồng Sigma (detection_source SIGMA, docs/implementation/SIGMA_RULES.md; config v3).
+CATEGORIES = ("RULE", "CORRELATION", "IOC", "STATIC", "EXTERNAL_AV", "SIGMA", "ML_STATIC", "ML_BEHAVIOR")
+# Nhóm cùng bản chất khi tính thưởng đa dạng: SIGMA và RULE đều là rule trên cùng telemetry -> tính là MỘT cơ chế.
+DIVERSITY_GROUP = {"SIGMA": "RULE"}
 ML_CATEGORIES = ("ML_STATIC", "ML_BEHAVIOR")
 SEVERITIES = ("low", "medium", "high", "critical")
 LEVELS = ("low", "medium", "high", "critical")

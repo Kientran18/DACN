@@ -10,12 +10,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-from .config import CATEGORIES, LEVELS, ML_CATEGORIES, RiskConfig
+from .config import CATEGORIES, DIVERSITY_GROUP, LEVELS, ML_CATEGORIES, RiskConfig
 
 
 @dataclass
 class Component:
-    category: str                       # RULE | CORRELATION | IOC | STATIC | EXTERNAL_AV | ML_STATIC | ML_BEHAVIOR
+    category: str                       # RULE | CORRELATION | IOC | STATIC | EXTERNAL_AV | SIGMA | ML_STATIC | ML_BEHAVIOR
     ref_type: str                       # alert | ml_signal
     ref_id: str
     label: str = ""
@@ -81,7 +81,8 @@ def score_components(components: List[Component], cfg: RiskConfig, *, not_evalua
         cats[row["category"]]["raw"] = _r(cats[row["category"]]["raw"] + row["points"])
     for v in cats.values():
         v["capped"] = _r(min(v["raw"], v["cap"]))
-    independent = [k for k, v in cats.items() if k not in ML_CATEGORIES and v["capped"] > 0]
+    # SIGMA và RULE gộp thành một nhóm (DIVERSITY_GROUP): cùng là rule trên cùng telemetry, không độc lập.
+    independent = sorted({DIVERSITY_GROUP.get(k, k) for k, v in cats.items() if k not in ML_CATEGORIES and v["capped"] > 0})
     bonus = min(d["diversity_bonus"]["max"], d["diversity_bonus"]["per_extra_category"] * max(0, len(independent) - 1))
     score = _r(min(100.0, sum(v["capped"] for v in cats.values()) + bonus))
     not_evaluated, data_gaps = list(not_evaluated or []), list(data_gaps or [])
@@ -89,5 +90,5 @@ def score_components(components: List[Component], cfg: RiskConfig, *, not_evalua
             "components": rows, "not_evaluated": not_evaluated, "data_gaps": data_gaps,
             "completeness": "PARTIAL" if (not_evaluated or data_gaps) else "FULL",
             "config": cfg.summary(), "triggers_response": False,
-            "formula": "min(100, Σ_nhóm min(Σ điểm, trần) + thưởng đa dạng (không tính ML)); "
+            "formula": "min(100, Σ_nhóm min(Σ điểm, trần) + thưởng đa dạng (không tính ML; SIGMA và RULE tính là một)); "
                        "điểm = gốc × trọng số × hệ số allowlist"}

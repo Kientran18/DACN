@@ -12,7 +12,9 @@ SILVER_TABLE_FOR_EVENT = {1: "silver_process_events", 5: "silver_process_events"
 # Kênh không phải Sysmon (DDL v1.3 đề xuất, docs/architecture/w8 mục 5.1): rule khai `source_events`, cột ID là windows_event_id.
 SILVER_TABLE_FOR_CHANNEL = {wc.DEFENDER_CHANNEL: "silver_defender_events",
                             wc.POWERSHELL_CHANNEL: "silver_powershell_scriptblock_events"}
-DETECTION_SOURCES = ("EXTERNAL_DEFENDER",)     # alert phản ánh phát hiện của sản phẩm khác (D7); mặc định RULE/IOC
+# EXTERNAL_DEFENDER: alert phản ánh phát hiện của sản phẩm khác (D7); SIGMA: rule cộng đồng Sigma dịch sang DACN
+# (docs/implementation/SIGMA_RULES.md, người dùng duyệt 2026-11-28). Mặc định RULE/IOC.
+DETECTION_SOURCES = ("EXTERNAL_DEFENDER", "SIGMA")
 
 _COND = {
     "type": "object", "additionalProperties": False, "required": ["field", "op", "value"],
@@ -25,12 +27,13 @@ RULE_SCHEMA = {
     "type": "object", "additionalProperties": False,
     "required": ["rule_id", "rule_version", "name", "type", "severity", "status", "description"],
     "properties": {
-        "rule_id": {"type": "string", "pattern": r"^DACN-DET-\d{3}$"},
+        # DACN-SIG-<8 hex đầu id Sigma>: rule Sigma (type 'sigma'); dài 17 ký tự, vừa alerts.rule_id VARCHAR(32).
+        "rule_id": {"type": "string", "pattern": r"^(DACN-DET-\d{3}|DACN-SIG-[0-9a-f]{8})$"},
         "legacy_id": {"type": "string", "pattern": r"^DET-\d{3}$"},
         "rule_version": {"type": "integer", "minimum": 1},
         "name": {"type": "string"},
         "description": {"type": "string"},
-        "type": {"enum": ["single", "correlation", "ioc", "scriptblock"]},
+        "type": {"enum": ["single", "correlation", "ioc", "scriptblock", "sigma"]},
         "status": {"enum": ["enabled", "disabled", "blocked", "candidate"]},
         "blocked_reason": {"type": "string"},
         "severity": {"enum": ["low", "medium", "high", "critical"]},
@@ -81,6 +84,26 @@ RULE_SCHEMA = {
         "limitations": {"type": "array", "items": {"type": "string"}},
         "validation_status": {"enum": ["synthetic_only", "lab_verified"]},
         "response_policy": {"enum": ["alert_only"], "default": "alert_only"},
+        # Rule 'sigma': metadata và detection gốc của rule Sigma (đã chép nguyên văn, ghim sha256). Bộ đánh giá biên dịch lại
+        # từ `detection` (detection.sigma.compiler); `dacn_logsource` là bảng/Event ID Silver đã phân giải khi nạp.
+        "sigma": {"type": "object", "additionalProperties": False,
+                  "required": ["id", "title", "status", "level", "author", "license", "origin", "source_path",
+                               "source_sha256", "logsource", "dacn_logsource", "detection"],
+                  "properties": {
+                      "id": {"type": "string"}, "title": {"type": "string"},
+                      "status": {"enum": ["test", "stable", "experimental"]},
+                      "level": {"enum": ["low", "medium", "high", "critical"]},
+                      "author": {"type": "string"}, "date": {"type": ["string", "null"]},
+                      "modified": {"type": ["string", "null"]},
+                      "references": {"type": "array", "items": {"type": "string"}},
+                      "license": {"type": "string"}, "license_url": {"type": ["string", "null"]},
+                      "origin": {"enum": ["sigmahq", "local"]}, "source_path": {"type": "string"},
+                      "source_commit": {"type": ["string", "null"]}, "source_url": {"type": ["string", "null"]},
+                      "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                      "logsource": {"type": "object"},
+                      "dacn_logsource": {"type": "object", "required": ["kind", "table", "event_ids", "fields"]},
+                      "detection": {"type": "object", "required": ["condition"]},
+                      "coverage_notes": {"type": "array", "items": {"type": "string"}}}},
     },
 }
 

@@ -1,7 +1,10 @@
 """Đối chiếu log Invoke-AtomicRedTeam với kết quả phát hiện của DACN, theo cây tiến trình (ProcessGuid).
 
   python tests/e2e/atomic_compare.py --silver <silver.duckdb> --logs <thư mục/tệp log> [--logs ...]
-      [--expected tests/e2e/atomic_expected.yaml] [--out report.md] [--json report.json]
+      [--expected tests/e2e/atomic_expected.yaml] [--out report.md] [--json report.json] [--sigma]
+
+--sigma: đánh giá thêm rule Sigma đã ghim (src/detection/sigma/manifest.yaml) trên bản sao Silver và báo cáo riêng rule Sigma
+khớp theo từng lần chạy. Kết luận TP/FN/FP/TN vẫn chỉ dựa trên rule DACN (target_rules), Sigma không làm đổi kết luận.
 
 Cách gán: mỗi lần chạy trong log (Attire JSON hoặc CSV mặc định) cho pid của tiến trình mà Invoke-AtomicTest khởi tạo
 (cmd.exe hoặc powershell.exe) và thời điểm chạy. Công cụ tìm Event 1 có cùng pid trong cửa sổ thời gian đó (tiến trình
@@ -34,6 +37,8 @@ for _p in (ROOT / "src", ROOT / "src" / "pipeline", ROOT / "poc" / "sysmon-colle
         sys.path.insert(0, str(_p))
 
 from detection.engine import DetectionEngine  # noqa: E402
+from detection.loader import load_rules  # noqa: E402
+from detection.sigma.loader import load_sigma, load_sigma_config  # noqa: E402
 from pipeline.silver_store import SilverStore  # noqa: E402
 
 EXPECTED = Path(__file__).with_name("atomic_expected.yaml")
@@ -175,7 +180,7 @@ def _coverage(con) -> dict:
             "max": hi.astimezone(timezone.utc).isoformat() if hi else None, "_max_dt": hi}
 
 
-def _evaluate(con, runs: List[dict], expected: dict) -> dict:
+def _evaluate(con, runs: List[dict], expected: dict, sigma: bool = False) -> dict:
     spec = {x["guid"].lower(): x for x in expected["tests"]}
     cov = _coverage(con)
     children = _children_index(con)
@@ -194,7 +199,8 @@ def _evaluate(con, runs: List[dict], expected: dict) -> dict:
         for r in results:
             if set(r.get("contributing_event_ids") or []) & set(ev):
                 outcomes[r["rule_id"]].add(r["outcome"])
-        matched = sorted(rid for rid, o in outcomes.items() if "MATCH" in o)
+        matched_all = sorted(rid for rid, o in outcomes.items() if "MATCH" in o)
+        matched = [x for x in matched_all if not x.startswith("DACN-SIG-")]       # kết luận chỉ theo rule DACN
         seen = sorted(set(ev.values()))
         rows.append({
             "id": sp["id"], "attempt": attempts[sp["id"]], "technique": sp["technique"], "guid": sp["guid"],
@@ -211,6 +217,9 @@ def _evaluate(con, runs: List[dict], expected: dict) -> dict:
             "matched_rules": matched, "outcomes": {k: sorted(v) for k, v in sorted(outcomes.items())},
             "verdict": _verdict(sp["category"], run["pid"] is not None, seed is not None, sp.get("target_rules") or [], matched),
         })
+        if sigma:
+            rows[-1]["sigma_matched_rules"] = [x for x in matched_all if x.startswith("DACN-SIG-")]
+        rows[-1]["outcomes"] = {k: v for k, v in rows[-1]["outcomes"].items() if sigma or not k.startswith("DACN-SIG-")}
     run_ids = {r["id"] for r in rows}
     not_run = [x["id"] for x in expected["tests"] if x["id"] not in run_ids]
     cov.pop("_max_dt")
@@ -236,7 +245,7 @@ def _summary(rows: List[dict], expected: dict, not_run: List[str]) -> List[dict]
     return [out[t] for t in order]
 
 
-def compare(runs: List[dict], silver: Path, expected=EXPECTED, bronze: Optional[Path] = None) -> dict:
+def compare(runs: List[dict], silver: Path, expected=EXPECTED, bronze: Optional[Path] = None, sigma: bool = False) -> dict:
     """Luôn làm việc trên bản sao tạm của Silver: chạy DetectionEngine để kết quả cập nhật mà không ghi vào DB core.
     bronze: thư mục Bronze; segment đã niêm phong mà core chưa nạp (ví dụ dừng core ngay sau khi agent niêm phong lúc dừng)
     được nạp vào BẢN SAO trước khi đối chiếu. Idempotent theo ledger: segment đã nạp được bỏ qua."""
@@ -256,8 +265,13 @@ def compare(runs: List[dict], silver: Path, expected=EXPECTED, bronze: Optional[
         try:
             if bronze:
                 st.ingest_dir(Path(bronze), run_id="atomic_compare")
-            DetectionEngine(st.con).run()
-            return _evaluate(st.con, runs, expected)
+            rules = load_rules()
+            if sigma:      # bật Sigma chỉ cho bản sao này, giữ các giới hạn khác của config/sigma-rules.yaml
+                rules = {**rules, **load_sigma({**load_sigma_config(), "enabled": True}).rules}
+            DetectionEngine(st.con, rules=rules).run()
+            rep = _evaluate(st.con, runs, expected, sigma)
+            rep["sigma_enabled"] = sigma
+            return rep
         finally:
             st.close()
 
@@ -295,6 +309,13 @@ def to_markdown(rep: dict) -> str:
             "Cỡ mẫu = số lần chạy ở trên, một VM, một lần đo; không suy rộng thành tỷ lệ phát hiện chung.",
             f"NOT RUN: {', '.join(rep['not_run']) or '(không có)'}.",
             f"Lần chạy không có trong bảng kỳ vọng: {len(rep['unknown_runs'])}."]
+    if rep.get("sigma_enabled"):
+        out += ["", "## So sánh rule DACN và rule Sigma (theo lần chạy)", "",
+                "Rule Sigma là rule cộng đồng (synthetic_only), không nằm trong kết luận TP/FN ở trên. Đếm rule khớp, không phải tỷ lệ.", "",
+                "| ID | Lần | Rule DACN MATCH | Rule Sigma MATCH |", "|---|---|---|---|"]
+        for r in rep["runs"]:
+            out.append(f"| {r['id']} | {r['attempt']} | {', '.join(r['matched_rules']) or '-'} | "
+                       f"{', '.join(r.get('sigma_matched_rules') or []) or '-'} |")
     return "\n".join(out) + "\n"
 
 
@@ -309,9 +330,10 @@ def main(argv=None) -> int:
     ap.add_argument("--bronze", type=Path, help="thư mục Bronze; nạp segment core chưa nạp vào bản sao Silver")
     ap.add_argument("--out", type=Path)
     ap.add_argument("--json", type=Path)
+    ap.add_argument("--sigma", action="store_true", help="đánh giá thêm rule Sigma đã ghim, báo cáo riêng")
     a = ap.parse_args(argv)
     try:
-        rep = compare(load_runs(a.logs), a.silver, a.expected, a.bronze)
+        rep = compare(load_runs(a.logs), a.silver, a.expected, a.bronze, sigma=a.sigma)
     except (FileNotFoundError, RuntimeError) as exc:
         print(str(exc), file=sys.stderr)
         return 2

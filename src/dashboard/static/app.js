@@ -57,7 +57,11 @@ function linksPanel(id, a) {
   });
   return box;
 }
-const sourceBadge = (a) => badge(a.source_label || "DACN", a.source_label === "Defender" ? "ext" : "");
+// "Sigma" = rule cộng đồng Sigma dịch sang DACN (synthetic_only, chưa kiểm chứng trên dữ liệu thật của DACN).
+const sourceBadge = (a) => badge(a.source_label || "DACN", a.source_label === "Defender" ? "ext" : a.source_label === "Sigma" ? "sigma" : "");
+// Link ra ngoài chỉ khi là https (dữ liệu từ API, không tin cậy); mở tab mới, không gửi referrer.
+const extLink = (url, text) => (typeof url === "string" && url.startsWith("https://"))
+  ? h("a", { href: url, target: "_blank", rel: "noopener noreferrer", text: text || url }) : h("span", { class: "muted", text: fmt(url) });
 async function riskMap() {            // điểm theo (host, process_guid); lỗi thì bảng alert vẫn hiện, cột rủi ro để "—"
   try { const d = await api("/risk/subjects?kind=process&limit=500"); const m = {}; for (const i of d.items) m[riskKey(i.subject.hostname, i.subject.process_guid)] = i; return m; }
   catch (e) { if (e.status === 401) throw e; return {}; }
@@ -251,7 +255,7 @@ async function pageAlerts() {
   const f = Object.fromEntries(new URLSearchParams(location.hash.split("?")[1] || ""));
   view.append(h("h1", { text: "Alerts" }));
   const sel = h("select", { name: "status" }, [""].concat(["NEW", "TRIAGED", "INVESTIGATING", "CONFIRMED", "FALSE_POSITIVE", "CLOSED"]).map((s) => h("option", { value: s, text: s || "(tất cả)", selected: s === (f.status || "") })));
-  const src = h("select", { name: "source" }, [["", "(tất cả)"], ["DACN", "DACN (rule của DACN)"], ["DEFENDER", "Defender (phản ánh Microsoft Defender)"]]
+  const src = h("select", { name: "source" }, [["", "(tất cả)"], ["DACN", "DACN (rule của DACN)"], ["SIGMA", "Sigma (rule cộng đồng)"], ["DEFENDER", "Defender (phản ánh Microsoft Defender)"]]
     .map(([v, t]) => h("option", { value: v, text: t, selected: v === (f.source || "") })));
   const form = h("form", { class: "filters", onsubmit: (e) => { e.preventDefault(); location.hash = "#/alerts" + qs({ status: sel.value, source: src.value }); } },
     h("label", {}, "Trạng thái", sel), h("label", {}, "Nguồn phát hiện", src), h("button", { class: "primary", type: "submit", text: "Lọc" }));
@@ -287,6 +291,7 @@ async function pageAlertDetail(id) {
           "severity Defender gốc nằm trong severity_name, severity alert do rule DACN gán. Defender không ghi PID: tiến trình liên quan bên dưới là suy luận." }),
         Object.keys(ctx).length ? h("dl", { class: "kv" }, Object.entries(ctx).map(([k, v]) => [h("dt", { text: k }), h("dd", { text: fmt(v) })])) : empty("Không có trường ngữ cảnh.")));
     }
+    if (a.source_label === "Sigma" && a.matched_fields && a.matched_fields.sigma) box.append(...sigmaPanel(a));
     if (!a.process_guid && (a.source_label === "Defender" || (a.matched_fields && a.matched_fields.script_block_id))) {
       box.append(h("h2", {}, labelled("inf", "SUY LUẬN"), "Tiến trình liên quan (nối với Sysmon)"), linksPanel(id, a));
     }
@@ -557,6 +562,25 @@ async function pageRisk() {
   ]);
 }
 
+// Khung giải thích alert Sigma: selection nào đúng, field đã khớp, ghi công tác giả + giấy phép (DRL 1.1 yêu cầu giữ tác giả).
+function sigmaPanel(a) {
+  const sg = a.matched_fields.sigma, at = a.matched_fields.attribution || {};
+  const fields = Object.entries(sg.fields || {}).map(([k, v]) => [h("dt", { text: k }),
+    h("dd", { text: v && typeof v === "object" && v.redacted ? "(không hiển thị văn bản script; sha256 " + v.sha256 + ", " + v.length + " ký tự)" : fmt(v) })]);
+  return [h("h2", {}, labelled("obs", "QUAN SÁT"), "Rule Sigma"), h("div", { class: "card", id: "sigma-panel" },
+    h("p", { class: "muted", text: "Rule cộng đồng Sigma, dịch bằng bộ biên dịch tập con của DACN. Trạng thái synthetic_only: chưa kiểm chứng trên dữ liệu thật " +
+      "của DACN; level do tác giả Sigma đặt. Alert Sigma không bao giờ kích hoạt response." }),
+    h("dl", { class: "kv" },
+      h("dt", { text: "tiêu đề Sigma" }), h("dd", { text: fmt(sg.title) }), h("dt", { text: "id Sigma" }), h("dd", { text: fmt(sg.id) }),
+      h("dt", { text: "level / status" }), h("dd", { text: fmt(sg.level) + " / " + fmt(sg.status) }),
+      h("dt", { text: "condition" }), h("dd", {}, h("code", { text: fmt(sg.condition) })),
+      h("dt", { text: "selection đúng" }), h("dd", { text: (sg.selections_true || []).join(", ") || "—" }),
+      h("dt", { text: "tác giả" }), h("dd", { id: "sigma-author", text: fmt(at.author) }),
+      h("dt", { text: "giấy phép" }), h("dd", {}, extLink(at.license_url, fmt(at.license))),
+      h("dt", { text: "rule gốc" }), h("dd", { id: "sigma-source" }, at.source_url ? extLink(at.source_url) : h("span", { text: fmt(at.source_path) }))),
+    h("h3", { text: "Field đã khớp" }), fields.length ? h("dl", { class: "kv" }, fields) : empty("Không có field."))];
+}
+
 // ---------- trang: rules ----------
 async function pageRules() {
   view.append(h("h1", { text: "Rules (chỉ đọc)" }));
@@ -565,6 +589,21 @@ async function pageRules() {
     { key: "name", label: "Tên", wrap: true }, { label: "Trạng thái", render: (r) => badge(r.status, r.status === "enabled" ? "ok" : "warn") }, { label: "Mức", render: (r) => badge(r.severity, sevKind(r.severity)) },
     { key: "validation_status", label: "Kiểm chứng" }, { label: "MITRE", render: (r) => fmt(r.mitre_technique_ids) }, { key: "response_policy", label: "Response" }], d.items,
     (r) => api("/rules/" + r.rule_id).then((full) => modal(r.rule_id, h("pre", { text: JSON.stringify(full, null, 2) }), [closeBtn]))) : empty("Không có rule nào được nạp.")));
+  view.append(h("h2", { text: "Rule Sigma" }));
+  const sbox = h("div", { id: "sigma-rules" }); view.append(sbox);
+  await load(sbox, () => api("/sigma/rules"), (d) => {
+    sbox.append(h("p", { class: "muted", text: (d.enabled ? "Sigma ĐANG BẬT. " : "Sigma đang TẮT (config/sigma-rules.yaml enabled: false); danh sách dưới đây chỉ để xem trước. ") +
+      "Rule Sigma là synthetic_only, không phải tỷ lệ phát hiện, không kích hoạt response." +
+      (d.source && d.source.commit ? " Nguồn SigmaHQ @" + d.source.commit.slice(0, 12) + ", giấy phép " + fmt(d.source.license) + "." : "") }));
+    sbox.append(h("h3", { text: "Đã nạp (" + d.loaded.length + ")" }), d.loaded.length ? table([{ key: "rule_id", label: "Rule" }, { key: "title", label: "Tiêu đề Sigma", wrap: true },
+      { label: "Mức", render: (r) => badge(r.severity, sevKind(r.severity)) }, { label: "Hoạt động", render: (r) => badge(r.active ? "bật" : "tắt", r.active ? "ok" : "warn") },
+      { key: "dacn_table", label: "Bảng Silver" }, { label: "MITRE", render: (r) => fmt(r.mitre_technique_ids) }, { key: "author", label: "Tác giả", wrap: true },
+      { label: "Ghi chú độ phủ", render: (r) => fmt((r.coverage_notes || []).join("; ")), wrap: true }], d.loaded,
+      (r) => api("/sigma/rules/" + r.rule_id).then((full) => modal(r.rule_id, h("div", {}, h("p", {}, "Rule gốc: ", extLink(full.summary.source_url, full.summary.source_path)),
+        h("pre", { id: "sigma-source-text", text: full.source_text || "(không đọc được tệp)" })), [closeBtn]))) : empty("Không có rule Sigma nào."));
+    sbox.append(h("h3", { text: "Bị loại (" + d.rejected.length + ")" }), d.rejected.length ? table([{ key: "code", label: "Mã" }, { key: "path", label: "Tệp", wrap: true },
+      { key: "title", label: "Tiêu đề", wrap: true }, { key: "reason", label: "Lý do", wrap: true }], d.rejected) : empty("Không có rule nào bị loại."));
+  });
 }
 
 // ---------- router ----------

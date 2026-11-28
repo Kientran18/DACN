@@ -144,14 +144,23 @@ class AlertStore:
         return dict(zip(cols, r)) if r else None
 
     def list(self, status: Optional[str] = None, limit: int = 100, offset: int = 0,
-             external: Optional[bool] = None) -> List[Dict]:
+             external: Optional[bool] = None, source: Optional[str] = None) -> List[Dict]:
         """external: True = chỉ alert phản ánh sản phẩm khác (detection_source EXTERNAL_*, ví dụ Defender);
-        False = chỉ alert do DACN tự suy ra; None = tất cả."""
+        False = chỉ alert không phải EXTERNAL_*; None = tất cả.
+        source: 'DEFENDER' = EXTERNAL_*; 'SIGMA' = rule cộng đồng Sigma; 'DACN' = rule của chính DACN (không EXTERNAL_, không SIGMA)."""
         sql, params, cond = "select * from alerts", [], []
         if status:
             cond.append("status=?"); params.append(status)
         if external is not None:
             cond.append(("" if external else "not ") + "starts_with(detection_source, 'EXTERNAL_')")
+        if source == "DEFENDER":
+            cond.append("starts_with(detection_source, 'EXTERNAL_')")
+        elif source == "SIGMA":
+            cond.append("detection_source = 'SIGMA'")
+        elif source == "DACN":
+            cond.append("not starts_with(detection_source, 'EXTERNAL_') and detection_source <> 'SIGMA'")
+        elif source is not None:
+            raise ValueError(f"source không hợp lệ: {source}")
         if cond:
             sql += " where " + " and ".join(cond)
         cur = self.con.execute(sql + " order by first_seen_utc desc, alert_id limit ? offset ?",

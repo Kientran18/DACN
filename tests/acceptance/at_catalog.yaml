@@ -453,3 +453,32 @@ AT-49:
   expected: Block nhiều phần ghép đủ; DET-203/204 MATCH; /script che chuỗi giả theo mặc định; reveal chỉ cho quyền raw và có audit SCRIPT_RAW_VIEW
   tests: []
   limits: "Quan sát thủ công 2026-11-28, một VM, một lần (w8 mục 12.11): 554/554 block ghép đủ (33 nhiều phần); 548/554 nối UNIQUE về powershell.exe; /script redacted, viewer reveal 403, analyst reveal có audit. Nút xem bản gốc trên dashboard chưa quan sát"
+AT-50:
+  req: R-03
+  level: L
+  goal: Nạp tập con rule Sigma theo manifest ghim sha256; rule không hỗ trợ bị loại kèm mã SIG-E* và lý do
+  pre: config/sigma-rules.yaml (mặc định tắt), src/detection/sigma/manifest.yaml (28 rule SigmaHQ @ddf1d4f87fd2)
+  steps: ["PYTHONPATH=src:poc/sysmon-collector python -m detection.sigma list", "python -m detection.sigma check <tệp.yml>"]
+  expected: 28 rule nạp được, 0 bị loại; rule sai sha256/logsource/field/modifier/condition/keyword/status bị loại đúng mã; trùng rule_id loại mọi bên; mặc định tắt
+  tests: [tests/detection/test_sigma_compiler.py, tests/detection/test_sigma_loader.py, tests/detection/test_sigma_cli.py]
+  gaps: "Thiết kế Sigma người dùng duyệt thay Cyber (docs/implementation/SIGMA_RULES.md mục 2), chưa review độc lập"
+  limits: Dữ liệu synthetic; độ phủ cú pháp không phải tỷ lệ phát hiện
+AT-51:
+  req: R-03
+  level: L
+  goal: Rule Sigma chạy trong DetectionEngine, ra DetectionResult -> alert detection_source SIGMA có giải thích và ghi công tác giả; không response
+  pre: Fixture Silver synthetic có nhãn (tests/detection/test_sigma_engine.py)
+  steps: ["Chạy DetectionEngine với rule DACN + rule Sigma", "AlertBuilder", "GET /sigma/rules, /alerts?source=SIGMA", "Dashboard: nguồn Sigma, khung Rule Sigma"]
+  expected: TP/TN/INSUFFICIENT đúng nhãn; script 4104 không vào kết quả; alert có matched_fields.sigma và attribution.author; nhóm rủi ro SIGMA không cộng thưởng đa dạng với RULE; module Sigma không import response
+  tests: [tests/detection/test_sigma_engine.py, tests/detection/test_sigma_safety.py, tests/api/test_sigma_api.py, tests/risk/test_sigma_risk.py, tests/dashboard/test_dashboard_sigma.py, tests/e2e/test_atomic_compare.py::test_sigma_option_reports_sigma_matches_separately_and_keeps_verdicts]
+  gaps: "Mọi rule Sigma synthetic_only; level chưa hiệu chỉnh cho DACN"
+  limits: Dữ liệu synthetic; chưa đo hiệu năng
+AT-52:
+  req: R-03
+  level: W
+  goal: Rule Sigma trên Windows 10 VM - nạp đủ sau checkout Windows, so rule khớp DACN và Sigma theo atomic, alert Sigma truy vết tới raw_xml
+  pre: Windows 10 VM như AT-47; config/sigma-rules.yaml enabled true
+  steps: ["Theo docs/implementation/acceptance/SIGMA_VM_GUIDE.md mục 3-5 (V-S1..V-S3)", "python tests\\e2e\\atomic_compare.py ... --sigma"]
+  expected: 28 loaded, 0 rejected; báo cáo atomic_compare có mục so sánh DACN và Sigma; alert Sigma có khung Rule Sigma và evidence FULL
+  tests: []
+  limits: "CHƯA chạy trên VM"

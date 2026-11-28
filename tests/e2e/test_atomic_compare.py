@@ -387,3 +387,25 @@ def test_report_states_silver_coverage_and_flags_runs_after_it(tmp_path):
     assert by_id(rep)["A04"]["after_silver_end"] is False
     md = ac.to_markdown(rep)
     assert "Silver có dữ liệu" in md and "--bronze" in md
+
+
+# ---------- so sánh DACN và Sigma (--sigma) ----------
+
+def test_sigma_option_reports_sigma_matches_separately_and_keeps_verdicts(tmp_path):
+    rows = silver_rows()
+    for r in rows:                     # raw_data như Silver thật (EventData gốc) để rule Sigma có field
+        if r["table"] == "process":
+            r["raw_data"] = json.dumps({"Image": r["image_path"], "CommandLine": r["command_line"], "User": "LAB\\op",
+                                        "OriginalFileName": "", "ParentImage": CMD})
+    db = build_silver(tmp_path, rows)
+    logs = write_logs(tmp_path, default_procs())
+    plain = by_id(ac.compare(ac.load_runs([logs]), db, EXPECTED))
+    rep = ac.compare(ac.load_runs([logs]), db, EXPECTED, sigma=True)
+    r = by_id(rep)
+    assert {k: v["verdict"] for k, v in r.items()} == {k: v["verdict"] for k, v in plain.items()}   # Sigma không đổi kết luận
+    assert all(not x.startswith("DACN-SIG-") for v in r.values() for x in v["matched_rules"])
+    assert "DACN-SIG-92626ddd" in r["A08"]["sigma_matched_rules"]           # schtasks /Create
+    assert "sigma_matched_rules" not in plain["A08"]
+    md = ac.to_markdown(rep)
+    assert "## So sánh rule DACN và rule Sigma" in md and "DACN-SIG-92626ddd" in md
+    assert "So sánh rule DACN và rule Sigma" not in ac.to_markdown(ac.compare(ac.load_runs([logs]), db, EXPECTED))

@@ -13,7 +13,7 @@
   "properties": {
     "rule_id": {
       "type": "string",
-      "pattern": "^DACN-DET-\\d{3}$"
+      "pattern": "^(DACN-DET-\\d{3}|DACN-SIG-[0-9a-f]{8})$"
     },
     "legacy_id": {
       "type": "string",
@@ -34,7 +34,8 @@
         "single",
         "correlation",
         "ioc",
-        "scriptblock"
+        "scriptblock",
+        "sigma"
       ]
     },
     "status": {
@@ -129,7 +130,8 @@
     },
     "detection_source": {
       "enum": [
-        "EXTERNAL_DEFENDER"
+        "EXTERNAL_DEFENDER",
+        "SIGMA"
       ]
     },
     "patterns": {
@@ -385,6 +387,126 @@
         "alert_only"
       ],
       "default": "alert_only"
+    },
+    "sigma": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "status",
+        "level",
+        "author",
+        "license",
+        "origin",
+        "source_path",
+        "source_sha256",
+        "logsource",
+        "dacn_logsource",
+        "detection"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "test",
+            "stable",
+            "experimental"
+          ]
+        },
+        "level": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "author": {
+          "type": "string"
+        },
+        "date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "modified": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "license": {
+          "type": "string"
+        },
+        "license_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "origin": {
+          "enum": [
+            "sigmahq",
+            "local"
+          ]
+        },
+        "source_path": {
+          "type": "string"
+        },
+        "source_commit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "logsource": {
+          "type": "object"
+        },
+        "dacn_logsource": {
+          "type": "object",
+          "required": [
+            "kind",
+            "table",
+            "event_ids",
+            "fields"
+          ]
+        },
+        "detection": {
+          "type": "object",
+          "required": [
+            "condition"
+          ]
+        },
+        "coverage_notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
     }
   }
 }

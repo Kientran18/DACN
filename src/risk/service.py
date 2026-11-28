@@ -109,6 +109,8 @@ class RiskService:
             return "STATIC"
         if (a["detection_source"] or "").startswith("EXTERNAL_"):
             return "EXTERNAL_AV"
+        if a["detection_source"] == "SIGMA" or (self.rules.get(a["rule_id"]) or {}).get("type") == "sigma":
+            return "SIGMA"
         if a["detection_source"] == "IOC" or (self.rules.get(a["rule_id"]) or {}).get("type") == "ioc":
             return "IOC"
         if (self.rules.get(a["rule_id"]) or {}).get("type") == "correlation":

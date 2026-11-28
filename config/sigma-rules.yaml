@@ -1,0 +1,13 @@
+# Cấu hình rule Sigma (src/detection/sigma, docs/implementation/SIGMA_RULES.md). MẶC ĐỊNH TẮT.
+# Rule Sigma chỉ tạo alert (detection_source SIGMA, alert_only), KHÔNG BAO GIỜ kích hoạt response.
+# Mọi rule Sigma là synthetic_only: chưa kiểm chứng trên dữ liệu thật của DACN.
+version: 1
+enabled: false
+# Chỉ nhận rule status test/stable của SigmaHQ; bật để nhận cả experimental.
+allow_experimental: false
+# Giới hạn số rule Sigma đang chạy (mỗi rule đánh giá từng hàng Silver mới bằng Python). Rule vượt mức bị loại SIG-E011.
+max_rules: 50
+# Độ dài tối đa của một regex (modifier |re). Python `re` không có timeout: giới hạn để giảm rủi ro ReDoS.
+regex_max_length: 1000
+# null = src/detection/sigma/manifest.yaml (đã ghim). Đường dẫn tương đối tính từ thư mục gốc repository.
+manifest: null

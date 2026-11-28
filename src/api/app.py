@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query as Q, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Path as Path_, Query as Q, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -113,7 +113,8 @@ def _err(status, code, message):
     return JSONResponse(status_code=status, content={"error": {"code": code, "message": message}})
 
 
-SOURCE_LABELS = {"EXTERNAL_DEFENDER": "Defender"}     # detection_source -> nhãn hiển thị; còn lại là phát hiện của DACN
+# detection_source -> nhãn hiển thị; còn lại là phát hiện của DACN. "Sigma" = rule cộng đồng Sigma (synthetic_only).
+SOURCE_LABELS = {"EXTERNAL_DEFENDER": "Defender", "SIGMA": "Sigma"}
 
 
 def _alert_out(a: dict) -> dict:
@@ -134,7 +135,8 @@ CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'se
 def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy, bronze_dir: Path,
                health_path: Optional[Path] = None, data_label: str = "UNSPECIFIED",
                lock: Optional[threading.RLock] = None, core_status=None, agent_poll_s: float = 2.0,
-               risk_config=None, ml_enabled: Optional[Dict[str, bool]] = None) -> FastAPI:
+               risk_config=None, ml_enabled: Optional[Dict[str, bool]] = None,
+               sigma_report: Optional[dict] = None) -> FastAPI:
     """data_label: 'SAMPLE' = dữ liệu mẫu/synthetic (UI hiện biểu ngữ nổi bật); 'UNSPECIFIED' = chưa xác nhận nguồn."""
     if data_label not in ("SAMPLE", "UNSPECIFIED"):
         raise ValueError("data_label không hợp lệ")
@@ -306,11 +308,10 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
 
     # -- alerts -----------------------------------------------------------------------------------
     @app.get("/alerts", tags=["alerts"])
-    def list_alerts(status: Optional[STATUSES] = None, source: Optional[Literal["DACN", "DEFENDER"]] = None,
+    def list_alerts(status: Optional[STATUSES] = None, source: Optional[Literal["DACN", "DEFENDER", "SIGMA"]] = None,
                     limit: int = Q(50, ge=1, le=200), offset: int = Q(0, ge=0), _: dict = Depends(need("read"))):
-        ext = None if source is None else source == "DEFENDER"
         with lock:
-            return page([_alert_out(a) for a in alerts.list(status, limit, offset, external=ext)], limit, offset)
+            return page([_alert_out(a) for a in alerts.list(status, limit, offset, source=source)], limit, offset)
 
     @app.get("/alerts/{alert_id}", tags=["alerts"])
     def alert(alert_id: str, _: dict = Depends(need("read"))):
@@ -522,6 +523,33 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
         if rule_id not in rules:
             raise HTTPException(404, "không tìm thấy rule")
         return rules[rule_id]
+
+    # -- rule Sigma (chỉ đọc) ----------------------------------------------------------------------------
+    def _public(x: dict) -> dict:
+        return {k: v for k, v in x.items() if not k.startswith("_")}
+
+    @app.get("/sigma/rules", tags=["rules"])
+    def sigma_rules(_: dict = Depends(need("read"))):
+        """Rule Sigma đã nạp và bị loại kèm mã SIG-E* + lý do. Rule Sigma là synthetic_only, không kích hoạt response."""
+        if sigma_report is None:
+            return {"enabled": False, "loaded": [], "rejected": [], "source": {}, "note": "chưa nạp cấu hình Sigma"}
+        return {"enabled": sigma_report["enabled"], "source": sigma_report.get("source", {}),
+                "config": sigma_report.get("config"), "note": sigma_report.get("note"),
+                "error_codes": sigma_report.get("error_codes", {}),
+                "loaded": [_public(x) for x in sigma_report["loaded"]], "rejected": sigma_report["rejected"]}
+
+    @app.get("/sigma/rules/{rule_id}", tags=["rules"])
+    def sigma_rule(rule_id: str = Path_(..., max_length=32), _: dict = Depends(need("read"))):
+        item = next((x for x in (sigma_report or {}).get("loaded", []) if x["rule_id"] == rule_id), None)
+        if item is None:
+            raise HTTPException(404, "không tìm thấy rule Sigma")
+        text = None
+        if item.get("_file"):
+            try:
+                text = Path(item["_file"]).read_text(encoding="utf-8")       # tệp gốc đã ghim sha256 khi nạp
+            except OSError:
+                text = None
+        return {"summary": _public(item), "rule": rules.get(rule_id), "source_text": text}
 
     # -- response ----------------------------------------------------------------------------------------
     @app.post("/response/actions", tags=["response"])

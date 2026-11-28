@@ -14,7 +14,8 @@ from .ioc import IocStore
 from .loader import load_rules
 from .ml.interface import NullDetector
 from .result import DetectionResult, make_dedup_key
-from .scriptblock import evaluate_scriptblock
+from .scriptblock import GAP, assemble, evaluate_scriptblock
+from .sigma.evaluate import defender_event, evaluate_event as evaluate_sigma, script_event, sysmon_event
 from .schema import SILVER_TABLE_FOR_CHANNEL as _TABLE_FOR_CHANNEL
 from .schema import SILVER_TABLE_FOR_EVENT as _TABLE_FOR
 
@@ -182,6 +183,8 @@ class DetectionEngine:
                 table = _TABLE_FOR_CHANNEL[rule["source_events"][0]["channel"]]
                 if table in self.tables:
                     results += self._scriptblocks(rule, table, since)
+            elif rule["type"] == "sigma":
+                results += self._sigma(rule, since)
             elif rule["type"] in ("single", "ioc"):
                 for eid in rule["sysmon_event_ids"]:
                     for row in self._rows(_TABLE_FOR[eid], [eid], ingested_from=since):
@@ -208,8 +211,8 @@ class DetectionEngine:
         self.con.execute("insert or replace into _detection_cursor values (1, ?, ?, ?)", [top, self._watermark(), sig])
         return emitted
 
-    def _scriptblocks(self, rule: dict, table: str, since) -> List[DetectionResult]:
-        """Đánh giá lại MỌI phần của các script block có phần mới kể từ con trỏ (phần đến muộn làm block đầy đủ hơn).
+    def _script_groups(self, table: str, since) -> Dict[tuple, List[dict]]:
+        """MỌI phần của các script block có phần mới kể từ con trỏ (phần đến muộn làm block đầy đủ hơn).
         Cùng message_number xuất hiện nhiều lần (chạy lại cùng ScriptBlockId, chưa xác minh) -> giữ dòng record_id nhỏ nhất."""
         cond, p = ("and ingest_timestamp > ?", [since]) if since is not None else ("", [])
         cur = self.con.execute(
@@ -223,11 +226,40 @@ class DetectionEngine:
             parts = groups.setdefault((row["hostname"], row["script_block_id"], row["message_total"]), [])
             if not parts or parts[-1]["message_number"] != row["message_number"]:
                 parts.append(row)
+        return groups
+
+    def _scriptblocks(self, rule: dict, table: str, since) -> List[DetectionResult]:
         out = []
-        for (host, sbid, total), parts in groups.items():
+        for (host, sbid, total), parts in self._script_groups(table, since).items():
             res = evaluate_scriptblock(rule, host, sbid, total, parts)
             if res:
                 out.append(res)
+        return out
+
+    def _sigma(self, rule: dict, since) -> List[DetectionResult]:
+        """Rule Sigma (detection.sigma): bảng/Event ID đã phân giải khi nạp (sigma.dacn_logsource)."""
+        spec = rule["sigma"]["dacn_logsource"]
+        out: List[DetectionResult] = []
+        if spec["table"] not in self.tables:
+            return out                      # DB chưa có DDL v1.3: không có dữ liệu để đánh giá
+        if spec["kind"] == "sysmon":
+            for eid in spec["event_ids"]:
+                for row in self._rows(spec["table"], [eid], ingested_from=since):
+                    out.append(evaluate_sigma(rule, sysmon_event(rule, row), row["event_id"], [row["event_id"]]))
+        elif spec["kind"] == "defender":
+            for row in self._rows_channel(spec["table"], spec["event_ids"], ingested_from=since):
+                out.append(evaluate_sigma(rule, defender_event(row), row["event_id"], [row["event_id"]]))
+        else:   # scriptblock: văn bản đã ghép như DACN-DET-203; không chép văn bản vào kết quả
+            for (host, sbid, total), parts in self._script_groups(spec["table"], since).items():
+                text, nums, ids = assemble(parts)
+                missing = [f"MessageNumber:{n}" for n in range(1, total + 1) if n not in set(nums)]
+                clean = text.replace(GAP, "")
+                extra = {"script_block_id": sbid, "message_total": total, "parts_seen": len(nums),
+                         "script_sha256": hashlib.sha256(clean.encode("utf-8")).hexdigest(), "script_length": len(clean)}
+                res = evaluate_sigma(rule, script_event(text, parts, total), f"{host}|{sbid}|{total}", ids,
+                                     extra=extra, missing_parts=missing)
+                if res.outcome == "MATCH" or not missing:
+                    out.append(res)         # block thiếu phần mà chưa khớp: chưa kết luận (như DET-203)
         return out
 
     def _ioc(self, rule: dict, row: dict) -> Optional[DetectionResult]:
