@@ -70,7 +70,14 @@ def test_det201_different_detections_are_separate_alerts(tmp_path):
 
 
 def test_det202_severity_by_event_id_and_mitre(tmp_path):
-    st, eng, rules, results, store, out = run_all(tmp_path, "defender_5001.synthetic.xml", "defender_5007.synthetic.xml")
+    # v2: 5007 cần khóa liên quan bảo vệ mới ra kết quả (fixture 5007 dùng khóa Synthetic, bị loại trừ)
+    st = SilverStore(tmp_path / "s.duckdb")
+    st.ingest_segment(seg(tmp_path, ["defender_5001.synthetic.xml"], [_5007(950, f"{D}\\Features\\TamperProtection = 0x1",
+                                                                         f"{D}\\Features\\TamperProtection = 0x0")]), "t")
+    rules = load_rules()
+    results = DetectionEngine(st.con, rules=rules).run()
+    store = AlertStore(st.con)
+    out = build_from_results(store, rules, results, st.con)
     sev = {r.matched_fields["context"]["event_type"]: r.severity for r in by_rule(results, "DACN-DET-202")}
     assert sev == {"DEFENDER_RTP_DISABLED": "high", "DEFENDER_CONFIG_CHANGED": "low"}
     alerts = [store.get(a) for a in out["alerts"]]
@@ -229,7 +236,66 @@ def test_det201_different_detection_ids_far_apart_are_not_merged(tmp_path):
 
 def test_det202_without_group_by_field_still_uses_time_buckets(tmp_path):
     # DET-202 không khai group_by_field: giữ cách gom cũ (process_guid + khung 10 phút) -> 5007 cách nhau 1 giờ là hai alert
-    xmls = [_at("defender_5007.synthetic.xml", "2026-11-28T10:00:00.0000000Z"),
-            _at("defender_5007.synthetic.xml", "2026-11-28T11:00:00.0000000Z", rid=777)]
+    tp = (f"{D}\\Features\\TamperProtection = 0x1", f"{D}\\Features\\TamperProtection = 0x0")
+    xmls = [_5007(960, *tp).replace("2026-11-28T01:06:00.0000000Z", "2026-11-28T10:00:00.0000000Z"),
+            _5007(961, *tp).replace("2026-11-28T01:06:00.0000000Z", "2026-11-28T11:00:00.0000000Z")]
     _, out = _alerts_for(tmp_path, xmls)
     assert len(out["alerts"]) == 2
+
+
+# ---- DET-202 v2: 5007 chỉ cảnh báo khi khóa liên quan bảo vệ (người dùng chọn cách B, w8 mục 12.13) ------------------------
+# Hình dạng khóa lấy từ thống kê 306 sự kiện 5007 thật trên VM (2026-11-28); giá trị là synthetic.
+D = "HKLM\\SOFTWARE\\Microsoft\\Windows Defender"
+
+
+def _5007(rid, old, new):
+    x = (FIX / "defender_5007.synthetic.xml").read_text(encoding="utf-8")
+    x = x.replace(x[x.index("<EventRecordID>"):x.index("</EventRecordID>")], f"<EventRecordID>{rid}")
+    x = x.replace(f"<Data Name='Old Value'>{D}\\Synthetic\\Value = 0x1</Data>", f"<Data Name='Old Value'>{old}</Data>")
+    return x.replace(f"<Data Name='New Value'>{D}\\Synthetic\\Value = 0x0</Data>", f"<Data Name='New Value'>{new}</Data>")
+
+
+NOISE_5007 = [   # thay đổi nội bộ quan sát trên VM: không được ra alert
+    ("", f"{D}\\Features\\EcsConfigs\\{{12345678-1234-1234-1234-123456789ABC}} = 0x1"),
+    ("", f"{D}\\Features\\Controls\\381 = 0x1"),
+    (f"{D}\\CoreService\\WdConfigHash = 0x0", f"{D}\\CoreService\\WdConfigHash = 0xE8BBA511"),
+    (f"{D}\\Diagnostics\\InitializingComponentProgress = InitWcsLibrary", f"{D}\\Diagnostics\\InitializingComponentProgress = LoadingEngine"),
+    (f"{D}\\ServiceStartStates = 0x0", f"{D}\\ServiceStartStates = 0x1"),
+    (f"{D}\\Real-Time Protection\\DpaDisabled = 0x0", f"{D}\\Real-Time Protection\\DpaDisabled = 0x0"),
+    (f"{D}\\CoreService\\MdDisableResController = 0x0", f"{D}\\CoreService\\MdDisableResController = 0x0"),
+    (f"{D}\\Features\\TPExclusions = 0x0", f"{D}\\Features\\TPExclusions = 0x0"),
+    (f"{D}\\ProductAppDataPath = C:\\ProgramData\\Microsoft\\Windows Defender", f"{D}\\ProductAppDataPath = C:\\ProgramData\\Microsoft\\Windows Defender\\Exclusions\\x"),
+]
+SECURITY_5007 = [   # khóa liên quan bảo vệ: phải ra alert
+    (f"{D}\\Features\\TamperProtection = 0x0", f"{D}\\Features\\TamperProtection = 0x1"),
+    (f"{D}\\NIS\\Consumers\\IPS\\DisableBmNetworkSensor = 0x0", f"{D}\\NIS\\Consumers\\IPS\\DisableBmNetworkSensor = 0x1"),
+    (f"{D}\\Real-Time Protection\\DisableRealtimeMonitoring = 0x0", f"{D}\\Real-Time Protection\\DisableRealtimeMonitoring = 0x1"),
+    ("", f"{D}\\Exclusions\\Paths\\C:\\dacn_lab = 0x0"),
+    (f"{D}\\Spynet\\SubmitSamplesConsent = 0x1", f"{D}\\Spynet\\SubmitSamplesConsent = 0x2"),
+    (f"{D}\\Spynet\\SpynetReporting = 0x2", f"{D}\\Spynet\\SpynetReporting = 0x0"),
+    (f"{D}\\Exclusions\\Paths\\C:\\dacn_lab = 0x0", ""),            # New Value rỗng (xóa khóa): giữ alert, thận trọng
+]
+
+
+def _det202(tmp_path, pairs, extra=()):
+    st = SilverStore(tmp_path / "s.duckdb")
+    st.ingest_segment(seg(tmp_path, names=extra, extra_xml=[_5007(900 + i, o, n) for i, (o, n) in enumerate(pairs)]), "t")
+    rules = load_rules()
+    return [r for r in DetectionEngine(st.con, rules=rules).run() if r.rule_id == "DACN-DET-202"], rules
+
+
+def test_det202_v2_internal_5007_changes_do_not_alert(tmp_path):
+    res, rules = _det202(tmp_path, NOISE_5007)
+    assert rules["DACN-DET-202"]["rule_version"] == 2
+    assert [r.outcome for r in res if r.outcome == "MATCH"] == []
+
+
+@pytest.mark.parametrize("pair", SECURITY_5007, ids=lambda p: (p[1] or p[0]).rsplit("\\", 1)[-1][:30])
+def test_det202_v2_security_related_5007_alerts(tmp_path, pair):
+    res, _ = _det202(tmp_path, [pair])
+    assert [r.outcome for r in res] == ["MATCH"] and res[0].severity == "low"
+
+
+def test_det202_v2_5001_still_alerts_high(tmp_path):
+    res, _ = _det202(tmp_path, [], extra=("defender_5001.synthetic.xml",))
+    assert [(r.outcome, r.severity) for r in res] == [("MATCH", "high")]

@@ -1,5 +1,5 @@
 rule_id: DACN-DET-202
-rule_version: 1
+rule_version: 2
 name: Microsoft Defender bị tắt bảo vệ thời gian thực, đổi cấu hình hoặc chặn thay đổi (tamper)
 description: >
   Mục đích: đánh dấu sự kiện trạng thái của Defender có thể liên quan tới vô hiệu hóa công cụ bảo vệ.
@@ -7,6 +7,10 @@ description: >
   5007 (configuration changed), 5013 (tamper protection blocked a change) theo tài liệu Microsoft
   (docs/architecture/w8 mục 3.4). Bảng silver_defender_events (DDL v1.3 đề xuất).
   Severity theo Event ID: 5001 high, 5013 medium, 5007 low (người dùng duyệt D6 thay cho Cyber).
+  v2 (2026-11-28, người dùng chọn cách B ở w8 mục 12.13): 5007 chỉ cảnh báo khi khóa trong 'New Value' thuộc nhóm liên quan
+  bảo vệ (tên giá trị bắt đầu bằng Disable, nhánh Exclusions, TamperProtection, Spynet SpynetReporting/SubmitSamplesConsent).
+  Lý do: 306 sự kiện 5007 thật trên một VM (2026-11-23..28) gần như toàn bộ là thay đổi nội bộ (Features\EcsConfigs 120,
+  Features\Controls 99, CoreService 27, Diagnostics 15). 5001/5013 không có New Value nên không bị điều kiện này ảnh hưởng.
 type: single
 status: enabled
 detection_source: EXTERNAL_DEFENDER
@@ -18,15 +22,24 @@ severity_by:
 source_events:
   - {channel: "Microsoft-Windows-Windows Defender/Operational", event_ids: [5001, 5007, 5013]}
 context_fields: [event_type, old_value, new_value]
+# Loại trừ 5007 có 'New Value' KHÔNG chứa khóa liên quan bảo vệ trong phần tên khóa (trước dấu '='). New Value rỗng/thiếu
+# (xóa khóa) không bị loại trừ: giữ alert để thận trọng. Danh sách khóa là đề xuất của Software theo tên chính sách Defender,
+# CHƯA được Cyber xác nhận.
+exclude:
+  - field: new_value
+    op: regex
+    value: '(?i)^(?![^=]*(\\Disable[^\\=]*\s*=|\\Exclusions\\|\\TamperProtection\s*=|\\Spynet\\(SpynetReporting|SubmitSamplesConsent)\s*=)).+'
 mitre_technique_ids: [T1562.001]
 mitre_basis: >
   docs/research/cyber/w5/01-detection-required-fields-and-mitre-to-data.md (T1562.001 Disable or Modify Tools gắn với DET-007);
   5001/5013 là trạng thái vô hiệu hóa hoặc bị chặn thay đổi của công cụ bảo vệ theo mô tả Microsoft
 false_positives:
-  - 5007 rất ồn - cả 4 mẫu thật trên VM (2026-11-28) là thay đổi nội bộ của Defender (WdConfigHash, ServiceStartStates, InitializingComponentProgress)
+  - 5007 rất ồn - cả 4 mẫu thật trên VM (2026-11-28) là thay đổi nội bộ của Defender (WdConfigHash, ServiceStartStates, InitializingComponentProgress); v2 loại trừ phần lớn
+  - Bật lại bảo vệ (ví dụ TamperProtection 0x0 -> 0x1) vẫn ra alert - v2 không xét hướng thay đổi
   - Quản trị viên tắt real-time protection có chủ đích; cập nhật nền tảng Defender
 limitations:
   - 5001 và 5013 chưa có mẫu thật trên VM; cấu trúc EventData chưa xác minh (chỉ dùng windows_event_id)
-  - exclude rỗng có chủ ý - danh sách khóa 5007 nội bộ cần loại trừ do Cyber quyết định
+  - v2 chỉ giữ 5007 của khóa trong danh sách; khóa liên quan bảo vệ có tên khác (không bắt đầu bằng Disable, ngoài các nhánh trên) bị bỏ sót
+  - Không xét hướng thay đổi, không bỏ thay đổi không đổi giá trị (cần sửa evaluator; cách C, chưa làm)
   - Chỉ phủ tamper của Defender, KHÔNG mở khóa DET-007 (tamper của DACN/Sysmon)
 validation_status: synthetic_only

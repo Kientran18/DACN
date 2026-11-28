@@ -904,3 +904,21 @@ gộp vào alert đã đóng (`find_group` không lọc trạng thái, như trư
 ("rule_id|host|process_guid|bucket thời gian") không được sửa (không sửa DDL v1.1/v1.2), nên lệch với khóa mới của ba rule trên.
 Kiểm thử: `python -m pytest -q` → 660 pass, 2 skipped, 0 fail (Linux). Chưa chạy lại trên VM.
 
+### 12.13. Ngày 2026-11-28: DACN-DET-202 v2, giảm nhiễu 5007 (phát hiện 3 của mục 12.11, người dùng chọn cách B)
+
+Thống kê 306 sự kiện 5007 thật trên VM (2026-11-23..28, 272 khóa; script chỉ đọc trên bản sao Silver, người dùng chạy): `Features\EcsConfigs` 120,
+`Features\Controls\<số>` 99, `CoreService` (kể cả `MemorySensor`, `CpuSensor`, `DiskSensor`) 27, `Diagnostics` 15; khóa liên quan bảo vệ chỉ thấy
+`Features\TamperProtection` (3 lần, bật lên) và `NIS\Consumers\IPS\DisableBmNetworkSensor` (0x0 → 0x1); không có thay đổi `Exclusions`
+hay `DisableRealtimeMonitoring`; nhiều thay đổi không đổi giá trị (`0x0` → `0x0`).
+
+| Thay đổi | Tệp |
+|---|---|
+| `rule_version` 2; thêm `exclude` regex trên `new_value`: loại trừ 5007 khi phần tên khóa (trước `=`) KHÔNG chứa `\Disable*` (tên giá trị), `\Exclusions\`, `\TamperProtection`, `\Spynet\SpynetReporting` hoặc `\Spynet\SubmitSamplesConsent`. Dùng điều kiện `exclude` có sẵn, không đổi rule model. 5001/5013 không có `New Value` nên không bị ảnh hưởng; 5007 có `New Value` rỗng (xóa khóa) vẫn ra alert | `src/detection/rules/dacn-det-202.yaml` |
+| Test: 9 thay đổi nội bộ (hình dạng khóa thật) không ra alert; 7 thay đổi liên quan bảo vệ ra alert `low`; 5001 vẫn `high`. Hai test cũ dùng fixture 5007 khóa `Synthetic` chuyển sang khóa `TamperProtection` | `tests/detection/test_defender_rules.py` |
+
+Ước tính trên 306 sự kiện (đếm tay từ top 30 khóa và nhóm khóa cha, không phải số đo lại): còn khoảng 5 kết quả 5007 (TamperProtection ×3,
+DisableBmNetworkSensor ×2). Giới hạn: danh sách khóa là đề xuất của Software theo tên chính sách Defender, **chưa được Cyber xác nhận**;
+khóa liên quan bảo vệ có tên khác bị bỏ sót; không xét hướng thay đổi (bật lại bảo vệ vẫn ra alert) và không bỏ thay đổi không đổi
+giá trị (cách C, cần sửa evaluator, chưa làm). Đổi `rule_version` làm engine đánh giá lại toàn bộ; alert DET-202 v1 đã có vẫn giữ.
+Kiểm thử: `python -m pytest -q` → 669 pass, 2 skipped, 0 fail (Linux). Chưa chạy trên VM.
+
