@@ -89,6 +89,16 @@ def test_defender_only_ingestion_after_first_run_is_evaluated(tmp_path):
     assert [r.outcome for r in by_rule(eng.run(), "DACN-DET-201")] == ["MATCH"]
 
 
+def test_incremental_run_with_only_channel_data_and_no_sysmon(tmp_path):
+    """Hồi quy (phát hiện ở hạng mục 6): DB chỉ có dữ liệu kênh v1.3, lượt tăng dần thứ hai từng lỗi min() rỗng ở correlation."""
+    st = SilverStore(tmp_path / "s.duckdb")
+    st.ingest_segment(seg(tmp_path / "a", ["defender_1116.synthetic.xml"]), "t1")
+    eng = DetectionEngine(st.con, rules=load_rules())
+    assert [r.rule_id for r in eng.run()] == ["DACN-DET-201"]
+    st.ingest_segment(seg(tmp_path / "b", ["defender_1117.synthetic.xml"]), "t2")
+    assert [r.rule_id for r in eng.run()] == ["DACN-DET-201"]
+
+
 def test_defender_timestamps_do_not_move_correlation_watermark(tmp_path):
     st = SilverStore(tmp_path / "s.duckdb")
     st.ingest_segment(seg(tmp_path, ["defender_1116.synthetic.xml"]), "t")
@@ -124,7 +134,9 @@ def _rule(**kw):
     ({"sysmon_event_ids": [1]}, "chỉ khai một"),
     ({"source_events": [{"channel": "Security", "event_ids": [4688]}]}, "không có bảng Silver"),
     ({"source_events": [{"channel": DEF, "event_ids": [4104]}]}, "không hỗ trợ Event ID"),
-    ({"source_events": [{"channel": PS, "event_ids": [4104]}], "detection_source": "EXTERNAL_DEFENDER"}, "EXTERNAL_DEFENDER"),
+    ({"type": "scriptblock", "patterns": ["iex("], "source_events": [{"channel": PS, "event_ids": [4104]}],
+      "detection_source": "EXTERNAL_DEFENDER"}, "EXTERNAL_DEFENDER"),
+    ({"source_events": [{"channel": PS, "event_ids": [4104]}]}, "chỉ dùng rule 'scriptblock'"),
     ({"type": "correlation", "time_window_seconds": 5, "window_status": "TBD_UNCALIBRATED"}, "source_events chỉ dùng"),
     ({"source_events": None}, "sysmon_event_ids hoặc source_events"),
 ])

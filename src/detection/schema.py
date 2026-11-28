@@ -30,7 +30,7 @@ RULE_SCHEMA = {
         "rule_version": {"type": "integer", "minimum": 1},
         "name": {"type": "string"},
         "description": {"type": "string"},
-        "type": {"enum": ["single", "correlation", "ioc"]},
+        "type": {"enum": ["single", "correlation", "ioc", "scriptblock"]},
         "status": {"enum": ["enabled", "disabled", "blocked", "candidate"]},
         "blocked_reason": {"type": "string"},
         "severity": {"enum": ["low", "medium", "high", "critical"]},
@@ -51,6 +51,13 @@ RULE_SCHEMA = {
         # Trường dùng gom alert (mặc định process_guid). Kênh không có process_guid cần trường khác, ví dụ detection_id.
         "group_by_field": {"type": "string", "pattern": "^[a-z_]+$"},
         "detection_source": {"enum": list(DETECTION_SOURCES)},
+        # Rule 'scriptblock' (PowerShell 4104, w8 mục 5.2): chuỗi con không phân biệt hoa/thường tìm trong script block đã ghép.
+        "patterns": {"type": "array", "items": {"type": "string", "minLength": 3}, "minItems": 1},
+        # Giải mã chuỗi base64 dài trong script rồi tìm lại `patterns` trên kết quả (DET-204). Có giới hạn để không tốn tài nguyên.
+        "base64": {"type": "object", "additionalProperties": False, "required": ["min_length"],
+                   "properties": {"min_length": {"type": "integer", "minimum": 16, "maximum": 100000},
+                                  "max_candidates": {"type": "integer", "minimum": 1, "maximum": 1000},
+                                  "max_decoded_bytes": {"type": "integer", "minimum": 64, "maximum": 10485760}}},
         "required_fields": {"type": "array", "items": {"type": "string"}},
         "match": {"type": "object", "additionalProperties": False,
                   "properties": {"all": {"type": "array", "items": _COND},

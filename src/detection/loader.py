@@ -33,8 +33,8 @@ def validate_rule(rule: dict, source: str = "") -> dict:
         raise RuleError(f"{source}: chỉ khai một trong sysmon_event_ids hoặc source_events")
     if r["type"] == "single" and not (r.get("sysmon_event_ids") or r.get("source_events")):
         raise RuleError(f"{source}: rule 'single' cần sysmon_event_ids hoặc source_events")
-    if r.get("source_events") and r["type"] != "single":
-        raise RuleError(f"{source}: source_events chỉ dùng cho rule 'single'")
+    if r.get("source_events") and r["type"] not in ("single", "scriptblock"):
+        raise RuleError(f"{source}: source_events chỉ dùng cho rule 'single' hoặc 'scriptblock'")
     channels = []
     for se in r.get("source_events") or []:
         ch = wc.canonical_channel(se["channel"])
@@ -45,6 +45,15 @@ def validate_rule(rule: dict, source: str = "") -> dict:
             raise RuleError(f"{source}: source_events {ch} không hỗ trợ Event ID {bad}")
         se["channel"] = ch
         channels.append(ch)
+    if r["type"] == "scriptblock":
+        ses = r.get("source_events") or []
+        if channels != [wc.POWERSHELL_CHANNEL] or ses[0]["event_ids"] != [4104] or not r.get("patterns"):
+            raise RuleError(f"{source}: rule 'scriptblock' cần source_events đúng một mục PowerShell/Operational [4104] và patterns")
+    elif wc.POWERSHELL_CHANNEL in channels:
+        # evaluator 'single' chép nguyên giá trị trường vào matched_fields -> lộ văn bản script (có thể chứa bí mật, w8 mục 2.7)
+        raise RuleError(f"{source}: kênh PowerShell chỉ dùng rule 'scriptblock' (không chép văn bản script vào alert)")
+    if (r.get("patterns") or r.get("base64")) and r["type"] != "scriptblock":
+        raise RuleError(f"{source}: patterns/base64 chỉ dùng cho rule 'scriptblock'")
     if r.get("detection_source") == "EXTERNAL_DEFENDER" and set(channels) != {wc.DEFENDER_CHANNEL}:
         raise RuleError(f"{source}: detection_source EXTERNAL_DEFENDER chỉ dùng cho rule đọc riêng kênh Defender")
     if r["type"] == "correlation" and not (r.get("time_window_seconds") and r.get("window_status")):

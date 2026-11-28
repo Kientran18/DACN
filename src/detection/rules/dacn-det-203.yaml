@@ -1,0 +1,31 @@
+rule_id: DACN-DET-203
+rule_version: 1
+name: Script block PowerShell có dấu hiệu tải-chạy, giải mã hoặc nạp mã vào bộ nhớ
+description: >
+  Mục đích: tìm trong NỘI DUNG script (PowerShell Script Block Logging, Event 4104) các dấu hiệu thường gặp ở script tải-chạy,
+  giải mã hoặc nạp mã vào bộ nhớ; bổ sung cho DET-001 (chỉ thấy command line). Telemetry: kênh Microsoft-Windows-PowerShell/Operational,
+  bảng silver_powershell_scriptblock_events (DDL v1.3 đề xuất); cần bật Script Block Logging (w8 mục 2.4).
+  Script block nhiều phần được ghép theo ScriptBlockId; thiếu phần thì kết luận trên phần có (coverage PARTIAL_SCRIPT_BLOCK).
+  Alert KHÔNG chứa văn bản script (chỉ tên mẫu, sha256, độ dài) vì script có thể chứa bí mật (w8 mục 2.7).
+  MATCH chỉ là ứng viên điều tra; một chuỗi đơn lẻ không chứng minh tấn công.
+type: scriptblock
+status: enabled
+severity: medium
+severity_reason: chuỗi đáng ngờ trong nội dung script, chưa có bằng chứng hành vi độc hại; không đạt high nếu thiếu ngữ cảnh khác
+source_events:
+  - {channel: "Microsoft-Windows-PowerShell/Operational", event_ids: [4104]}
+patterns: [frombase64string, invoke-expression, "iex(", downloadstring, downloadfile, net.webclient, "-bxor",
+           "reflection.assembly]::load", virtualalloc]
+group_by_field: script_block_id
+mitre_technique_ids: [T1059.001]
+mitre_basis: docs/research/cyber/w5/01-detection-required-fields-and-mitre-to-data.md mục 2 (T1059.001 PowerShell; ghi nhận thiếu 4104)
+false_positives:
+  - Script quản trị/triển khai hợp lệ dùng Invoke-Expression, WebClient hoặc giải mã base64
+  - Module PowerShell hợp lệ nạp assembly bằng Reflection
+  - Script lab/kiểm thử của chính DACN
+limitations:
+  - So khớp chuỗi con; script làm rối (nối chuỗi, biến, escape) né được
+  - Danh sách mẫu do Software đề xuất, người dùng duyệt (D6) thay cho Cyber; chưa đo FP trên tải lành tính
+  - Nếu block thiếu phần đã MATCH, alert giữ coverage PARTIAL dù phần thiếu đến sau
+  - Chưa nối với process_guid của Sysmon (hạng mục 4)
+validation_status: synthetic_only

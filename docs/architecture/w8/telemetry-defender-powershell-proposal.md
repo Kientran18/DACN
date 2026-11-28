@@ -1,6 +1,6 @@
 # Đề xuất bổ sung telemetry Microsoft Defender và PowerShell Script Block Logging
 
-> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–3 và 5 xong ngày 2026-11-28, xem mục 12).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
+> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–3, 5, 6 xong ngày 2026-11-28, xem mục 12).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
 > Data/Cyber; chưa có review độc lập của nhóm Data/Cyber. Người dùng nói "bắt đầu" ngày 2026-11-28. Tài liệu này không
 > thay đổi contract `bronze-event/1.0`, DDL v1.1, DDL v1.2, ADR, README hay kế hoạch 12 tuần. Mọi ánh xạ field gắn nhãn **[CHƯA XÁC MINH]**
 > giữ nguyên nhãn đó cho tới khi có mẫu XML thật từ VM (mục 2.8); phê duyệt thiết kế không xác minh các field này.
@@ -702,3 +702,29 @@ Giới hạn hiện tại:
   và gắn vào chủ thể host (không có `process_guid`).
 - Dashboard hiển thị nguyên giá trị `EXTERNAL_DEFENDER`; nhãn "DACN/Defender" và bộ lọc nguồn là hạng mục 9.
 - Không nối alert Defender với tiến trình Sysmon (hạng mục 4).
+
+### 12.4. Ngày 2026-11-28: hạng mục 6 (DACN-DET-203/204, rule PowerShell 4104)
+
+| Thay đổi | Tệp |
+|---|---|
+| Rule type mới `scriptblock` + field `patterns`, `base64`; loader **cấm rule `single` đọc kênh PowerShell** (evaluator `single` chép nguyên giá trị trường vào `matched_fields`, tức là chép văn bản script vào alert) | `src/detection/schema.py`, `src/detection/loader.py` |
+| Evaluator script block: ghép theo (`hostname`, `script_block_id`, `message_total`) theo `message_number`; thiếu phần thì chèn ký tự ngăn cách ở chỗ hở (không ghép giả), `coverage_status = PARTIAL_SCRIPT_BLOCK`, `missing_fields` liệt kê phần thiếu; giải mã base64 có giới hạn (số ứng viên, kích thước, không giải nén, chỉ văn bản in được, UTF-16LE hoặc UTF-8). `matched_fields` chỉ có tên mẫu, sha256, độ dài, số phần: **không có văn bản script hay văn bản giải mã** | `src/detection/scriptblock.py` (mới) |
+| Engine: mỗi lượt đánh giá lại MỌI phần của các block có phần mới (phần đến muộn làm block đầy đủ); cùng `message_number` lặp lại thì giữ `record_id` nhỏ nhất | `src/detection/engine.py` |
+| AlertBuilder tra bảng PowerShell **nội bộ** (lấy hostname/thời điểm/`script_block_id`); `resolve_evidence` (API) **không** tra bảng này nên evidence của alert DET-203/204 là PARTIAL, không trả script hay `raw_xml` cho tới hạng mục 8 | `src/alerts/evidence.py`, `src/alerts/builder.py` |
+| DACN-DET-203 (9 mẫu chuỗi, medium, T1059.001) và DACN-DET-204 (base64 `min_length` 40, tối đa 50 ứng viên, 1 MiB; medium; T1059.001; **T1027 không gắn** vì chưa có căn cứ trong tài liệu Cyber, điều kiện của D6) | `src/detection/rules/dacn-det-203.yaml`, `dacn-det-204.yaml` |
+| Contract W06 xuất lại (chỉ thêm) | `docs/architecture/w6/contracts/rule.schema.json`, `README.md` |
+| 11 test + 1 test hồi quy | `tests/detection/test_powershell_rules.py`, `tests/detection/test_defender_rules.py` |
+
+**Lỗi phát hiện và đã sửa** (do hạng mục 5 gây ra): DB chỉ có dữ liệu kênh v1.3 (chưa có sự kiện Sysmon nào) thì lượt chạy
+tăng dần thứ hai lỗi `min() iterable argument is empty` ở bước correlation, vì watermark và mốc thấp nhất đều chỉ tính bảng Sysmon.
+Sửa: không có mốc Sysmon thì nạp toàn bộ bảng Sysmon (đang rỗng). Có test hồi quy `test_incremental_run_with_only_channel_data_and_no_sysmon`.
+
+Chuỗi "đáng ngờ" và base64 trong test được ghép lúc chạy, không để trong tệp fixture tĩnh, để Defender trên VM không cách ly tệp khi clone repo.
+
+Kết quả trên 28 sự kiện thật đã khử định danh (scratchpad, một lần, Linux): 20 sự kiện 4104 (lệnh tương tác và script chú thích
+lành tính của người dùng) → **0** kết quả DET-203/204; Defender giữ nguyên như 12.3. Mẫu rất nhỏ: không phải số đo FP.
+
+Kiểm thử (Linux, Python 3.13, không có `lightgbm`): `python -m pytest -q` → 612 pass, 2 skipped, 0 fail. Chưa chạy trên Windows.
+
+Quyết định triển khai **chờ duyệt**: rule type `scriptblock`, field `patterns`/`base64`, giá trị `min_length` 40, danh sách 9 mẫu
+(lấy từ mục 5.2 và DET-001), giữ alert ở coverage PARTIAL khi phần thiếu đến sau.

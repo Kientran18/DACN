@@ -14,6 +14,7 @@ from .ioc import IocStore
 from .loader import load_rules
 from .ml.interface import NullDetector
 from .result import DetectionResult, make_dedup_key
+from .scriptblock import evaluate_scriptblock
 from .schema import SILVER_TABLE_FOR_CHANNEL as _TABLE_FOR_CHANNEL
 from .schema import SILVER_TABLE_FOR_EVENT as _TABLE_FOR
 
@@ -177,6 +178,10 @@ class DetectionEngine:
                         continue        # DB chưa có DDL v1.3: không có dữ liệu để đánh giá
                     for row in self._rows_channel(table, se["event_ids"], ingested_from=since):
                         results.append(evaluate_single(rule, row))
+            elif rule["type"] == "scriptblock":
+                table = _TABLE_FOR_CHANNEL[rule["source_events"][0]["channel"]]
+                if table in self.tables:
+                    results += self._scriptblocks(rule, table, since)
             elif rule["type"] in ("single", "ioc"):
                 for eid in rule["sysmon_event_ids"]:
                     for row in self._rows(_TABLE_FOR[eid], [eid], ingested_from=since):
@@ -185,9 +190,12 @@ class DetectionEngine:
                             results.append(res)
             elif rule["type"] == "correlation":
                 # Chỉ nạp phần đuôi: cửa sổ của mọi create còn có thể đổi kết quả nằm sau mốc `from_ts`.
-                from_ts = None if full else min(x for x in (prev_wm, lo) if x is not None) - timedelta(
+                # Không có mốc Sysmon nào (lượt trước chưa có Sysmon và không có Sysmon mới, chỉ có kênh v1.3) nghĩa là bảng
+                # Sysmon rỗng: from_ts = None (nạp toàn bộ = không có gì), tránh min() trên tập rỗng.
+                marks = [x for x in (prev_wm, lo) if x is not None]
+                from_ts = None if full or not marks else min(marks) - timedelta(
                     seconds=rule["time_window_seconds"] + rule.get("allowed_lateness_seconds", 0))
-                if not full:
+                if from_ts is not None:
                     pending_at = self.con.execute("select min(f.timestamp) from silver_file_events f "
                         "join _detection_results d on f.event_id=d.subject "
                         "where d.rule_id=? and d.outcome='PENDING_LATE_EVENTS'", [rule["rule_id"]]).fetchone()[0]
@@ -199,6 +207,28 @@ class DetectionEngine:
         emitted = self._save_all(results)
         self.con.execute("insert or replace into _detection_cursor values (1, ?, ?, ?)", [top, self._watermark(), sig])
         return emitted
+
+    def _scriptblocks(self, rule: dict, table: str, since) -> List[DetectionResult]:
+        """Đánh giá lại MỌI phần của các script block có phần mới kể từ con trỏ (phần đến muộn làm block đầy đủ hơn).
+        Cùng message_number xuất hiện nhiều lần (chạy lại cùng ScriptBlockId, chưa xác minh) -> giữ dòng record_id nhỏ nhất."""
+        cond, p = ("and ingest_timestamp > ?", [since]) if since is not None else ("", [])
+        cur = self.con.execute(
+            f"select x.* from {table} x join (select distinct hostname, script_block_id, message_total from {table} "
+            f"where windows_event_id = 4104 {cond}) g using (hostname, script_block_id, message_total) "
+            "where x.windows_event_id = 4104 order by x.hostname, x.script_block_id, x.message_total, x.message_number, x.record_id", p)
+        cols = [c[0] for c in cur.description]
+        groups: Dict[tuple, List[dict]] = {}
+        for r in cur.fetchall():
+            row = dict(zip(cols, r))
+            parts = groups.setdefault((row["hostname"], row["script_block_id"], row["message_total"]), [])
+            if not parts or parts[-1]["message_number"] != row["message_number"]:
+                parts.append(row)
+        out = []
+        for (host, sbid, total), parts in groups.items():
+            res = evaluate_scriptblock(rule, host, sbid, total, parts)
+            if res:
+                out.append(res)
+        return out
 
     def _ioc(self, rule: dict, row: dict) -> Optional[DetectionResult]:
         sha = row.get("file_sha256")

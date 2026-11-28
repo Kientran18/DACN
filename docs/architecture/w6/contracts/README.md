@@ -10,3 +10,7 @@ Bổ sung 2026-11-28 (field tùy chọn, không đổi field bắt buộc cũ; h
 `source_events` (rule đọc kênh Windows khác Sysmon; loại trừ lẫn nhau với `sysmon_event_ids`), `severity_by`, `context_fields`,
 `group_by_field`, `detection_source` (`EXTERNAL_DEFENDER`). `source_events` và `detection_source` người dùng duyệt (D7) thay cho
 Data/Cyber; `severity_by`, `context_fields`, `group_by_field` là quyết định triển khai chờ duyệt.
+
+Bổ sung 2026-11-28 (hạng mục 6, field tùy chọn): giá trị `type: scriptblock` (rule trên PowerShell 4104; kết quả không chứa văn bản
+script), `patterns`, `base64`. Loader cấm rule `single` đọc kênh PowerShell. Người dùng duyệt DET-203/204 (D6); type `scriptblock`
+và hai field này là quyết định triển khai chờ duyệt.

@@ -9,8 +9,8 @@ api:
 # Kênh Event Log agent đọc ở chế độ --live (mỗi kênh một reader, checkpoint và segment riêng). Thiếu mục này = chỉ Sysmon.
 # Kênh Defender/PowerShell mặc định TẮT (D10, docs/architecture/w8/telemetry-defender-powershell-proposal.md): chỉ bật sau khi
 # đo trên VM. PowerShell 4104 cần bật Script Block Logging (mục 2.4 của tài liệu trên) và có thể chứa dữ liệu nhạy cảm (mục 2.7).
-# Silver cho hai kênh mới có từ 2026-11-28 (DDL v1.3 đề xuất); rule Defender DACN-DET-201/202 có; rule PowerShell 4104 và
-# che bí mật ở API CHƯA triển khai.
+# Silver cho hai kênh mới có từ 2026-11-28 (DDL v1.3 đề xuất); rule Defender DACN-DET-201/202 và PowerShell DACN-DET-203/204
+# có (alert PowerShell không chứa văn bản script); che bí mật khi API trả script CHƯA triển khai (API hiện không trả script).
 # xpath (tùy chọn) ghi đè bộ lọc mặc định trong poc/sysmon-collector/windows_channels.py (DEFAULT_XPATH).
 agent:
   channels:

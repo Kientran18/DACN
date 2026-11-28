@@ -1,0 +1,30 @@
+rule_id: DACN-DET-204
+rule_version: 1
+name: Script block PowerShell chứa chuỗi base64 giải mã ra lệnh PowerShell đáng ngờ
+description: >
+  Mục đích: tìm chuỗi base64 dài trong nội dung script (Event 4104), giải mã (UTF-16LE như -EncodedCommand, hoặc UTF-8) rồi tìm lại
+  các mẫu của DET-203 trên văn bản đã giải mã. Bắt trường hợp lệnh đáng ngờ được giấu trong base64 mà DET-203 không thấy.
+  Giới hạn: tối đa 50 ứng viên mỗi block, mỗi ứng viên giải mã tối đa 1 MiB, không giải nén, chỉ nhận văn bản in được.
+  Alert KHÔNG chứa văn bản script hay văn bản đã giải mã (chỉ tên mẫu khớp, số ứng viên, sha256, độ dài).
+type: scriptblock
+status: enabled
+severity: medium
+severity_reason: lệnh đáng ngờ được mã hóa base64 trong script; chưa chứng minh độc hại
+source_events:
+  - {channel: "Microsoft-Windows-PowerShell/Operational", event_ids: [4104]}
+patterns: [frombase64string, invoke-expression, "iex(", downloadstring, downloadfile, net.webclient, "-bxor",
+           "reflection.assembly]::load", virtualalloc]
+base64: {min_length: 40, max_candidates: 50, max_decoded_bytes: 1048576}
+group_by_field: script_block_id
+mitre_technique_ids: [T1059.001]
+mitre_basis: >
+  docs/research/cyber/w5/01-detection-required-fields-and-mitre-to-data.md mục 2 (T1059.001). T1027 (Obfuscated Files or Information)
+  CHƯA gắn: chưa có căn cứ trong tài liệu Cyber của repo (điều kiện của D6)
+false_positives:
+  - Script quản trị nhúng dữ liệu hoặc script con dạng base64 hợp lệ
+  - Công cụ triển khai đóng gói lệnh bằng -EncodedCommand
+limitations:
+  - min_length 40 là giá trị khởi đầu, chưa hiệu chỉnh
+  - Base64 bị chia nhỏ, nối chuỗi, đảo ngược hoặc nén (gzip/deflate) không được giải
+  - Chỉ thấy lệnh khi văn bản giải mã chứa đúng các mẫu của DET-203
+validation_status: synthetic_only
