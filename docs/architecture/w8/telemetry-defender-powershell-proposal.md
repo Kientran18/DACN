@@ -1,6 +1,6 @@
 # Đề xuất bổ sung telemetry Microsoft Defender và PowerShell Script Block Logging
 
-> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–3, 5–8 xong ngày 2026-11-28, xem mục 12).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
+> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–3, 5–9 xong ngày 2026-11-28, xem mục 12; còn 4 và 11).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
 > Data/Cyber; chưa có review độc lập của nhóm Data/Cyber. Người dùng nói "bắt đầu" ngày 2026-11-28. Tài liệu này không
 > thay đổi contract `bronze-event/1.0`, DDL v1.1, DDL v1.2, ADR, README hay kế hoạch 12 tuần. Mọi ánh xạ field gắn nhãn **[CHƯA XÁC MINH]**
 > giữ nguyên nhãn đó cho tới khi có mẫu XML thật từ VM (mục 2.8); phê duyệt thiết kế không xác minh các field này.
@@ -775,3 +775,21 @@ Kiểm tra trên mẫu thật (scratchpad): 20 script block 4104 lành tính c�
 Kiểm thử (Linux, Python 3.13, không có `lightgbm`): `python -m pytest -q` → 633 pass, 2 skipped, 0 fail.
 
 Quyết định triển khai **chờ duyệt**: dùng quyền `raw` thay vai trò admin; danh sách luật che; ngưỡng 40 ký tự của `long_token`.
+
+### 12.7. Ngày 2026-11-28: hạng mục 9 (dashboard nguồn phát hiện và khung script)
+
+| Thay đổi | Tệp |
+|---|---|
+| `/alerts?source=DACN|DEFENDER`; mọi alert trả thêm trường suy ra `source_label` (`Defender` khi `detection_source = EXTERNAL_DEFENDER`, còn lại `DACN`; không lưu DB) | `src/api/app.py`, `src/alerts/store.py` |
+| Danh sách alert: cột "Nguồn" (huy hiệu Defender màu riêng), bộ lọc "Nguồn phát hiện" | `src/dashboard/static/app.js`, `style.css` |
+| Chi tiết alert: huy hiệu nguồn ở tiêu đề và dòng "nguồn phát hiện"; alert Defender có khung "Phát hiện của Microsoft Defender" (ghi rõ DACN không xác minh lại, không có PID) và bảng ngữ cảnh; alert PowerShell có khung "Script PowerShell (Event 4104)" hiện bản **đã che**, luật đã áp dụng, phần thiếu, nút "Hiện bản gốc (ghi audit)" chỉ bật với quyền `raw` và hỏi xác nhận trước; bảng bằng chứng hiện Event ID và kênh của bảng v1.3 | `src/dashboard/static/app.js` |
+| Test: Playwright riêng (không sửa `ui_check.js` của màn hình cây tiến trình) và test API lọc nguồn | `tests/dashboard/test_dashboard_sources.py`, `tests/dashboard/ui_sources_check.js`, `tests/api/test_alert_sources.py` |
+
+Playwright (Linux, Chromium có sẵn, dữ liệu synthetic) kiểm: cột nguồn có cả hai giá trị; lọc Defender/DACN đúng; khung Defender
+có ngữ cảnh EICAR; script đã che không chứa bí mật giả; chuỗi `<img onerror>` trong script hiện thành chữ (không chạy); approver
+xem được bản gốc sau xác nhận và audit ghi đúng một `SCRIPT_RAW_VIEW`; viewer thấy nút bị tắt và không thấy bí mật; không có
+request ra ngoài. Ảnh chụp chỉ để kiểm tra, không commit.
+
+Kiểm thử (Linux, Python 3.13, không có `lightgbm`): `python -m pytest -q` → 635 pass, 2 skipped, 0 fail. Chưa chạy trên Windows.
+
+Chưa làm: trang Tổng quan chưa tách số alert theo nguồn; cây tiến trình chưa hiện alert Defender/PowerShell (cần hạng mục 4).

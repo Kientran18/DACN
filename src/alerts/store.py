@@ -142,10 +142,17 @@ class AlertStore:
         r = cur.fetchone()
         return dict(zip(cols, r)) if r else None
 
-    def list(self, status: Optional[str] = None, limit: int = 100, offset: int = 0) -> List[Dict]:
-        sql, params = "select * from alerts", []
+    def list(self, status: Optional[str] = None, limit: int = 100, offset: int = 0,
+             external: Optional[bool] = None) -> List[Dict]:
+        """external: True = chỉ alert phản ánh sản phẩm khác (detection_source EXTERNAL_*, ví dụ Defender);
+        False = chỉ alert do DACN tự suy ra; None = tất cả."""
+        sql, params, cond = "select * from alerts", [], []
         if status:
-            sql += " where status=?"; params.append(status)
+            cond.append("status=?"); params.append(status)
+        if external is not None:
+            cond.append(("" if external else "not ") + "starts_with(detection_source, 'EXTERNAL_')")
+        if cond:
+            sql += " where " + " and ".join(cond)
         cur = self.con.execute(sql + " order by first_seen_utc desc, alert_id limit ? offset ?",
                                params + [min(max(limit, 1), 500), max(offset, 0)])
         cols = [c[0] for c in cur.description]

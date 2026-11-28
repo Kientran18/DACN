@@ -112,11 +112,16 @@ def _err(status, code, message):
     return JSONResponse(status_code=status, content={"error": {"code": code, "message": message}})
 
 
+SOURCE_LABELS = {"EXTERNAL_DEFENDER": "Defender"}     # detection_source -> nhãn hiển thị; còn lại là phát hiện của DACN
+
+
 def _alert_out(a: dict) -> dict:
     a = dict(a)
     for k in ("mitre_technique_ids", "matched_fields", "missing_fields"):
         if isinstance(a.get(k), str):
             a[k] = json.loads(a[k])
+    # Trường suy ra cho giao diện (không lưu DB): ai phát hiện. "Defender" = DACN chỉ phản ánh, không xác minh lại.
+    a["source_label"] = SOURCE_LABELS.get(a.get("detection_source"), "DACN")
     return a
 
 
@@ -300,10 +305,11 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
 
     # -- alerts -----------------------------------------------------------------------------------
     @app.get("/alerts", tags=["alerts"])
-    def list_alerts(status: Optional[STATUSES] = None, limit: int = Q(50, ge=1, le=200), offset: int = Q(0, ge=0),
-                    _: dict = Depends(need("read"))):
+    def list_alerts(status: Optional[STATUSES] = None, source: Optional[Literal["DACN", "DEFENDER"]] = None,
+                    limit: int = Q(50, ge=1, le=200), offset: int = Q(0, ge=0), _: dict = Depends(need("read"))):
+        ext = None if source is None else source == "DEFENDER"
         with lock:
-            return page([_alert_out(a) for a in alerts.list(status, limit, offset)], limit, offset)
+            return page([_alert_out(a) for a in alerts.list(status, limit, offset, external=ext)], limit, offset)
 
     @app.get("/alerts/{alert_id}", tags=["alerts"])
     def alert(alert_id: str, _: dict = Depends(need("read"))):

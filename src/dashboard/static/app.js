@@ -36,6 +36,8 @@ const badge = (text, kind) => h("span", { class: "badge " + (kind || ""), text }
 const sevKind = (s) => ({ critical: "bad", high: "bad", medium: "warn", low: "ok" }[s] || "");
 const riskBadge = (r) => r ? h("span", { class: "badge risk-badge " + sevKind(r.level), text: r.level + " · " + r.score }) : h("span", { class: "muted", text: "—" });
 const riskKey = (host, guid) => host + "|" + guid;
+// Nguồn phát hiện: "Defender" = DACN chỉ phản ánh phát hiện của Microsoft Defender (không xác minh lại); "DACN" = rule của DACN.
+const sourceBadge = (a) => badge(a.source_label || "DACN", a.source_label === "Defender" ? "ext" : "");
 async function riskMap() {            // điểm theo (host, process_guid); lỗi thì bảng alert vẫn hiện, cột rủi ro để "—"
   try { const d = await api("/risk/subjects?kind=process&limit=500"); const m = {}; for (const i of d.items) m[riskKey(i.subject.hostname, i.subject.process_guid)] = i; return m; }
   catch (e) { if (e.status === 401) throw e; return {}; }
@@ -218,6 +220,7 @@ async function pageEvents() {
 function alertTable(items, risks) {
   return table([
     { label: "Mức", render: (a) => badge(a.severity, sevKind(a.severity)) },
+    { label: "Nguồn", render: sourceBadge },
     { label: "Rủi ro", render: (a) => riskBadge(risks && a.process_guid ? risks[riskKey(a.hostname, a.process_guid)] : null) },
     { label: "Rule", render: (a) => a.rule_id + " v" + a.rule_version }, { key: "rule_name", label: "Tên", wrap: true },
     { label: "Trạng thái", render: (a) => badge(a.status) }, { key: "hostname", label: "Host" },
@@ -228,11 +231,13 @@ async function pageAlerts() {
   const f = Object.fromEntries(new URLSearchParams(location.hash.split("?")[1] || ""));
   view.append(h("h1", { text: "Alerts" }));
   const sel = h("select", { name: "status" }, [""].concat(["NEW", "TRIAGED", "INVESTIGATING", "CONFIRMED", "FALSE_POSITIVE", "CLOSED"]).map((s) => h("option", { value: s, text: s || "(tất cả)", selected: s === (f.status || "") })));
-  const form = h("form", { class: "filters", onsubmit: (e) => { e.preventDefault(); location.hash = "#/alerts" + qs({ status: sel.value }); } },
-    h("label", {}, "Trạng thái", sel), h("button", { class: "primary", type: "submit", text: "Lọc" }));
+  const src = h("select", { name: "source" }, [["", "(tất cả)"], ["DACN", "DACN (rule của DACN)"], ["DEFENDER", "Defender (phản ánh Microsoft Defender)"]]
+    .map(([v, t]) => h("option", { value: v, text: t, selected: v === (f.source || "") })));
+  const form = h("form", { class: "filters", onsubmit: (e) => { e.preventDefault(); location.hash = "#/alerts" + qs({ status: sel.value, source: src.value }); } },
+    h("label", {}, "Trạng thái", sel), h("label", {}, "Nguồn phát hiện", src), h("button", { class: "primary", type: "submit", text: "Lọc" }));
   const box = h("div"); view.append(form, box);
-  await load(box, async () => { const [d, risks] = await Promise.all([api("/alerts" + qs({ status: f.status, limit: 50 })), riskMap()]); return { d, risks }; }, ({ d, risks }) =>
-    box.append(d.items.length ? alertTable(d.items, risks) : empty(f.status ? "Không có alert ở trạng thái " + f.status + "." : "Chưa có alert nào.")));
+  await load(box, async () => { const [d, risks] = await Promise.all([api("/alerts" + qs({ status: f.status, source: f.source, limit: 50 })), riskMap()]); return { d, risks }; }, ({ d, risks }) =>
+    box.append(d.items.length ? alertTable(d.items, risks) : empty(f.status || f.source ? "Không có alert khớp bộ lọc." : "Chưa có alert nào.")));
 }
 
 // ---------- trang: chi tiết alert / điều tra ----------
@@ -249,11 +254,36 @@ async function pageAlertDetail(id) {
       api("/alerts/" + id + "/evidence").catch((e) => ({ error: e.message }))]);
     return { a, hist, tl, tree, ev };
   }, ({ a, hist, tl, tree, ev }) => {
-    box.append(h("h1", {}, badge(a.severity, sevKind(a.severity)), " " + a.rule_name));
+    box.append(h("h1", {}, badge(a.severity, sevKind(a.severity)), " ", sourceBadge(a), " " + a.rule_name));
     box.append(h("h2", {}, labelled("obs", "QUAN SÁT"), "Dữ liệu từ telemetry"), h("dl", { class: "kv card" },
       ["rule_id", "rule_version", "status", "hostname", "process_guid", "image_path", "command_line", "occurrence_count"].map((k) => [h("dt", { text: k }), h("dd", { text: fmt(a[k]) })]),
       h("dt", { text: "first_seen" }), h("dd", { text: utc(a.first_seen_utc) }), h("dt", { text: "last_seen" }), h("dd", { text: utc(a.last_seen_utc) }),
+      h("dt", { text: "nguồn phát hiện" }), h("dd", {}, sourceBadge(a), " " + fmt(a.detection_source)),
       h("dt", { text: "trường khớp" }), h("dd", { text: fmt(a.matched_fields) })));
+    if (a.source_label === "Defender") {
+      const ctx = (a.matched_fields && a.matched_fields.context) || {};
+      box.append(h("h2", {}, labelled("obs", "QUAN SÁT"), "Phát hiện của Microsoft Defender"), h("div", { class: "card", id: "defender-panel" },
+        h("p", { class: "muted", text: "Alert này phản ánh sự kiện của Microsoft Defender (Event 1116/1117/5001/5007/5013). DACN không xác minh lại; " +
+          "severity Defender gốc nằm trong severity_name, severity alert do rule DACN gán. Không có PID nên chưa nối với cây tiến trình Sysmon." }),
+        Object.keys(ctx).length ? h("dl", { class: "kv" }, Object.entries(ctx).map(([k, v]) => [h("dt", { text: k }), h("dd", { text: fmt(v) })])) : empty("Không có trường ngữ cảnh.")));
+    }
+    if (a.matched_fields && a.matched_fields.script_block_id) {
+      box.append(h("h2", {}, labelled("obs", "QUAN SÁT"), "Script PowerShell (Event 4104)"));
+      const sbBox = h("div", { id: "script-panel" }); box.append(sbBox);
+      load(sbBox, () => api("/alerts/" + id + "/script"), (sb) => {
+        sbBox.append(h("p", { class: "muted", text: "Đã che chuỗi giống bí mật bằng heuristic (không bảo đảm che hết). Luật đã áp dụng: " +
+            (sb.redaction_rules.length ? sb.redaction_rules.join(", ") : "không có") + ". Phần: " + sb.parts_seen + "/" + sb.message_total +
+            (sb.missing_message_numbers.length ? " (thiếu " + sb.missing_message_numbers.join(", ") + ")" : "") + "." }),
+          h("pre", { id: "script-text", text: sb.text }),
+          h("div", { class: "actions" }, h("button", { type: "button", id: "script-reveal", text: "Hiện bản gốc (ghi audit)", disabled: !can("raw"),
+            title: can("raw") ? "" : "vai trò không đủ quyền", onclick: () =>
+              modal("Xem script gốc", h("p", { text: "Thao tác này được ghi vào audit log (SCRIPT_RAW_VIEW). Script có thể chứa mật khẩu, token hoặc dữ liệu nhạy cảm." }), [closeBtn,
+                { label: "Đồng ý xem", kind: "primary", fn: async () => {
+                  try { const r = await api("/alerts/" + id + "/script?reveal=true");
+                    modal("Script gốc (không che)", h("pre", { id: "script-raw", text: r.text }), [closeBtn]);
+                  } catch (e) { modal("Lỗi", h("p", { text: e.message }), [closeBtn]); } } }]) })));
+      });
+    }
     box.append(h("h2", {}, labelled("inf", "SUY LUẬN"), "Do rule đưa ra (không phải bằng chứng)"), h("dl", { class: "kv card" },
       h("dt", { text: "Lý do mức độ" }), h("dd", { text: a.severity_reason }),
       h("dt", { text: "MITRE" }), h("dd", { text: a.mitre_technique_ids ? a.mitre_technique_ids.join(", ") + " (gán theo rule; chưa kiểm chứng trên endpoint thật)" : "không gán (rule không có căn cứ)" })));
@@ -268,7 +298,8 @@ async function pageAlertDetail(id) {
     if (ev.error) box.append(empty("Không tải được bằng chứng: " + ev.error));
     else box.append(h("p", {}, "Trạng thái: ", badge(ev.status, ev.status === "FULL" ? "ok" : "warn")),
       table([{ key: "event_id", label: "event_id", wrap: true }, { label: "Bronze", render: (e) => e.bronze ? e.bronze.segment + "#" + e.bronze.line_no : "—", wrap: true },
-        { key: "status", label: "Trạng thái" }, { label: "Event", render: (e) => fmt(e.silver && e.silver.sysmon_event_id) }], ev.events));
+        { key: "status", label: "Trạng thái" }, { label: "Event", render: (e) => fmt(e.silver && (e.silver.sysmon_event_id ?? e.silver.windows_event_id)) },
+        { label: "Kênh", render: (e) => fmt(e.silver && e.silver.channel), wrap: true }], ev.events));
     box.append(h("div", { class: "actions" }, h("button", { type: "button", text: "Xem raw XML (ghi audit)", disabled: !can("raw"), title: can("raw") ? "" : "vai trò không đủ quyền", onclick: () =>
       modal("Xem raw XML", h("p", { text: "Thao tác này được ghi vào audit log. Nội dung có thể chứa dữ liệu nhạy cảm." }), [closeBtn,
         { label: "Đồng ý xem", kind: "primary", fn: async () => {
