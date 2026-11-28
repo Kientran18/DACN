@@ -321,6 +321,14 @@ def test_health_reports_agent_write_failure_as_error(ctx):
     assert cl(ctx, "viewer").get("/health").json()["agent"]["status"] == "ERROR"
 
 
+def test_health_reports_partial_channel_failure_as_degraded(ctx):
+    """Agent đa kênh: một kênh lỗi (ví dụ Defender thiếu quyền) ghi state "degraded"; heartbeat cũ vẫn lộ STALE."""
+    _write_agent_health(ctx, 1, state="degraded")
+    assert cl(ctx, "viewer").get("/health").json()["agent"]["status"] == "DEGRADED"
+    _write_agent_health(ctx, 600, state="degraded")
+    assert cl(ctx, "viewer").get("/health").json()["agent"]["status"] == "STALE"
+
+
 def test_responder_does_not_leave_action_stuck_when_finish_fails(ctx):
     import httpx
     from response.backends.dryrun import DryRunBackend

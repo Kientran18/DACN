@@ -1,7 +1,7 @@
 # Đề xuất bổ sung telemetry Microsoft Defender và PowerShell Script Block Logging
 
-> **Trạng thái: APPROVED BY USER (2026-11-26) / CHƯA TRIỂN KHAI.** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
-> Data/Cyber; chưa có review độc lập của nhóm Data/Cyber. Chưa có code; triển khai chỉ bắt đầu khi người dùng nói "bắt đầu". Tài liệu này không
+> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–2 xong ngày 2026-11-28, xem mục 12).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
+> Data/Cyber; chưa có review độc lập của nhóm Data/Cyber. Người dùng nói "bắt đầu" ngày 2026-11-28. Tài liệu này không
 > thay đổi contract `bronze-event/1.0`, DDL v1.1, DDL v1.2, ADR, README hay kế hoạch 12 tuần. Mọi ánh xạ field gắn nhãn **[CHƯA XÁC MINH]**
 > giữ nguyên nhãn đó cho tới khi có mẫu XML thật từ VM (mục 2.8); phê duyệt thiết kế không xác minh các field này.
 >
@@ -575,3 +575,41 @@ Defender đi trước PowerShell vì ít rủi ro dữ liệu nhạy cảm và t
 - Repository: `docs/decisions/0001`–`0003`, `poc/sysmon-collector/bronze-event.schema.json`, `bronze_contract.py`, `bronze_to_silver_adapter.py`,
   `src/agent/`, `src/pipeline/silver_store.py`, `src/pipeline/validator_poc.py`, `src/pipeline/sql/*_v1_2_proposal.sql`, `src/detection/`, `src/risk/`,
   `docs/implementation/acceptance/ATOMIC_RED_TEAM_RESULTS_2026-11-26.md`, `docs/research/cyber/w5/01-...md`, `04-...md`.
+
+## 12. Tiến độ triển khai
+
+### 12.1. Ngày 2026-11-28: hạng mục 1 (Bronze 1.1) và 2 (agent đa kênh)
+
+Làm trước cổng chặn "mẫu XML thật" (hạng mục 0) vì không phụ thuộc tên trường EventData. Hạng mục 3 trở đi (Silver, rule) **chờ mẫu XML**.
+
+| Thay đổi | Tệp |
+|---|---|
+| Bảng kênh dùng chung: kênh → (`source`, `schema_version`), Event ID hỗ trợ, event type theo (kênh, ID), XPath mặc định | `poc/sysmon-collector/windows_channels.py` (mới) |
+| Schema `bronze-event/1.1` (tệp riêng; tệp 1.0 không sửa) | `poc/sysmon-collector/bronze-event-1.1.schema.json` (mới) |
+| `build_bronze_record` gán `source`/`schema_version` theo kênh; kênh khác → `C-007`; `validate_record` chọn schema theo phiên bản và kiểm tra chéo (source, schema_version) với channel | `poc/sysmon-collector/bronze_contract.py` |
+| Adapter: event type theo (kênh, ID) cho kênh mới; Sysmon giữ `_event_type` | `poc/sysmon-collector/bronze_to_silver_adapter.py` |
+| Manifest ghi `schema_version` thật của segment (`mixed` + `schema_versions` nếu trộn); tiền tố tên segment theo kênh | `src/agent/bronze_writer.py` |
+| `EventLogSource(xpath=...)`; `AgentRunner(max_events_per_run=...)`, `state`, `hit_limit` | `src/agent/sources/eventlog.py`, `src/agent/runner.py` |
+| Agent đa kênh: reader/checkpoint/segment/health riêng, round-robin, kế thừa `checkpoint_live.json`, `health.json` tổng hợp (`degraded` khi một phần kênh lỗi) | `src/agent/multichannel.py` (mới), `src/agent/__main__.py` |
+| Cấu hình `agent.channels` (mặc định chỉ Sysmon; tệp mẫu để Defender/PowerShell `enabled: false`, D10); mã `CFG-006` | `src/common/config.py`, `config/edr.example.yaml` |
+| `/health` báo `DEGRADED` khi `state = degraded` | `src/api/app.py` |
+| Fixture SYNTHETIC (tên `Data Name` là giả thuyết, gắn nhãn) và test | `tests/fixtures/windows_channels/`, `tests/pipeline/test_bronze_v11_channels.py`, `tests/agent/test_multichannel.py`, `tests/api/test_api.py`, `tests/agent/test_runner.py`, `tests/agent/test_eventlog_source.py` |
+
+Quyết định triển khai nhỏ phát sinh (cần ghi nhận, chưa nằm trong D1–D10):
+- **Mã collector mới `C-007`** (kênh không được hỗ trợ): sự kiện kênh lạ (ví dụ file mode đọc export Security) bị từ chối ở collector,
+  ghi `collector_errors.jsonl` kèm `raw_xml`, thay vì gắn nhãn sai `SYSMON`. Bảng mã C-001..C-006 trong
+  `docs/research/software/w5/01-collector-to-bronze-interface-contract-v1.md` chưa được sửa; cần Data/Software bổ sung.
+- **Mã cấu hình `CFG-006`** (danh sách kênh không hợp lệ hoặc kênh không hỗ trợ; agent thoát mã 2).
+- **Trạng thái health `degraded`** và `/health` status `DEGRADED`.
+- Tên segment Sysmon giữ nguyên `seg-<thời gian>-<n>`; kênh khác `seg-<slug>-<thời gian>-<n>`.
+- Giới hạn mặc định 500 sự kiện/kênh/lượt; vòng `--follow` không ngủ khi còn tồn đọng.
+
+Kiểm thử (Linux, Python 3.13, môi trường **không** có `lightgbm`): `python -m pytest -q` → 566 pass, 2 skipped, 0 fail
+(trước thay đổi: 533 pass, 2 skipped cùng môi trường). Chưa chạy trên Windows.
+
+Hiện trạng dữ liệu: bản ghi Defender/PowerShell vào Bronze đúng nhãn rồi vào DLQ `ERR_UNSUPPORTED_EVENT_ID` ở validator Sysmon
+(không vào 4 bảng Sysmon, không mất âm thầm). Hạng mục 3 sẽ route theo kênh sang validator riêng.
+
+Kiểm tra trên VM khi người dùng muốn (không bắt buộc trước hạng mục 3): bật một kênh mới trong `edr.yaml`, chạy
+`python -m agent run --config C:\dacn_edr\edr.yaml --live` (không `--follow`), xem `C:\dacn_edr\agent\health.json` mục `channels`
+và segment `seg-microsoft_windows_...` trong `bronze\`. Không gửi nội dung segment PowerShell (có thể chứa script/bí mật).

@@ -5,7 +5,7 @@ from agent.sources.base import SourceError
 
 class FakeApi:
     def __init__(self, evs): self.evs, self.sent = evs, False
-    def query(self, ch, bm): return "h", "bm"
+    def query(self, ch, bm, xpath="*"): self.xpath = xpath; return "h", "bm"
     def next(self, h, n):
         if self.sent: return []
         self.sent = True; return self.evs

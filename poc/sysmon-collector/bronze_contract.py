@@ -16,11 +16,14 @@ from pathlib import Path
 from typing import Iterator, Optional
 
 import sysmon_collector_poc as poc
+import windows_channels as wc
 
-SCHEMA_VERSION = "bronze-event/1.0"
+SCHEMA_VERSION = "bronze-event/1.0"          # phiên bản của bản ghi Sysmon (không đổi)
+SCHEMA_VERSIONS = (wc.SCHEMA_V10, wc.SCHEMA_V11)
 COLLECTOR_NAME = "sysmon_collector_poc"
 COLLECTOR_VERSION = "0.2.0-contract"
 SCHEMA_PATH = Path(__file__).parent / "bronze-event.schema.json"
+SCHEMA_PATHS = {wc.SCHEMA_V10: SCHEMA_PATH, wc.SCHEMA_V11: Path(__file__).parent / "bronze-event-1.1.schema.json"}
 # Fixed namespace: the same computer name always gives the same host_id (Phase 1 is a single host).
 HOST_NAMESPACE = uuid.UUID("0b8f6c3e-5d21-4a7e-8f10-9c2d4e6a1b73")
 
@@ -78,7 +81,10 @@ def _system_metadata(ev: ET.Element) -> dict:
 def build_bronze_record(raw_xml: str, *, mode: str, collected_at: Optional[str] = None,
                         source_file: Optional[str] = None, batch_id: Optional[str] = None,
                         seq: Optional[int] = None) -> dict:
-    """Raise ValueError when the XML cannot form a valid envelope (collector error C-001/C-002)."""
+    """Raise ValueError when the XML cannot form a valid envelope (collector error C-001/C-002/C-007).
+
+    `source` và `schema_version` suy ra từ Channel (bronze-event/1.1, D1): Sysmon -> SYSMON + 1.0 (không đổi),
+    Windows Defender -> WINDOWS_DEFENDER + 1.1, PowerShell -> POWERSHELL + 1.1. Kênh khác -> C-007 (không gắn nhãn sai)."""
     try:
         ev = ET.fromstring(raw_xml)
     except ET.ParseError as exc:
@@ -88,12 +94,16 @@ def build_bronze_record(raw_xml: str, *, mode: str, collected_at: Optional[str] 
     for name in ("record_id", "channel", "computer", "event_id", "time_created"):
         if s.get(name) in (None, ""):
             raise ValueError(f"C-002 missing System field: {name}")
+    src = wc.source_for_channel(s["channel"])
+    if src is None:
+        raise ValueError(f"C-007 unsupported channel: {s['channel']}")
+    source, schema_version = src
     meta = _system_metadata(ev)
     key = f"{s['computer']}|{s['channel']}|{s['record_id']}"
     return {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": schema_version,
         "event_id": str(uuid.uuid5(poc.EVENT_ID_NAMESPACE, key)),
-        "source": "SYSMON",
+        "source": source,
         "channel": s["channel"],
         "provider": meta["provider"],
         "sysmon_event_id": s["event_id"],
@@ -122,13 +132,31 @@ def build_bronze_record(raw_xml: str, *, mode: str, collected_at: Optional[str] 
     }
 
 
-def load_schema() -> dict:
-    return json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+_SCHEMAS: dict = {}
+
+
+def load_schema(version: str = SCHEMA_VERSION) -> dict:
+    if version not in _SCHEMAS:
+        _SCHEMAS[version] = json.loads(SCHEMA_PATHS[version].read_text(encoding="utf-8"))
+    return _SCHEMAS[version]
 
 
 def validate_record(record: dict) -> list:
-    """Return a list of readable schema violations (empty list = valid)."""
+    """Return a list of readable schema violations (empty list = valid).
+
+    Chọn schema theo `schema_version` của bản ghi (1.0 hoặc 1.1); giá trị khác kiểm tra theo 1.0 (báo lỗi const).
+    Thêm kiểm tra chéo: `source`/`schema_version` phải đúng với `channel` (bản ghi Sysmon mang 1.1 hoặc
+    bản ghi Defender gắn SYSMON đều bị từ chối)."""
     from jsonschema import Draft202012Validator
-    validator = Draft202012Validator(load_schema())
+    version = record.get("schema_version") if isinstance(record, dict) else None
+    validator = Draft202012Validator(load_schema(version if version in SCHEMA_PATHS else SCHEMA_VERSION))
     errors = sorted(validator.iter_errors(record), key=lambda e: list(e.path))
-    return [f"{'/'.join(str(p) for p in e.path) or '<root>'}: {e.message}" for e in errors]
+    out = [f"{'/'.join(str(p) for p in e.path) or '<root>'}: {e.message}" for e in errors]
+    if isinstance(record, dict) and isinstance(record.get("channel"), str):
+        expected = wc.source_for_channel(record["channel"])
+        if expected is None:
+            out.append(f"channel: kênh không được hỗ trợ: {record['channel']!r}")
+        elif (record.get("source"), version) != expected:
+            out.append(f"source: cặp (source, schema_version) {(record.get('source'), version)} không khớp channel, "
+                       f"phải là {expected}")
+    return out

@@ -178,6 +178,9 @@ def test_file_and_live_modes_do_not_share_a_checkpoint(tmp_path, monkeypatch):
     seen = {}
 
     class FakeLive:
+        def __init__(self, **kw):           # agent đa kênh truyền channel=, xpath=
+            pass
+
         def iter_events(self, bm):
             seen["bm"] = bm
             return iter(())
@@ -200,6 +203,9 @@ def test_live_source_error_without_follow_exits_nonzero(tmp_path, monkeypatch):
     from agent.sources.base import SourceError
 
     class Denied:
+        def __init__(self, **kw):
+            pass
+
         def iter_events(self, bm):
             raise SourceError("C-006", "error: (5, 'EvtQuery', 'Access is denied.')")
             yield  # pragma: no cover

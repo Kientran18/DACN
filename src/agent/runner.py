@@ -25,10 +25,16 @@ class _WriteFailure(Exception):
 
 class AgentRunner:
     def __init__(self, source, writer: BronzeWriter, checkpoint: Checkpoint, health_path: Path,
-                 *, batch_size: int = 100, mode: str = "file", stop_file: Optional[Path] = None):
+                 *, batch_size: int = 100, mode: str = "file", stop_file: Optional[Path] = None,
+                 max_events_per_run: Optional[int] = None):
+        """max_events_per_run: dừng lượt chạy sau N sự kiện (commit bookmark, seal) để agent đa kênh luân phiên được;
+        None = đọc tới khi nguồn hết như trước."""
         self.source, self.writer, self.cp = source, writer, checkpoint
         self.health_path = Path(health_path)
         self.batch_size, self.mode = batch_size, mode
+        self.max_events_per_run = max_events_per_run
+        self.state: Optional[str] = None     # trạng thái ghi gần nhất vào health (đọc bởi agent đa kênh)
+        self.hit_limit = False               # lượt gần nhất dừng vì max_events_per_run (có thể còn sự kiện chờ đọc)
         self.stop_file = Path(stop_file) if stop_file else None
         self.stop_requested = False
         self.errors = Counter()
@@ -47,6 +53,7 @@ class AgentRunner:
         return self.stop_requested or bool(self.stop_file and self.stop_file.exists())
 
     def _health(self, state: str) -> None:
+        self.state = state
         h = {"state": state, "heartbeat": _now(), "last_event_at": self.last_event_at,
              "last_seal_at": self.writer.last_sealed_at,
              "events_written": self.written, "errors_by_code": dict(self.errors)}
@@ -77,6 +84,7 @@ class AgentRunner:
         self._health("running")
         pending_bm, in_batch, seq = None, 0, 0
         self.failed, self.source_failed = False, False
+        self.hit_limit = False
         try:
             for item in self.source.iter_events(bookmark):
                 if self._should_stop():
@@ -97,6 +105,9 @@ class AgentRunner:
                     self._commit(pending_bm)
                     in_batch = 0
                     self._health("running")
+                if self.max_events_per_run and seq >= self.max_events_per_run:
+                    self.hit_limit = True
+                    break        # phần còn lại đọc ở lượt sau, tiếp từ bookmark đã commit trong finally
         except SourceError as exc:
             self._record_error(exc.code, None, str(exc))       # tăng bộ đếm + dấu vết; không bịa nội dung (raw_xml = None)
             self.source_failed = True                               # nguồn không đọc được: health phải báo lỗi, không phải 'idle'

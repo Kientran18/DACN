@@ -53,6 +53,13 @@ python -m api.auth --config C:\dacn_edr\edr.yaml --role approver --actor <tên>
 ```
 Quy tắc hai người đang **bật** (`require_distinct_approver: true`): `--actor` của analyst và approver phải **khác nhau**. Demo một người dùng thì đặt `false` trong `config\response-policy.yaml`.
 
+Kênh Event Log của agent live nằm ở mục `agent.channels` trong `edr.yaml` (thiếu mục này = chỉ Sysmon). Tệp mẫu để
+kênh Windows Defender và PowerShell **tắt**; bật bằng `enabled: true` chỉ để thử trên VM lab. **Chưa kiểm chứng trên Windows**
+(2026-11-28; mới có test với nguồn giả trên Linux): agent ghi bản ghi các kênh này vào Bronze (`bronze-event/1.1`), nhưng Silver
+và rule cho chúng chưa triển khai nên bản ghi vào DLQ. Kênh PowerShell cần bật Script Block Logging và có thể chứa dữ liệu nhạy cảm: xem
+`docs/architecture/w8/telemetry-defender-powershell-proposal.md` mục 2.3–2.8. Mỗi kênh có checkpoint riêng
+`C:\dacn_edr\agent\checkpoint_live_<kênh>.json`; Sysmon kế thừa `checkpoint_live.json` cũ (tệp cũ được giữ).
+
 `config\response-policy.yaml` mặc định **dry_run**; **không đổi** trừ khi bạn chủ động chạy PH7-T10. Policy dùng biến `%TEMP%`, `%PUBLIC%`, `%SystemRoot%`, `%ProgramFiles%`, `%ProgramFiles(x86)%` (có sẵn trên Windows).
 
 ## 6. Chạy

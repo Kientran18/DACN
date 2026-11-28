@@ -236,6 +236,8 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
                 agent["status"] = "ERROR"        # agent dừng vì lỗi ghi (C-004); không che bằng STALE
             elif agent.get("state") != "stopped" and age > 3 * agent_poll_s:
                 agent["status"] = "STALE"
+            elif agent.get("state") == "degraded":
+                agent["status"] = "DEGRADED"     # agent đa kênh: một phần kênh lỗi (xem agent.channels), kênh khác vẫn chạy
         except (OSError, ValueError, KeyError, TypeError):
             pass
         lag = (datetime.now(timezone.utc) - led[3]).total_seconds() if led[3] else None

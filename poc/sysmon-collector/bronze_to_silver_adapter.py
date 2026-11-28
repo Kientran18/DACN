@@ -10,6 +10,7 @@ from typing import Any
 
 import bronze_contract as bc
 import sysmon_collector_poc as poc
+import windows_channels as wc
 
 
 def to_silver_input(record: dict[str, Any]) -> dict[str, Any]:
@@ -48,11 +49,16 @@ def to_silver_input(record: dict[str, Any]) -> dict[str, Any]:
         "seq": record["ingest"].get("seq"),
     }
     data = record["event_data"]
+    if wc.is_sysmon(record["channel"]):
+        event_type = poc._event_type(record["sysmon_event_id"], data)
+    else:
+        # Kênh mới (bronze-event/1.1): tên theo (channel, event_id) (D4); None nếu ID chưa hỗ trợ -> validator quyết định
+        event_type = wc.event_type_for(record["channel"], record["sysmon_event_id"])
     return {
         "timestamp": record["time_created"],
         "source": record["source"],
         "sysmon_event_id": record["sysmon_event_id"],
-        "event_type": poc._event_type(record["sysmon_event_id"], data),
+        "event_type": event_type,
         "event_id": record["event_id"],
         "channel": record["channel"],
         "record_id": record["record_id"],

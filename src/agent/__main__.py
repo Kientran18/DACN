@@ -28,9 +28,8 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     cfg = load_config(a.config)
     if a.live:
-        from .sources.eventlog import EventLogSource
-        src, mode = EventLogSource(), "live"
-    elif a.input:
+        return _run_live(cfg, a)
+    if a.input:
         src, mode = FileEventSource(a.input), "file"
     else:
         ap.error("cần --input hoặc --live")
@@ -47,6 +46,33 @@ def main(argv=None) -> int:
         runner.mark_stopped()      # chỉ ghi "stopped" khi thoát thật
     elif runner.failed or runner.source_failed:
         return 1                   # lỗi ghi đĩa (C-004) hoặc nguồn không đọc được (C-006, A-002): báo cho người gọi; --follow tự thử lại
+    return 0
+
+
+def _run_live(cfg, a) -> int:
+    """Live: một runner mỗi kênh trong agent.channels (mặc định chỉ Sysmon), luân phiên (agent/multichannel.py)."""
+    from .multichannel import ChannelConfigError, MultiChannelAgent, resolve_channels
+    from .sources.eventlog import EventLogSource
+    try:
+        channels = resolve_channels(cfg.agent_channels)
+    except ChannelConfigError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    agent = MultiChannelAgent(channels, cfg.home, cfg.bronze_dir,
+                              lambda name, xpath: EventLogSource(channel=name, xpath=xpath),
+                              stop_file=cfg.home / "run" / "agent.stop")
+    signal.signal(signal.SIGINT, lambda *_: agent.request_stop())
+    agent.run_round(final=not a.follow)
+    while a.follow and not agent.should_stop():
+        if not agent.has_backlog:
+            time.sleep(a.poll_seconds)
+        if agent.should_stop():
+            break
+        agent.run_round(final=False)
+    if a.follow:
+        agent.mark_stopped()
+    elif agent.failed or agent.source_failed:
+        return 1
     return 0
 
 

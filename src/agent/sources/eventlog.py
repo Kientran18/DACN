@@ -21,7 +21,7 @@ class _Api:
         self.w = win32evtlog
         self._subs = {}      # handle subscription -> event báo hiệu (giữ tham chiếu cho tới khi handle hết dùng)
 
-    def query(self, channel, bookmark_xml):
+    def query(self, channel, bookmark_xml, xpath="*"):
         w = self.w
         if bookmark_xml:
             # Mô hình kéo (không Callback) BẮT BUỘC SignalEvent; thiếu nó EvtSubscribe báo lỗi 87 (đo trên VM Windows 10,
@@ -29,10 +29,10 @@ class _Api:
             import win32event  # type: ignore
             signal = win32event.CreateEvent(None, 0, 0, None)
             bm = w.EvtCreateBookmark(bookmark_xml)
-            h = w.EvtSubscribe(channel, w.EvtSubscribeStartAfterBookmark, SignalEvent=signal, Query="*", Bookmark=bm)
+            h = w.EvtSubscribe(channel, w.EvtSubscribeStartAfterBookmark, SignalEvent=signal, Query=xpath, Bookmark=bm)
             self._subs = {h: signal}
             return h, bm
-        h = w.EvtQuery(channel, w.EvtQueryChannelPath | w.EvtQueryForwardDirection, "*")
+        h = w.EvtQuery(channel, w.EvtQueryChannelPath | w.EvtQueryForwardDirection, xpath)
         return h, w.EvtCreateBookmark(None)
 
     def next(self, handle, n):
@@ -51,13 +51,14 @@ class _Api:
 
 
 class EventLogSource:
-    def __init__(self, channel: str = CHANNEL, api=None, batch: int = 64):
-        self.channel, self._api, self.batch = channel, api, batch
+    def __init__(self, channel: str = CHANNEL, api=None, batch: int = 64, xpath: str = "*"):
+        """xpath: bộ lọc XPath truyền cho EvtQuery/EvtSubscribe (mặc định "*" = mọi sự kiện như trước)."""
+        self.channel, self._api, self.batch, self.xpath = channel, api, batch, xpath
 
     def iter_events(self, from_bookmark: Optional[str]) -> Iterator[RawItem]:
         try:
             api = self._api or _Api()
-            handle, bm = api.query(self.channel, from_bookmark)
+            handle, bm = api.query(self.channel, from_bookmark, self.xpath)
         except ImportError as exc:
             raise SourceError("A-001", "pywin32 không khả dụng") from exc
         except Exception as exc:  # pywintypes.error: mã 5 = ACCESS_DENIED

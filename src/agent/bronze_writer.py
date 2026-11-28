@@ -1,7 +1,7 @@
 """Bronze segment writer (PH2-T02) + phục hồi (PH2-T04).
 
 `.jsonl.part` (UTF-8, LF) → seal bằng os.replace sang `.jsonl` + `.manifest.json`.
-Không đổi schema bronze-event/1.0; bản ghi do bronze_contract.build_bronze_record tạo.
+Không đổi schema Bronze; bản ghi do bronze_contract.build_bronze_record tạo (1.0 cho Sysmon, 1.1 cho Defender/PowerShell).
 """
 from __future__ import annotations
 
@@ -26,8 +26,11 @@ def _sha256(path: Path) -> str:
 
 class BronzeWriter:
     def __init__(self, directory: Path, *, max_records: int = 5000,
-                 max_bytes: int = 8 << 20, max_age_s: float = 300.0):
+                 max_bytes: int = 8 << 20, max_age_s: float = 300.0, name_prefix: str = ""):
+        """name_prefix: chèn sau `seg-` để mỗi kênh có segment riêng (ví dụ `microsoft_windows_powershell_operational-`).
+        Rỗng (mặc định, kênh Sysmon) giữ nguyên tên segment như trước; `list_sealed` vẫn dùng glob `seg-*.jsonl`."""
         self.dir = Path(directory)
+        self.name_prefix = name_prefix
         self.dir.mkdir(parents=True, exist_ok=True)
         self.max_records, self.max_bytes, self.max_age_s = max_records, max_bytes, max_age_s
         self._fh = None
@@ -43,7 +46,7 @@ class BronzeWriter:
     def _open(self) -> None:
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
         self._counter += 1
-        self._part = self.dir / f"seg-{stamp}-{self._counter:04d}.jsonl.part"
+        self._part = self.dir / f"seg-{self.name_prefix}{stamp}-{self._counter:04d}.jsonl.part"
         self._fh = self._part.open("wb")
         self._n = self._bytes = 0
         self._first = self._last = None
@@ -95,10 +98,16 @@ def _finalize(part: Path, n: int, first, last, sealed_at: Optional[str] = None) 
     Nhờ đó reader không bao giờ thấy segment thiếu manifest hoặc manifest ghi dở; crash giữa chừng
     chỉ để lại `.part` mà recover_dir xử lý được."""
     seg = part.with_suffix("")  # bỏ '.part' → .jsonl
+    versions = _schema_versions(part)
     manifest = {"segment": seg.name, "sha256": _sha256(part), "record_count": n,
                 "first_record_id": first, "last_record_id": last,
-                "schema_version": bc.SCHEMA_VERSION, "collector_version": bc.COLLECTOR_VERSION,
+                # Một phiên bản duy nhất (thường gặp: mỗi kênh một writer). Segment trộn phiên bản (file mode đọc export
+                # nhiều kênh) ghi "mixed" kèm danh sách; segment rỗng giữ phiên bản mặc định như trước.
+                "schema_version": versions[0] if len(versions) == 1 else ("mixed" if versions else bc.SCHEMA_VERSION),
+                "collector_version": bc.COLLECTOR_VERSION,
                 "sealed_at": sealed_at or datetime.now(timezone.utc).isoformat()}
+    if len(versions) > 1:
+        manifest["schema_versions"] = versions
     mp = seg.with_suffix(".manifest.json")
     tmp = mp.with_name(mp.name + ".tmp")
     with tmp.open("w", encoding="utf-8", newline="\n") as f:
@@ -108,6 +117,20 @@ def _finalize(part: Path, n: int, first, last, sealed_at: Optional[str] = None) 
     os.replace(tmp, mp)
     os.replace(part, seg)
     return seg
+
+
+def _schema_versions(part: Path) -> List[str]:
+    """Các `schema_version` có trong tệp (sắp xếp). Dòng không đọc được bỏ qua: recover_dir đã lọc dòng hỏng."""
+    found = set()
+    with part.open("rb") as f:
+        for line in f:
+            try:
+                v = json.loads(line).get("schema_version")
+            except (ValueError, AttributeError):
+                continue
+            if isinstance(v, str):
+                found.add(v)
+    return sorted(found)
 
 
 def verify_segment(seg: Path) -> List[str]:
