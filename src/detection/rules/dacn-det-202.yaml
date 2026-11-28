@@ -25,8 +25,8 @@ source_events:
   - {channel: "Microsoft-Windows-Windows Defender/Operational", event_ids: [5001, 5007, 5013]}
 context_fields: [event_type, old_value, new_value]
 # Loại trừ 5007 có 'New Value' KHÔNG chứa khóa liên quan bảo vệ trong phần tên khóa (trước dấu '='). New Value rỗng/thiếu
-# (xóa khóa) không bị exclude loại trừ; registry_change_filter quyết định (xóa Exclusion/Disable* = STRENGTHEN, bỏ). Danh sách khóa là đề xuất của Software theo tên chính sách Defender,
-# CHƯA được Cyber xác nhận.
+# (xóa khóa) không bị exclude loại trừ; registry_change_filter quyết định (xóa Exclusion/Disable* = STRENGTHEN, bỏ). Danh sách khóa là đề xuất của Software theo tên chính sách Defender;
+# người dùng duyệt thay Cyber ngày 2026-11-28 (w8 mục 12.15), chưa có review độc lập của Cyber.
 registry_change_filter: {old_field: old_value, new_field: new_value, drop: [NOOP, STRENGTHEN]}
 exclude:
   - field: new_value

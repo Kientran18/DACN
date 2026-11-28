@@ -937,3 +937,19 @@ Giới hạn: hướng chỉ suy từ tên; một chính sách mà giá trị kh
 sai (chưa thấy trên dữ liệu); TamperProtection/Spynet đổi theo hướng nào cũng ra alert. Kiểm thử: `python -m pytest -q` → 690 pass,
 2 skipped, 0 fail (Linux). Chưa chạy trên VM.
 
+### 12.15. Ngày 2026-11-28: người dùng duyệt thay Cyber ba mục của DACN-DET-202
+
+Người dùng yêu cầu "duyệt thay Cyber các mục đang chờ", ngay sau khi Claude liệt kê ba mục dưới đây. Ghi nhận đúng phạm vi đó; đây là phê
+duyệt của người dùng thay cho nhóm Cyber, **chưa có review độc lập của Cyber**.
+
+| Mục | Quyết định | Căn cứ |
+|---|---|---|
+| Danh sách khóa 5007 liên quan bảo vệ của DET-202 (`\Disable*`, `\Exclusions\`, `\TamperProtection`, `\Spynet\SpynetReporting`, `\Spynet\SubmitSamplesConsent`) | Duyệt như hiện có | Mục 12.13 |
+| Khóa rule `registry_change_filter` và cách phân loại `NOOP`/`WEAKEN`/`STRENGTHEN`/`CHANGE` | Duyệt như hiện có | Mục 12.14 |
+| Ngữ nghĩa giá trị `TamperProtection`, `Spynet` | Giữ `CHANGE` (mọi thay đổi thật vẫn ra alert); không suy hướng khi chưa có nguồn đã kiểm chứng | Mục 12.14 |
+
+Không thay đổi: `validation_status: synthetic_only` của DET-202 (lượt VM mới đo trên dữ liệu v1, chưa đo lại v3). Các quyết định khác
+còn chờ (khóa `severity_by`, `context_fields`, `group_by_field`; rule type `scriptblock` và danh sách mẫu DET-203/204; `EXTERNAL_AV`
+1.0/60; quyền `raw` thay vai trò admin và danh sách luật che; phương pháp nối tiến trình và cửa sổ 24 giờ) **không** nằm trong phê
+duyệt này.
+
