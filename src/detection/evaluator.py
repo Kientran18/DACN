@@ -68,5 +68,12 @@ def evaluate_single(rule: dict, row: dict) -> DetectionResult:
     for c in rule.get("exclude", []) or []:
         if cond_match(c, row)[0]:
             return DetectionResult(outcome="NO_MATCH", notes=[f"excluded_by:{c['field']}"], **base)
-    return DetectionResult(outcome="MATCH", matched_fields=matched, severity=rule["severity"],
-                           severity_reason=rule.get("severity_reason", ""), **base)
+    severity, reason = rule["severity"], rule.get("severity_reason", "")
+    sb = rule.get("severity_by")
+    if sb and row.get(sb["field"]) is not None and str(row[sb["field"]]) in sb["map"]:
+        severity = sb["map"][str(row[sb["field"]])]
+        reason = f"{reason} [severity theo {sb['field']}={row[sb['field']]}]".strip()
+    ctx = {f: str(row[f]) for f in rule.get("context_fields", []) if row.get(f) not in (None, "")}
+    if ctx:
+        matched["context"] = ctx          # ngữ cảnh cho người điều tra, KHÔNG phải điều kiện đã khớp
+    return DetectionResult(outcome="MATCH", matched_fields=matched, severity=severity, severity_reason=reason, **base)

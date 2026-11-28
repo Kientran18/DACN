@@ -1,4 +1,6 @@
 """Schema rule và DetectionResult (PH4-T01/T02). Đề xuất — cần Cyber/Data duyệt (#38, #39)."""
+import windows_channels as wc
+
 OUTCOMES = ("MATCH", "NO_MATCH", "INSUFFICIENT_TELEMETRY", "PENDING_LATE_EVENTS")
 OPS = ("equals", "contains_any", "endswith_any", "startswith_any", "regex")
 # Bảng Silver chứa từng Sysmon Event ID (khớp cách validator_poc định tuyến SUPPORTED_SYSMON_IDS).
@@ -7,6 +9,10 @@ SILVER_TABLE_FOR_EVENT = {1: "silver_process_events", 5: "silver_process_events"
                           26: "silver_file_events", 29: "silver_file_events",
                           12: "silver_registry_events", 13: "silver_registry_events", 14: "silver_registry_events",
                           3: "silver_network_events", 22: "silver_network_events"}
+# Kênh không phải Sysmon (DDL v1.3 đề xuất, docs/architecture/w8 mục 5.1): rule khai `source_events`, cột ID là windows_event_id.
+SILVER_TABLE_FOR_CHANNEL = {wc.DEFENDER_CHANNEL: "silver_defender_events",
+                            wc.POWERSHELL_CHANNEL: "silver_powershell_scriptblock_events"}
+DETECTION_SOURCES = ("EXTERNAL_DEFENDER",)     # alert phản ánh phát hiện của sản phẩm khác (D7); mặc định RULE/IOC
 
 _COND = {
     "type": "object", "additionalProperties": False, "required": ["field", "op", "value"],
@@ -30,6 +36,21 @@ RULE_SCHEMA = {
         "severity": {"enum": ["low", "medium", "high", "critical"]},
         "severity_reason": {"type": "string"},
         "sysmon_event_ids": {"type": "array", "items": {"type": "integer"}, "minItems": 1},
+        # Kênh Windows khác Sysmon (w8 mục 5.1). Rule chỉ khai MỘT trong hai: sysmon_event_ids hoặc source_events.
+        "source_events": {"type": "array", "minItems": 1, "items": {
+            "type": "object", "additionalProperties": False, "required": ["channel", "event_ids"],
+            "properties": {"channel": {"type": "string"},
+                           "event_ids": {"type": "array", "items": {"type": "integer"}, "minItems": 1}}}},
+        # Severity theo giá trị một trường của hàng (khóa so sánh dạng chuỗi); không khớp -> `severity` của rule.
+        "severity_by": {"type": "object", "additionalProperties": False, "required": ["field", "map"],
+                        "properties": {"field": {"type": "string", "pattern": "^[a-z_]+$"},
+                                       "map": {"type": "object", "minProperties": 1, "additionalProperties": {
+                                           "enum": ["low", "medium", "high", "critical"]}}}},
+        # Trường ngữ cảnh chép vào matched_fields["context"] khi MATCH (chỉ trường có giá trị; không phải điều kiện khớp).
+        "context_fields": {"type": "array", "items": {"type": "string", "pattern": "^[a-z_]+$"}},
+        # Trường dùng gom alert (mặc định process_guid). Kênh không có process_guid cần trường khác, ví dụ detection_id.
+        "group_by_field": {"type": "string", "pattern": "^[a-z_]+$"},
+        "detection_source": {"enum": list(DETECTION_SOURCES)},
         "required_fields": {"type": "array", "items": {"type": "string"}},
         "match": {"type": "object", "additionalProperties": False,
                   "properties": {"all": {"type": "array", "items": _COND},

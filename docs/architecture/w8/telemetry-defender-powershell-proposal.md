@@ -1,6 +1,6 @@
 # Đề xuất bổ sung telemetry Microsoft Defender và PowerShell Script Block Logging
 
-> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–3 xong ngày 2026-11-28, xem mục 12).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
+> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–3 và 5 xong ngày 2026-11-28, xem mục 12).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
 > Data/Cyber; chưa có review độc lập của nhóm Data/Cyber. Người dùng nói "bắt đầu" ngày 2026-11-28. Tài liệu này không
 > thay đổi contract `bronze-event/1.0`, DDL v1.1, DDL v1.2, ADR, README hay kế hoạch 12 tuần. Mọi ánh xạ field gắn nhãn **[CHƯA XÁC MINH]**
 > giữ nguyên nhãn đó cho tới khi có mẫu XML thật từ VM (mục 2.8); phê duyệt thiết kế không xác minh các field này.
@@ -671,3 +671,34 @@ Kiểm thử (Linux, Python 3.13, không có `lightgbm`): `python -m pytest -q` 
 
 Còn lại: hạng mục 4 (join tiến trình), 5–6 (rule DET-201..204), 7 (risk), 8 (API che bí mật; **trước khi xong hạng mục 8, văn bản
 script nằm nguyên trong Silver và có thể đọc qua truy vấn DuckDB trực tiếp**; API hiện chưa có endpoint đọc bảng này), 9 (dashboard), 11 (VM).
+
+### 12.3. Ngày 2026-11-28: hạng mục 5 (rule model `source_events`, DACN-DET-201/202)
+
+| Thay đổi | Tệp |
+|---|---|
+| Rule schema thêm field tùy chọn: `source_events` (D7), `detection_source: EXTERNAL_DEFENDER` (D7), `severity_by`, `context_fields`, `group_by_field`; loader kiểm tra kênh/Event ID theo `windows_channels`, loại trừ lẫn nhau với `sysmon_event_ids`, chuẩn hóa tên kênh | `src/detection/schema.py`, `src/detection/loader.py` |
+| Evaluator: severity theo giá trị trường (`severity_by`), ngữ cảnh vào `matched_fields["context"]` chỉ khi MATCH | `src/detection/evaluator.py` |
+| Engine: đọc bảng v1.3 theo `windows_event_id` khi bảng tồn tại; con trỏ `ingest_timestamp` tính cả bảng v1.3; **watermark correlation chỉ tính bảng Sysmon** (segment Defender có thể đến sớm hơn Sysmon cùng khoảng thời gian, không được đóng cửa sổ DET-010 sớm) | `src/detection/engine.py` |
+| AlertBuilder: `detection_source` và `group_by_field` từ rule; evidence tra được `silver_defender_events` (bảng PowerShell **cố ý chưa** tra cho tới khi có che bí mật ở API) | `src/alerts/builder.py`, `src/alerts/evidence.py` |
+| DACN-DET-201 (1116/1117, medium cố định, không MITRE, gom theo `detection_id`) và DACN-DET-202 (5001 high / 5013 medium / 5007 low, T1562.001) | `src/detection/rules/dacn-det-201.yaml`, `dacn-det-202.yaml` |
+| Contract W06 xuất lại (chỉ thêm field) | `docs/architecture/w6/contracts/rule.schema.json`, `README.md` |
+| 16 test | `tests/detection/test_defender_rules.py` |
+
+Quyết định triển khai phát sinh (**chờ duyệt**, ngoài D1–D10):
+- `severity_by` (cần để một rule DET-202 có severity khác nhau theo Event ID như D6), `context_fields` (đưa tên mối đe dọa,
+  đường dẫn, hành động vào alert; Defender không có `image_path`/`command_line`), `group_by_field` (Defender không có `process_guid`;
+  thiếu nó mọi phát hiện Defender trong 10 phút trên một máy bị gộp vào một alert).
+- DET-201 đọc cả 1116 và 1117 (1117 gộp vào alert của 1116 nhờ `detection_id`; còn 1117 khi mất 1116 vẫn có alert).
+- DET-201 severity cố định `medium`: chưa có bảng ánh xạ `Severity Name` được Cyber duyệt (D6 cho phép mặc định này).
+
+Kết quả trên 28 sự kiện thật đã khử định danh (scratchpad, không commit, một lần trên Linux): DET-201 MATCH 4 (EICAR 1116+1117,
+Atomic A09 1116+1117) → **2 alert** `EXTERNAL_DEFENDER`; DET-202 MATCH 4 (4 sự kiện 5007 nội bộ của Defender) → **3 alert `low`**.
+Xác nhận 5007 gây nhiễu: cần Cyber chọn danh sách loại trừ (`exclude`) hoặc tắt 5007 khỏi DET-202.
+
+Kiểm thử (Linux, Python 3.13, không có `lightgbm`): `python -m pytest -q` → 599 pass, 2 skipped, 0 fail. Chưa chạy trên Windows.
+
+Giới hạn hiện tại:
+- Điểm rủi ro (`src/risk`) chưa có category `EXTERNAL_AV` (hạng mục 7): alert `EXTERNAL_DEFENDER` đang được tính như `RULE`
+  và gắn vào chủ thể host (không có `process_guid`).
+- Dashboard hiển thị nguyên giá trị `EXTERNAL_DEFENDER`; nhãn "DACN/Defender" và bộ lọc nguồn là hạng mục 9.
+- Không nối alert Defender với tiến trình Sysmon (hạng mục 4).

@@ -14,6 +14,7 @@ from .ioc import IocStore
 from .loader import load_rules
 from .ml.interface import NullDetector
 from .result import DetectionResult, make_dedup_key
+from .schema import SILVER_TABLE_FOR_CHANNEL as _TABLE_FOR_CHANNEL
 from .schema import SILVER_TABLE_FOR_EVENT as _TABLE_FOR
 
 
@@ -30,6 +31,8 @@ CREATE TABLE IF NOT EXISTS _detection_cursor (
 CREATE TABLE IF NOT EXISTS _detection_outbox (dedup_key VARCHAR PRIMARY KEY, result JSON, rule JSON)
 """
 _TABLES = ("silver_process_events", "silver_file_events", "silver_registry_events", "silver_network_events")
+# Bảng v1.3 (đề xuất): chỉ dùng nếu tồn tại trong DB (SilverStore tạo; DB cũ/thiếu DDL v1.3 vẫn chạy như trước).
+_CHANNEL_TABLES = tuple(_TABLE_FOR_CHANNEL.values())
 
 
 class DetectionEngine:
@@ -40,6 +43,8 @@ class DetectionEngine:
         self.ioc = ioc or IocStore()
         self.ml = ml or NullDetector()
         self.q = Query(con)
+        have = {r[0] for r in con.execute("select table_name from information_schema.tables").fetchall()}
+        self.tables = _TABLES + tuple(t for t in _CHANNEL_TABLES if t in have)
         con.execute(DDL)
         con.execute(CURSOR_DDL)
 
@@ -81,12 +86,25 @@ class DetectionEngine:
         cols = [c[0] for c in cur.description]
         return [dict(zip(cols, r)) for r in cur.fetchall()]
 
-    def _max(self, col: str):
-        ts = [v for v in (self.con.execute(f"select max({col}) from {t}").fetchone()[0] for t in _TABLES) if v is not None]
+    def _rows_channel(self, table: str, ids: List[int], ingested_from=None) -> List[dict]:
+        """Như _rows cho bảng v1.3 (cột ID là windows_event_id)."""
+        ph = ",".join("?" * len(ids))
+        sql, p = f"select * from {table} where windows_event_id in ({ph})", list(ids)
+        if ingested_from is not None:
+            sql += " and ingest_timestamp > ?"; p.append(ingested_from)
+        cur = self.con.execute(sql + " order by timestamp, event_id", p)
+        cols = [c[0] for c in cur.description]
+        return [dict(zip(cols, r)) for r in cur.fetchall()]
+
+    def _max(self, col: str, tables=None):
+        ts = [v for v in (self.con.execute(f"select max({col}) from {t}").fetchone()[0] for t in (tables or self.tables))
+              if v is not None]
         return max(ts) if ts else None
 
     def _watermark(self):
-        return self._max("timestamp")
+        # Chỉ bảng Sysmon: watermark đóng cửa sổ correlation (DET-010 dùng Sysmon). Kênh khác đến theo segment riêng,
+        # có thể sớm hơn Sysmon cùng khoảng thời gian -> không được đẩy watermark (tránh đóng cửa sổ sớm).
+        return self._max("timestamp", _TABLES)
 
     def _host_watermarks(self):
         """Không dùng đồng hồ host khác để đóng correlation window."""
@@ -142,7 +160,7 @@ class DetectionEngine:
         top = self._max("ingest_timestamp")
         if not full and (top is None or top <= since):
             return []                       # không có gì mới
-        lo = None                           # timestamp sự kiện nhỏ nhất trong số mới
+        lo = None                           # timestamp sự kiện Sysmon nhỏ nhất trong số mới (chỉ dùng cho correlation)
         if not full:
             lows = [self.con.execute(f"select min(timestamp) from {t} where ingest_timestamp > ?", [since]).fetchone()[0]
                     for t in _TABLES]
@@ -152,7 +170,14 @@ class DetectionEngine:
         for rule in self.rules.values():
             if rule["status"] != "enabled":
                 continue
-            if rule["type"] in ("single", "ioc"):
+            if rule["type"] == "single" and rule.get("source_events"):
+                for se in rule["source_events"]:
+                    table = _TABLE_FOR_CHANNEL[se["channel"]]
+                    if table not in self.tables:
+                        continue        # DB chưa có DDL v1.3: không có dữ liệu để đánh giá
+                    for row in self._rows_channel(table, se["event_ids"], ingested_from=since):
+                        results.append(evaluate_single(rule, row))
+            elif rule["type"] in ("single", "ioc"):
                 for eid in rule["sysmon_event_ids"]:
                     for row in self._rows(_TABLE_FOR[eid], [eid], ingested_from=since):
                         res = evaluate_single(rule, row) if rule["type"] == "single" else self._ioc(rule, row)

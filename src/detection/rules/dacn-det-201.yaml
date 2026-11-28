@@ -1,0 +1,32 @@
+rule_id: DACN-DET-201
+rule_version: 1
+name: Microsoft Defender phát hiện mối đe dọa
+description: >
+  Mục đích: phản ánh phát hiện của Microsoft Defender Antivirus vào DACN để người điều tra thấy cùng chỗ với alert của DACN
+  (lấp khoảng trống EICAR và Atomic A02/A03, nơi Defender chặn trước khi Sysmon thấy tiến trình).
+  Telemetry: kênh Microsoft-Windows-Windows Defender/Operational, Event 1116 (phát hiện) và 1117 (hành động),
+  bảng silver_defender_events (DDL v1.3 đề xuất). Alert gom theo detection_id, nên 1116 và 1117 của cùng phát hiện
+  thường vào một alert (cùng cửa sổ 10 phút của AlertBuilder).
+  Đây KHÔNG phải kết luận của DACN: DACN không xác minh lại phát hiện của Defender.
+type: single
+status: enabled
+detection_source: EXTERNAL_DEFENDER
+severity: medium
+severity_reason: >
+  Severity cố định medium vì chưa có bảng ánh xạ Severity Name của Defender sang severity DACN được Cyber duyệt
+  (w8 D6); Severity Name gốc nằm trong matched_fields.context
+source_events:
+  - {channel: "Microsoft-Windows-Windows Defender/Operational", event_ids: [1116, 1117]}
+required_fields: [threat_name]
+context_fields: [threat_name, threat_id, severity_name, category_name, source_name, action_name, resource_type,
+                 resource_value, process_name, detection_id, detection_time]
+group_by_field: detection_id
+false_positives:
+  - Tệp kiểm thử (EICAR) và công cụ kiểm thử bảo mật hợp lệ (Atomic Red Team) cũng sinh 1116/1117
+  - Phát hiện PUA/hackTool trên công cụ quản trị hợp lệ
+limitations:
+  - Không có PID; process_name có thể là 'Unknown'. Chưa nối với process_guid của Sysmon (hạng mục 4)
+  - Path của Defender có thể bị cắt ngắn (đã thấy với CmdLine trên VM)
+  - Không gắn MITRE - tên mối đe dọa của Defender không cho technique một cách tin cậy
+  - Hai sự kiện của cùng phát hiện rơi vào hai cửa sổ 10 phút khác nhau sẽ tạo hai alert
+validation_status: synthetic_only

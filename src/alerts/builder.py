@@ -25,7 +25,8 @@ def build_from_results(store, rules: Dict[str, dict], results: Iterable, con) ->
         if store.exists_dedup(r.dedup_key):
             continue   # đã xử lý (replay-safe)
         bucket = int(ev["timestamp"].timestamp() // BUCKET_SECONDS)
-        gkey = f"{r.rule_id}|{ev['hostname']}|{ev.get('process_guid')}|{bucket}"
+        # Mặc định gom theo process_guid; rule kênh không có process_guid (Defender) khai group_by_field, ví dụ detection_id.
+        gkey = f"{r.rule_id}|{ev['hostname']}|{ev.get(rule.get('group_by_field', 'process_guid'))}|{bucket}"
         existing = store.find_group(gkey)
         if existing:
             store.bump(existing, ev["timestamp"], r.contributing_event_ids)
@@ -34,7 +35,7 @@ def build_from_results(store, rules: Dict[str, dict], results: Iterable, con) ->
         mitre = rule.get("mitre_technique_ids") if rule.get("mitre_basis") else None
         out["alerts"].append(store.insert_alert(
             detection_dedup_key=r.dedup_key, group_key=gkey, first_seen_utc=ev["timestamp"], last_seen_utc=ev["timestamp"],
-            detection_source="IOC" if rule["type"] == "ioc" else "RULE", rule_id=r.rule_id,
+            detection_source=rule.get("detection_source") or ("IOC" if rule["type"] == "ioc" else "RULE"), rule_id=r.rule_id,
             rule_version=r.rule_version, rule_name=rule["name"], severity=r.severity, severity_reason=r.severity_reason,
             mitre_technique_ids=mitre, hostname=ev["hostname"], process_guid=ev.get("process_guid"),
             image_path=ev.get("image_path"), command_line=ev.get("command_line"), user_name=ev.get("user_name"),

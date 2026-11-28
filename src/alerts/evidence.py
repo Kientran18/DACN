@@ -8,10 +8,18 @@ from typing import Dict, Optional
 from pipeline.segment_reader import SegmentError, read_segment
 
 _TABLES = ("silver_process_events", "silver_file_events", "silver_registry_events", "silver_network_events")
+# Bảng Defender (DDL v1.3 đề xuất) được tra khi tồn tại. Bảng PowerShell 4104 CỐ Ý chưa có ở đây: văn bản script có thể chứa
+# bí mật và API chưa che (docs/architecture/w8 mục 2.7, hạng mục 8).
+_OPTIONAL_TABLES = ("silver_defender_events",)
+
+
+def _tables(con):
+    have = {r[0] for r in con.execute("select table_name from information_schema.tables").fetchall()}
+    return _TABLES + tuple(t for t in _OPTIONAL_TABLES if t in have)
 
 
 def _silver(con, event_id: str) -> Optional[Dict]:
-    for t in _TABLES:
+    for t in _tables(con):
         cur = con.execute(f"select * from {t} where event_id=?", [event_id])
         cols = [c[0] for c in cur.description]
         r = cur.fetchone()
