@@ -62,7 +62,9 @@ Căn cứ: mã nguồn trên nhánh tích hợp `claude_implement` và kết qu�
 - Điểm rủi ro: hiệu chỉnh trọng số và ngưỡng trên kịch bản lab và tải lành tính; Cyber duyệt cách gộp severity; hiệu năng khi có nhiều alert.
 - Phê duyệt liên nhóm: DDL v1.2, schema `DetectionResult`, hostname D-07, tên event type (Q-X3), số hiệu DET-101, mã lỗi `R-*`/`A-*`, ADR 0004/0007, các schema/contract W06–W07 (`docs/architecture/w6/contracts/`, `docs/architecture/w7/contracts/`), bảng `static_candidates` và số hiệu `DACN-STATIC-001`.
 
-**Kết quả test mới nhất (2026-11-28, Linux, Python 3.13, KHÔNG có `lightgbm`, sau hạng mục 4 nối tiến trình):** `python -m pytest -q` → **645 pass, 2 skipped, 0 fail** (thêm 10 test `tests/alerts/test_process_link.py`, 3 kiểm tra Playwright).
+**Kết quả test mới nhất (2026-11-28, Linux, Python 3.13, KHÔNG có `lightgbm`, sau khi thêm công cụ báo cáo hạng mục 11):** `python -m pytest -q` → **650 pass, 2 skipped, 0 fail** (thêm 5 test `tests/e2e/test_w8_channel_report.py`). Hướng dẫn chạy hạng mục 11 trên VM: `docs/implementation/acceptance/W8_DEFENDER_POWERSHELL_VM_GUIDE.md` (**chưa chạy**).
+
+**Kết quả test (2026-11-28, sau hạng mục 4 nối tiến trình):** `python -m pytest -q` → 645 pass, 2 skipped, 0 fail (thêm 10 test `tests/alerts/test_process_link.py`, 3 kiểm tra Playwright).
 
 **Kết quả test (2026-11-28, sau hạng mục 9):** `python -m pytest -q` → 635 pass, 2 skipped, 0 fail (thêm Playwright `tests/dashboard/test_dashboard_sources.py` và `tests/api/test_alert_sources.py`).
 

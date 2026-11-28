@@ -1,6 +1,6 @@
 # Đề xuất bổ sung telemetry Microsoft Defender và PowerShell Script Block Logging
 
-> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–9 xong ngày 2026-11-28, xem mục 12; còn 11: kiểm thử trên VM).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
+> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–9 xong ngày 2026-11-28, xem mục 12; còn 11: kiểm thử trên VM, hướng dẫn đã soạn ở mục 12.9).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
 > Data/Cyber; chưa có review độc lập của nhóm Data/Cyber. Người dùng nói "bắt đầu" ngày 2026-11-28. Tài liệu này không
 > thay đổi contract `bronze-event/1.0`, DDL v1.1, DDL v1.2, ADR, README hay kế hoạch 12 tuần. Mọi ánh xạ field gắn nhãn **[CHƯA XÁC MINH]**
 > giữ nguyên nhãn đó cho tới khi có mẫu XML thật từ VM (mục 2.8); phê duyệt thiết kế không xác minh các field này.
@@ -815,3 +815,16 @@ Chưa làm: trang Tổng quan chưa tách số alert theo nguồn; cây tiến t
 Kiểm thử (Linux, Python 3.13, không có `lightgbm`): `python -m pytest -q` → 645 pass, 2 skipped, 0 fail. Chưa chạy trên Windows.
 
 Quyết định triển khai **chờ duyệt**: ba phương pháp nối và điều kiện "còn sống"; cửa sổ 24 giờ; không đưa kết quả nối vào alert/rủi ro.
+
+### 12.9. Ngày 2026-11-28: hướng dẫn chạy hạng mục 11 trên VM (chưa chạy)
+
+| Thay đổi | Tệp |
+|---|---|
+| Hướng dẫn từng bước V1–V7: agent ba kênh, 4104 lành tính và block nhiều phần, kiểm tra PID của 4104, che bí mật/DET-203/DET-204 bằng chuỗi giả, EICAR (SC05), Atomic A02/A03, dừng/chạy lại; đọc token bằng `Read-Host -AsSecureString` để token không thành 4104 | `docs/implementation/acceptance/W8_DEFENDER_POWERSHELL_VM_GUIDE.md` |
+| Công cụ báo cáo CHỈ ĐỌC (bản sao Silver, `--bronze` nạp segment còn thiếu, `--since` tách sự kiện cũ do lần đầu đọc cả lịch sử log): đếm Bronze/ledger/Silver/DLQ theo kênh, kiểm tra `source`, alert theo rule, nhãn nối tiến trình và ảnh ứng viên; không xuất hostname, người dùng, đường dẫn hay script | `tests/e2e/w8_channel_report.py`, `tests/e2e/test_w8_channel_report.py` (5 test, fixture synthetic) |
+
+Hai dòng thử DET-203/DET-204 trong hướng dẫn đã được kiểm với `find_patterns`, `decode_candidates`, `redact` trên Linux; chưa qua agent.
+`atomic_compare.py` không quy alert DET-201..204 về test Atomic vì các alert này không có `process_guid`; hướng dẫn dùng `--since` của
+báo cáo mới thay thế. Lưu ý quan sát từ code: lần đầu bật kênh không có checkpoint, `EventLogSource` đọc từ bản ghi cũ nhất (`EvtQuery`
+chiều tiến), nên alert từ sự kiện cũ (EICAR/A09 ngày 2026-11-26, 5007) sẽ xuất hiện; đây là hành vi đúng, không phải FP mới.
+
