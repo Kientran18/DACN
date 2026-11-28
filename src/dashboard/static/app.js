@@ -37,6 +37,26 @@ const sevKind = (s) => ({ critical: "bad", high: "bad", medium: "warn", low: "ok
 const riskBadge = (r) => r ? h("span", { class: "badge risk-badge " + sevKind(r.level), text: r.level + " · " + r.score }) : h("span", { class: "muted", text: "—" });
 const riskKey = (host, guid) => host + "|" + guid;
 // Nguồn phát hiện: "Defender" = DACN chỉ phản ánh phát hiện của Microsoft Defender (không xác minh lại); "DACN" = rule của DACN.
+// Suy luận nối sự kiện Defender/PowerShell với tiến trình Sysmon (GET /alerts/{id}/process-links). Không phải bằng chứng.
+const linkKind = (c) => ({ UNIQUE: "ok", AMBIGUOUS: "warn", NONE: "", NOT_APPLICABLE: "" }[c] || "");
+function linksPanel(id, a) {
+  const box = h("div", { id: "links-panel" });
+  load(box, () => api("/alerts/" + id + "/process-links"), (r) => {
+    if (!r.events.length) { box.append(empty("Không có sự kiện Defender/PowerShell để nối.")); return; }
+    for (const ev of r.events) for (const l of ev.links) {
+      box.append(h("div", { class: "card" },
+        h("p", {}, badge(l.confidence, linkKind(l.confidence)), " " + l.method + " — " + l.basis),
+        h("p", { class: "muted", text: l.note || "" }),
+        l.candidates.length ? table([
+          { label: "Tiến trình", render: (c) => fmt(c.image_path), wrap: true }, { key: "pid", label: "PID" },
+          { label: "Bắt đầu / tạo tệp", render: (c) => utc(c.start_utc || c.file_event_utc) },
+          { label: "Cây tiến trình", render: (c) => h("a", { class: "link-tree", href: treeHash({ hostname: ev.hostname, process_guid: c.process_guid, alert: id }), text: "mở →" }) }],
+          l.candidates) : empty(l.confidence === "NOT_APPLICABLE" ? "Không đủ dữ liệu để nối." : "Không tìm thấy tiến trình ứng viên trong Silver.")));
+    }
+    box.append(h("p", { class: "muted", text: "Cửa sổ nhìn lại " + r.lookback_hours + " giờ (heuristic). " + r.note }));
+  });
+  return box;
+}
 const sourceBadge = (a) => badge(a.source_label || "DACN", a.source_label === "Defender" ? "ext" : "");
 async function riskMap() {            // điểm theo (host, process_guid); lỗi thì bảng alert vẫn hiện, cột rủi ro để "—"
   try { const d = await api("/risk/subjects?kind=process&limit=500"); const m = {}; for (const i of d.items) m[riskKey(i.subject.hostname, i.subject.process_guid)] = i; return m; }
@@ -264,8 +284,11 @@ async function pageAlertDetail(id) {
       const ctx = (a.matched_fields && a.matched_fields.context) || {};
       box.append(h("h2", {}, labelled("obs", "QUAN SÁT"), "Phát hiện của Microsoft Defender"), h("div", { class: "card", id: "defender-panel" },
         h("p", { class: "muted", text: "Alert này phản ánh sự kiện của Microsoft Defender (Event 1116/1117/5001/5007/5013). DACN không xác minh lại; " +
-          "severity Defender gốc nằm trong severity_name, severity alert do rule DACN gán. Không có PID nên chưa nối với cây tiến trình Sysmon." }),
+          "severity Defender gốc nằm trong severity_name, severity alert do rule DACN gán. Defender không ghi PID: tiến trình liên quan bên dưới là suy luận." }),
         Object.keys(ctx).length ? h("dl", { class: "kv" }, Object.entries(ctx).map(([k, v]) => [h("dt", { text: k }), h("dd", { text: fmt(v) })])) : empty("Không có trường ngữ cảnh.")));
+    }
+    if (!a.process_guid && (a.source_label === "Defender" || (a.matched_fields && a.matched_fields.script_block_id))) {
+      box.append(h("h2", {}, labelled("inf", "SUY LUẬN"), "Tiến trình liên quan (nối với Sysmon)"), linksPanel(id, a));
     }
     if (a.matched_fields && a.matched_fields.script_block_id) {
       box.append(h("h2", {}, labelled("obs", "QUAN SÁT"), "Script PowerShell (Event 4104)"));

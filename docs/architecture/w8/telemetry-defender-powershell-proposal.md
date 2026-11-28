@@ -1,6 +1,6 @@
 # Đề xuất bổ sung telemetry Microsoft Defender và PowerShell Script Block Logging
 
-> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–3, 5–9 xong ngày 2026-11-28, xem mục 12; còn 4 và 11).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
+> **Trạng thái: APPROVED BY USER (2026-11-26) / ĐANG TRIỂN KHAI (hạng mục 1–9 xong ngày 2026-11-28, xem mục 12; còn 11: kiểm thử trên VM).** Người dùng duyệt D1–D10 ở mục 9 theo đúng đề xuất, thay cho
 > Data/Cyber; chưa có review độc lập của nhóm Data/Cyber. Người dùng nói "bắt đầu" ngày 2026-11-28. Tài liệu này không
 > thay đổi contract `bronze-event/1.0`, DDL v1.1, DDL v1.2, ADR, README hay kế hoạch 12 tuần. Mọi ánh xạ field gắn nhãn **[CHƯA XÁC MINH]**
 > giữ nguyên nhãn đó cho tới khi có mẫu XML thật từ VM (mục 2.8); phê duyệt thiết kế không xác minh các field này.
@@ -793,3 +793,25 @@ request ra ngoài. Ảnh chụp chỉ để kiểm tra, không commit.
 Kiểm thử (Linux, Python 3.13, không có `lightgbm`): `python -m pytest -q` → 635 pass, 2 skipped, 0 fail. Chưa chạy trên Windows.
 
 Chưa làm: trang Tổng quan chưa tách số alert theo nguồn; cây tiến trình chưa hiện alert Defender/PowerShell (cần hạng mục 4).
+
+### 12.8. Ngày 2026-11-28: hạng mục 4 (nối sự kiện Defender/PowerShell với tiến trình Sysmon)
+
+| Thay đổi | Tệp |
+|---|---|
+| Suy luận tính khi truy vấn, **không ghi DB** và không gán `process_guid` vào alert/Silver. Ba phương pháp: `PID_IMAGE_LIFETIME` (4104: `writer_process_id` + host + ảnh `powershell.exe`/`pwsh.exe`/`powershell_ise.exe` + còn sống tại thời điểm 4104), `PROCESS_NAME_LIFETIME` (Defender: `Process Name` = `image_path`, còn sống tại `Detection Time`; "Unknown" → `NOT_APPLICABLE`), `FILE_CREATE` (Defender `resource_type=file`: `file_path` của Sysmon Event 11 trước `Detection Time`). Nhãn `UNIQUE`/`AMBIGUOUS`/`NONE`/`NOT_APPLICABLE`; liệt kê mọi ứng viên (tối đa 20); cửa sổ nhìn lại 24 giờ (heuristic) | `src/alerts/process_link.py` (mới) |
+| `GET /alerts/{id}/process-links` (quyền `read`; không trả văn bản script) | `src/api/app.py` |
+| Dashboard: khung "SUY LUẬN — Tiến trình liên quan" cho alert Defender/PowerShell không có `process_guid`, có link mở màn hình cây tiến trình | `src/dashboard/static/app.js` |
+| 10 test + 3 kiểm tra Playwright | `tests/alerts/test_process_link.py`, `tests/dashboard/test_dashboard_sources.py`, `ui_sources_check.js` |
+
+"Còn sống tại t" = có Event 1 trong [t − 24h, t] và không có Event 5 cùng `process_guid` trước t. Giới hạn:
+- Thiếu Event 5 (agent không chạy lúc tiến trình kết thúc) làm tiến trình cũ trông như còn sống → thêm ứng viên (AMBIGUOUS), không chọn đại.
+- 4104 dùng PID làm khóa chính, khác nguyên tắc W06 "không PID-only" (`src/detection/process_context.py`) của join Sysmon–Sysmon;
+  được giảm rủi ro bằng host + ảnh + vòng đời và luôn hiển thị là suy luận. Việc `System/Execution@ProcessID` của 4104 là PID của
+  `powershell.exe` **chưa xác nhận trên VM** (mẫu thật có PID nhất quán 2888 nhưng chưa có Sysmon Event 1 cùng lúc để đối chiếu).
+- A02/A03 (Defender chặn khi tạo tiến trình): không có Event 1 → `NONE` là kết quả đúng.
+- Kết quả nối không vào điểm rủi ro theo tiến trình và không hiện trên màn hình cây tiến trình (chỉ link sang cây).
+- Chưa thử trên dữ liệu VM có cả Sysmon và Defender/4104 cùng khoảng thời gian.
+
+Kiểm thử (Linux, Python 3.13, không có `lightgbm`): `python -m pytest -q` → 645 pass, 2 skipped, 0 fail. Chưa chạy trên Windows.
+
+Quyết định triển khai **chờ duyệt**: ba phương pháp nối và điều kiện "còn sống"; cửa sổ 24 giờ; không đưa kết quả nối vào alert/rủi ro.

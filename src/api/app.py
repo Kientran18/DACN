@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from alerts.evidence import resolve_evidence
+from alerts.process_link import links_for_alert
 from alerts.scriptblock_view import script_for_alert
 from common.redact import redact
 from alerts.process_view import CATEGORIES as PROC_EVENT_KINDS, process_events, process_tree_view, search_processes
@@ -398,6 +399,14 @@ def create_app(cfg, tokens: TokenStore, *, store, rules: Dict[str, dict], policy
                     e["silver"]["script_redacted"] = True
                     e["silver"]["redaction_rules"] = sorted(set(hits))
         return ev
+
+    @app.get("/alerts/{alert_id}/process-links", tags=["evidence"])
+    def alert_process_links(alert_id: str, _: dict = Depends(need("read"))):
+        """SUY LUẬN: tiến trình Sysmon ứng viên cho sự kiện Defender/PowerShell của alert (không ghi DB, không gán vào alert).
+        Nhãn UNIQUE / AMBIGUOUS / NONE / NOT_APPLICABLE; mọi ứng viên được liệt kê. Không trả văn bản script."""
+        with lock:
+            a = get_alert(alert_id)
+            return {"alert_id": alert_id, **links_for_alert(con, a["contributing_event_ids"])}
 
     @app.get("/alerts/{alert_id}/script", tags=["evidence"])
     def alert_script(alert_id: str, reveal: bool = False, who: dict = Depends(need("read"))):

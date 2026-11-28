@@ -70,7 +70,11 @@ def server(tmp_path_factory):
     st.ingest_dir(bdir, "t")
     for t, _, row in harness.build_rows({"name": "uisrc", "rows": [{
             "id": "p", "table": "process", "hostname": "SYNTH-HOST", "image_path": "C:\\a\\powershell.exe",
-            "command_line": "powershell.exe -enc AAAAAAAA", "timestamp": "2026-11-28T01:30:00+00:00"}]}):
+            "command_line": "powershell.exe -enc AAAAAAAA", "timestamp": "2026-11-28T01:30:00+00:00"},
+            # Tiến trình PowerShell còn sống lúc Defender 1116 (01:02) và 4104 (01:20, PID 3333): khung "Tiến trình liên quan"
+            {"id": "ps", "table": "process", "hostname": "SYNTH-HOST", "process_guid": "eeeeeeee-0000-0000-0000-000000000001",
+             "pid": 3333, "image_path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+             "command_line": "powershell.exe", "timestamp": "2026-11-28T01:00:00+00:00", "record_id": 2}]}):
         st._insert(t, row)
     rules = load_rules()
     store = AlertStore(st.con)
